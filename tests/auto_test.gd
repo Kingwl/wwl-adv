@@ -684,9 +684,10 @@ func _phase_special_tags() -> void:
 
 		var effect_position: Vector2 = melee._get_slash_effect_position(player.global_position, Vector2.RIGHT)
 		var effect_offset: Vector2 = effect_position - player.global_position
-		_assert(effect_offset.length() < 0.001, "Melee slash effect is centered on the player like the damage sector")
+		_assert(effect_offset.x > 0.0 and abs(effect_offset.y) < 0.001, "Melee slash effect is pushed toward attack direction")
+		_assert(abs(effect_offset.length() - melee.get_range() * 0.2) < 0.01, "Melee slash effect offset follows weapon range")
 		var slash_scale: Vector2 = melee._get_slash_effect_scale()
-		_assert(abs((slash_scale.x * 60.0) - melee.get_range()) < 0.01, "Melee slash visual radius matches damage range")
+		_assert(abs((slash_scale.x * 80.0) - melee.get_range()) < 0.01, "Melee slash visual radius matches damage range")
 		_assert(abs(melee._get_slash_effect_rotation(Vector2.RIGHT)) < 0.001, "Melee slash effect rotation matches attack direction")
 		var slash_frames := VFXHelper.build_sprite_frames(
 			"res://assets/art/effects/by_type/fx_slash",

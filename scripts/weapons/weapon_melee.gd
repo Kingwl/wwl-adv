@@ -2,7 +2,8 @@ extends WeaponBase
 
 const SECTOR_ANGLE := deg_to_rad(90.0)
 const SLASH_EFFECT_ROTATION_OFFSET := 0.0
-const SLASH_EFFECT_BASE_RADIUS := 60.0
+const SLASH_EFFECT_BASE_RADIUS := 80.0
+const SLASH_EFFECT_FORWARD_RATIO := 0.2
 
 func _activate() -> void:
 	var player := get_parent().get_parent() as Node2D
@@ -84,8 +85,11 @@ func _show_slash_effect(player: Node2D, attack_dir: Vector2) -> void:
 	anim.name = "MeleeSlashEffect"
 	anim.rotation = _get_slash_effect_rotation(attack_dir)
 
-func _get_slash_effect_position(player_position: Vector2, _attack_dir: Vector2) -> Vector2:
-	return player_position
+func _get_slash_effect_position(player_position: Vector2, attack_dir: Vector2) -> Vector2:
+	var dir := attack_dir.normalized()
+	if dir == Vector2.ZERO:
+		dir = Vector2.RIGHT
+	return player_position + dir * get_range() * SLASH_EFFECT_FORWARD_RATIO
 
 func _get_slash_effect_scale() -> Vector2:
 	var scale_factor: float = maxf(1.0, get_range() / SLASH_EFFECT_BASE_RADIUS)

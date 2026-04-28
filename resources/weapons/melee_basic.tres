@@ -1,25 +1,20 @@
-[gd_resource type="Resource" script_class="WeaponData" load_steps=28 format=3]
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://dvkg043nrm358"]
 
-[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_melee"]
-[ext_resource type="Script" path="res://scripts/data/weapon_path.gd" id="2_path"]
-[ext_resource type="Script" path="res://scripts/data/weapon_path_level.gd" id="3_level"]
-[ext_resource type="Texture2D" path="res://assets/art/weapons/icons_sliced/icon_00.png" id="4_icon"]
+[ext_resource type="Script" uid="uid://bs052wvlrrbp6" path="res://scripts/data/weapon_data.gd" id="1_melee"]
+[ext_resource type="Script" uid="uid://dvai6dt0os8pu" path="res://scripts/data/weapon_path.gd" id="2_path"]
+[ext_resource type="Script" uid="uid://drbaokr4v6iih" path="res://scripts/data/weapon_path_level.gd" id="3_level"]
+[ext_resource type="Texture2D" uid="uid://b4tnxd818yaeo" path="res://assets/art/weapons/icons_sliced/icon_00.png" id="4_icon"]
 
 [sub_resource type="Resource" id="Resource_b1"]
 script = ExtResource("3_level")
 level = 2
 damage_bonus = 5
-cooldown_bonus = 0.0
-range_bonus = 0.0
-special_tag = &""
 description = "伤害+5"
 
 [sub_resource type="Resource" id="Resource_b2"]
 script = ExtResource("3_level")
 level = 3
 damage_bonus = 5
-cooldown_bonus = 0.0
-range_bonus = 0.0
 special_tag = &"wider_arc"
 description = "扇形角度扩大至135°"
 
@@ -27,35 +22,24 @@ description = "扇形角度扩大至135°"
 script = ExtResource("3_level")
 level = 4
 damage_bonus = 8
-cooldown_bonus = 0.0
-range_bonus = 0.0
-special_tag = &""
 description = "伤害+8"
 
 [sub_resource type="Resource" id="Resource_b4"]
 script = ExtResource("3_level")
 level = 5
-damage_bonus = 0
-cooldown_bonus = 0.0
 range_bonus = 10.0
-special_tag = &""
 description = "范围+10"
 
 [sub_resource type="Resource" id="Resource_b5"]
 script = ExtResource("3_level")
 level = 6
 damage_bonus = 10
-cooldown_bonus = 0.0
-range_bonus = 0.0
-special_tag = &""
 description = "伤害+10"
 
 [sub_resource type="Resource" id="Resource_b6"]
 script = ExtResource("3_level")
 level = 7
 damage_bonus = 5
-cooldown_bonus = 0.0
-range_bonus = 0.0
 special_tag = &"widest_arc"
 description = "扇形角度扩大至180°"
 
@@ -63,8 +47,6 @@ description = "扇形角度扩大至180°"
 script = ExtResource("3_level")
 level = 8
 damage_bonus = 15
-cooldown_bonus = 0.0
-range_bonus = 0.0
 special_tag = &"crit_bonus"
 description = "伤害+15，暴击率提升"
 
@@ -78,63 +60,44 @@ levels = Array[ExtResource("3_level")]([SubResource("Resource_b1"), SubResource(
 [sub_resource type="Resource" id="Resource_s1"]
 script = ExtResource("3_level")
 level = 2
-damage_bonus = 0
 cooldown_bonus = -0.15
-range_bonus = 0.0
-special_tag = &""
 description = "冷却-0.15秒"
 
 [sub_resource type="Resource" id="Resource_s2"]
 script = ExtResource("3_level")
 level = 3
-damage_bonus = 0
 cooldown_bonus = -0.15
-range_bonus = 0.0
-special_tag = &""
 description = "冷却-0.15秒"
 
 [sub_resource type="Resource" id="Resource_s3"]
 script = ExtResource("3_level")
 level = 4
 damage_bonus = 3
-cooldown_bonus = 0.0
-range_bonus = 0.0
-special_tag = &""
 description = "伤害+3"
 
 [sub_resource type="Resource" id="Resource_s4"]
 script = ExtResource("3_level")
 level = 5
-damage_bonus = 0
 cooldown_bonus = -0.2
-range_bonus = 0.0
-special_tag = &""
 description = "冷却-0.2秒"
 
 [sub_resource type="Resource" id="Resource_s5"]
 script = ExtResource("3_level")
 level = 6
 damage_bonus = 5
-cooldown_bonus = 0.0
-range_bonus = 0.0
 special_tag = &"double_strike"
 description = "攻击时触发2连击"
 
 [sub_resource type="Resource" id="Resource_s6"]
 script = ExtResource("3_level")
 level = 7
-damage_bonus = 0
 cooldown_bonus = -0.2
-range_bonus = 0.0
-special_tag = &""
 description = "冷却-0.2秒"
 
 [sub_resource type="Resource" id="Resource_s7"]
 script = ExtResource("3_level")
 level = 8
 damage_bonus = 8
-cooldown_bonus = 0.0
-range_bonus = 0.0
 special_tag = &"triple_strike"
 description = "攻击时触发3连击"
 
@@ -148,18 +111,13 @@ levels = Array[ExtResource("3_level")]([SubResource("Resource_s1"), SubResource(
 [sub_resource type="Resource" id="Resource_g1"]
 script = ExtResource("3_level")
 level = 2
-damage_bonus = 0
-cooldown_bonus = 0.0
 range_bonus = 10.0
-special_tag = &""
 description = "范围+10"
 
 [sub_resource type="Resource" id="Resource_g2"]
 script = ExtResource("3_level")
 level = 3
 damage_bonus = 3
-cooldown_bonus = 0.0
-range_bonus = 0.0
 special_tag = &"knockback"
 description = "攻击附带击退效果"
 
@@ -167,26 +125,18 @@ description = "攻击附带击退效果"
 script = ExtResource("3_level")
 level = 4
 damage_bonus = 4
-cooldown_bonus = 0.0
-range_bonus = 0.0
-special_tag = &""
 description = "伤害+4"
 
 [sub_resource type="Resource" id="Resource_g4"]
 script = ExtResource("3_level")
 level = 5
-damage_bonus = 0
-cooldown_bonus = 0.0
 range_bonus = 15.0
-special_tag = &""
 description = "范围+15"
 
 [sub_resource type="Resource" id="Resource_g5"]
 script = ExtResource("3_level")
 level = 6
 damage_bonus = 5
-cooldown_bonus = 0.0
-range_bonus = 0.0
 special_tag = &"heal_on_hit"
 description = "命中时回复2点生命"
 
@@ -194,17 +144,12 @@ description = "命中时回复2点生命"
 script = ExtResource("3_level")
 level = 7
 damage_bonus = 6
-cooldown_bonus = 0.0
-range_bonus = 0.0
-special_tag = &""
 description = "伤害+6"
 
 [sub_resource type="Resource" id="Resource_g7"]
 script = ExtResource("3_level")
 level = 8
 damage_bonus = 8
-cooldown_bonus = 0.0
-range_bonus = 0.0
 special_tag = &"heal_on_hit_boost"
 description = "命中回复提升至5点"
 
@@ -220,18 +165,7 @@ script = ExtResource("1_melee")
 id = &"melee_basic"
 display_name = "基础利刃"
 description = "近战斩击，对范围内敌人造成伤害"
-weapon_type = 0
-category = 0
-damage = 10
-cooldown = 1.0
-range = 80.0
-projectile_speed = 300.0
-projectile_count = 1
-pierce = 0
-heal_amount = 0
-orbit_count = 0
-reflect_percent = 0.0
-tags = Array[StringName]([&"斩击"])
 icon = ExtResource("4_icon")
-max_level = 8
+range = 80.0
+tags = Array[StringName]([&"斩击"])
 paths = Array[ExtResource("2_path")]([SubResource("Resource_path_b"), SubResource("Resource_path_s"), SubResource("Resource_path_g")])

@@ -67,6 +67,7 @@
 - [x] UI 按钮贴图化（button_normal / hover / pressed）
 - [x] 主菜单背景替换为 ground_tile.png 平铺
 - [x] 武器分类标签在 UI 中显示（攻击 / 防御 / 增益）
+- [x] Web UI 中文字体打包与运行时 fallback 主题注入
 
 ### 测试与质量
 - [x] 自动化集成测试框架（headless Godot）
@@ -117,6 +118,6 @@
 | 武器种类 | 17 |
 | 敌人类型 | 1（基础追踪型，未资源化） |
 | UI 场景 | 8 |
-| 自动化测试 | 399 passed, 0 failed |
+| 自动化测试 | 395 passed, 0 failed |
 | 引擎版本 | Godot 4.x（最近测试 4.6.2，GL Compatibility） |
 | 目标平台 | Web / Android / iOS |

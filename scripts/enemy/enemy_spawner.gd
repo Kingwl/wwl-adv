@@ -1,7 +1,7 @@
 extends Node
 
-@export var spawn_radius_min: float = 450.0
-@export var spawn_radius_max: float = 700.0
+@export var spawn_view_margin_min: float = 80.0
+@export var spawn_view_margin_max: float = 300.0
 @export var base_spawn_interval: float = 2.0
 
 var _player: Node2D
@@ -26,7 +26,8 @@ func _spawn_enemy() -> void:
 	var enemy := enemy_scene.instantiate() as CharacterBody2D
 
 	var angle := randf() * TAU
-	var radius := randf_range(spawn_radius_min, spawn_radius_max)
+	var radius_bounds := _get_spawn_radius_bounds()
+	var radius := randf_range(radius_bounds.x, radius_bounds.y)
 	var spawn_pos := _player.global_position + Vector2(cos(angle), sin(angle)) * radius
 	enemy.global_position = spawn_pos
 
@@ -51,6 +52,21 @@ func _spawn_enemy() -> void:
 func _get_spawn_interval() -> float:
 	var difficulty_multiplier := 1.0 + (_elapsed_time / 60.0) * 0.5
 	return max(0.3, base_spawn_interval / difficulty_multiplier)
+
+func _get_spawn_radius_bounds() -> Vector2:
+	var view_radius := _get_view_radius()
+	var min_radius := view_radius + spawn_view_margin_min
+	var max_margin: float = max(spawn_view_margin_max, spawn_view_margin_min + 1.0)
+	return Vector2(min_radius, view_radius + max_margin)
+
+func _get_view_radius() -> float:
+	var viewport_size := Vector2(720.0, 1280.0)
+	var viewport := get_viewport()
+	if viewport:
+		var visible_size := viewport.get_visible_rect().size
+		if visible_size.x > 0.0 and visible_size.y > 0.0:
+			viewport_size = visible_size
+	return (viewport_size * 0.5).length()
 
 func _weighted_pick(enemies: Array) -> EnemyData:
 	var total_weight := 0.0

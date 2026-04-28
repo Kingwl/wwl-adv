@@ -51,10 +51,18 @@ func _get_poison_lifetime() -> float:
 	return 4.0
 
 func _get_poison_radius() -> float:
-	var r := get_range()
+	var r := _get_field_radius(90.0)
 	if has_special_tag(&"wider_poison"):
 		r += 20.0
 	return r
+
+func _get_field_radius(default_radius: float) -> float:
+	var r := default_radius
+	if weapon_data and weapon_data.field_radius > 0.0:
+		r = weapon_data.field_radius
+	if weapon_data:
+		r += get_range() - weapon_data.range
+	return max(1.0, r)
 
 func _find_nearest_enemy(from_pos: Vector2) -> Node2D:
 	var enemies := get_tree().get_nodes_in_group("enemies")

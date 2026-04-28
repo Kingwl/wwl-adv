@@ -9,7 +9,7 @@ func _activate() -> void:
 	if enemies.is_empty():
 		return
 
-	var first := _find_nearest_enemy(player.global_position, enemies)
+	var first := _find_nearest_enemy(player.global_position, enemies, _get_acquire_range())
 	if not first:
 		return
 
@@ -34,11 +34,13 @@ func _activate() -> void:
 		hit_targets.append(next)
 		current = next
 
-func _find_nearest_enemy(from_pos: Vector2, enemies: Array[Node]) -> Node2D:
+func _find_nearest_enemy(from_pos: Vector2, enemies: Array[Node], max_distance: float = INF) -> Node2D:
 	var nearest: Node2D = null
 	var min_dist := INF
 	for enemy in enemies:
 		var dist := from_pos.distance_to(enemy.global_position)
+		if dist > max_distance:
+			continue
 		if dist < min_dist:
 			min_dist = dist
 			nearest = enemy
@@ -103,3 +105,9 @@ func _get_chain_count() -> int:
 	if has_special_tag(&"chain_1"):
 		return base + 1
 	return base
+
+func _get_acquire_range() -> float:
+	var r := get_range()
+	if weapon_data and weapon_data.acquire_range > 0.0:
+		r = weapon_data.acquire_range + get_range() - weapon_data.range
+	return max(1.0, r)

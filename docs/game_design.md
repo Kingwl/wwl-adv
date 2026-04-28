@@ -25,7 +25,7 @@
 | 属性 | 数值 |
 |------|------|
 | 初始 HP | 100 |
-| 移动速度 | 150 |
+| 移动速度 | 170 |
 | 受击无敌 | 受击后短暂无敌，避免连续扣血 |
 | 死亡 | 播放死亡动画后进入结算 |
 
@@ -128,15 +128,17 @@ exp_required = 15 * 1.2^(level - 1)
 | 初始 HP | `autoload/game_state.gd` | `STARTING_HP = 100` |
 | 初始经验阈值 | `autoload/game_state.gd` | `STARTING_EXP_TO_LEVEL = 15` |
 | 经验增长倍率 | `autoload/game_state.gd` | `pow(1.2, level - 1)` |
-| 玩家移速 | `scripts/player/player.gd` | `move_speed = 150.0` |
+| 玩家移速 | `scripts/player/player.gd` | `move_speed = 170.0` |
 | 敌人基础 HP | `scripts/enemy/enemy.gd` | `_hp = 12` |
 | 敌人基础速度 | `scripts/enemy/enemy.gd` | `_base_speed = 60.0` |
 | 敌人基础伤害 | `scripts/enemy/enemy.gd` | `_damage = 5` |
 | 敌人生成间隔 | `scripts/enemy/enemy_spawner.gd` | `base_spawn_interval = 2.0` |
-| 敌人最小生成距离 | `scripts/enemy/enemy_spawner.gd` | `spawn_radius_min = 450` |
-| 敌人最大生成距离 | `scripts/enemy/enemy_spawner.gd` | `spawn_radius_max = 700` |
-| 经验球磁力距离 | `scripts/drops/exp_orb.gd` | `magnet_distance = 80` + 拾取 bonus |
-| 金币磁力距离 | `scripts/drops/gold_pickup.gd` | `magnet_distance = 80` + 拾取 bonus |
+| 敌人生成距离 | `scripts/enemy/enemy_spawner.gd` | 视口半对角线 + `80~300`（720x1280 下约 `814~1034`） |
+| 火焰瓶火场半径 | `resources/weapons/fire_bottle.tres` | `field_radius = 80` + 等级 / 流派加成 |
+| 毒液罐毒雾半径 | `resources/weapons/poison_vial.tres` | `field_radius = 90` + 等级 / 流派加成 |
+| 电磁链首次索敌 | `resources/weapons/electromagnetic_chain.tres` | `acquire_range = 280`，跳跃距离 `range = 120` |
+| 经验球磁力距离 | `scripts/drops/exp_orb.gd` | `magnet_distance = 120` + 拾取 bonus |
+| 金币磁力距离 | `scripts/drops/gold_pickup.gd` | `magnet_distance = 120` + 拾取 bonus |
 
 ## 待实现 / 未来规划
 

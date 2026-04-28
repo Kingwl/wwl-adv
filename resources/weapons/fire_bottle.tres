@@ -207,6 +207,7 @@ pierce = 0
 heal_amount = 0
 orbit_count = 0
 reflect_percent = 0.0
+field_radius = 80.0
 tags = Array[StringName]([&"范围", &"持续"])
 icon = ExtResource("2_icon")
 max_level = 8

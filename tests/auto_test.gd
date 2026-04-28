@@ -873,6 +873,7 @@ func _phase_weapon_path_tags() -> void:
 		fire.current_path_id = &""
 		fire._recalc_stats()
 		_assert(fire._get_lifetime() == 3.0, "Fire bottle base lifetime is 3.0")
+		_assert(fire._get_fire_radius() == 80.0, "Fire bottle base field radius is 80.0")
 
 		fire.set_path(&"spread")
 		fire.level = 3
@@ -883,7 +884,8 @@ func _phase_weapon_path_tags() -> void:
 		fire.level = 5
 		fire._recalc_stats()
 		fire._apply_path_effects()
-		_assert(fire._get_fire_radius() == fire.get_range() + 20.0, "spread Lv.5 wider_fire adds +20 radius")
+		var expected_fire_radius: float = fire.weapon_data.field_radius + fire.get_range() - fire.weapon_data.range + 20.0
+		_assert(fire._get_fire_radius() == expected_fire_radius, "spread Lv.5 wider_fire adds +20 field radius")
 		await _assert_field_visual("fire")
 
 	# === frost_ring ===
@@ -1038,12 +1040,14 @@ func _phase_weapon_path_tags() -> void:
 		poison.current_path_id = &""
 		poison._recalc_stats()
 		_assert(poison._get_poison_lifetime() == 4.0, "Poison vial base lifetime is 4.0")
+		_assert(poison._get_poison_radius() == 90.0, "Poison vial base field radius is 90.0")
 
 		poison.set_path(&"plague")
 		poison.level = 3
 		poison._recalc_stats()
 		poison._apply_path_effects()
-		_assert(poison._get_poison_radius() == poison.get_range() + 20.0, "plague Lv.3 wider_poison adds +20")
+		var expected_poison_radius: float = poison.weapon_data.field_radius + poison.get_range() - poison.weapon_data.range + 20.0
+		_assert(poison._get_poison_radius() == expected_poison_radius, "plague Lv.3 wider_poison adds +20 field radius")
 		await _assert_field_visual("poison")
 
 	# === rocket_pack ===
@@ -1086,6 +1090,19 @@ func _phase_weapon_path_tags() -> void:
 		chain._recalc_stats()
 		var base_chains: int = chain._get_chain_count()
 		_assert(base_chains >= 1, "Chain base count >= 1")
+		_assert(chain._get_acquire_range() == 280.0, "Chain base acquire range is 280.0")
+		if player:
+			var far_enemy := Node2D.new()
+			far_enemy.global_position = player.global_position + Vector2.RIGHT * (chain._get_acquire_range() + 1.0)
+			var near_enemy := Node2D.new()
+			near_enemy.global_position = player.global_position + Vector2.RIGHT * (chain._get_acquire_range() - 1.0)
+			var mock_enemies: Array[Node] = []
+			mock_enemies.append(far_enemy)
+			_assert(chain._find_nearest_enemy(player.global_position, mock_enemies, chain._get_acquire_range()) == null, "Chain ignores first target outside acquire range")
+			mock_enemies.append(near_enemy)
+			_assert(chain._find_nearest_enemy(player.global_position, mock_enemies, chain._get_acquire_range()) == near_enemy, "Chain acquires first target inside acquire range")
+			far_enemy.free()
+			near_enemy.free()
 
 		chain.set_path(&"conduction")
 		chain.level = 3
@@ -1540,6 +1557,13 @@ func _phase_player_movement() -> void:
 	# Disable _physics_process so our velocity settings are not overwritten
 	player.set_physics_process(false)
 
+	var diagonal_input: Vector2 = player._compose_move_input(Vector2.ONE, Vector2.ZERO)
+	_assert(abs(diagonal_input.length() - 1.0) < 0.01, "Keyboard diagonal input is normalized")
+	var analog_input: Vector2 = player._compose_move_input(Vector2.ZERO, Vector2.RIGHT * 0.5)
+	_assert(abs(analog_input.length() - 0.5) < 0.01, "Joystick analog strength is preserved")
+	var joystick_input: Vector2 = player._compose_move_input(Vector2.LEFT, Vector2.RIGHT * 0.4)
+	_assert(joystick_input.x > 0.0 and abs(joystick_input.length() - 0.4) < 0.01, "Joystick input takes priority when active")
+
 	# Test right movement
 	var start_x: float = player.global_position.x
 	player.velocity = Vector2.RIGHT * player.move_speed
@@ -1571,6 +1595,18 @@ func _phase_player_movement() -> void:
 	var dx: float = player.global_position.x - start_x3
 	_assert(dx > 0, "Player moves with upgraded speed")
 	player.move_speed = prev_speed
+
+	var joystick := preload("res://scenes/ui/virtual_joystick.tscn").instantiate()
+	_game.add_child(joystick)
+	await _wait(0.05)
+	joystick.max_distance = 50.0
+	joystick.deadzone_ratio = 0.2
+	_assert(joystick._direction_from_offset(Vector2.RIGHT * 5.0) == Vector2.ZERO, "Joystick ignores deadzone input")
+	var half_push: Vector2 = joystick._direction_from_offset(Vector2.RIGHT * 30.0)
+	_assert(half_push.x > 0.0 and half_push.length() < 1.0, "Joystick maps partial push to partial strength")
+	var full_push: Vector2 = joystick._direction_from_offset(Vector2.RIGHT * 80.0)
+	_assert(abs(full_push.length() - 1.0) < 0.01, "Joystick clamps full push to unit strength")
+	joystick.queue_free()
 
 	player.set_physics_process(true)
 	await _wait(0.1)
@@ -1727,9 +1763,12 @@ func _phase_enemy_spawner() -> void:
 			pick_counts[1] += 1
 	_assert(pick_counts[1] > pick_counts[0], "Weighted pick favors higher weight enemy")
 
-	# Test spawner properties exist
-	_assert(spawner.spawn_radius_min > 0, "Spawner has positive min radius")
-	_assert(spawner.spawn_radius_max > spawner.spawn_radius_min, "Spawner max radius > min radius")
+	# Test viewport-relative spawn radius
+	var view_radius: float = spawner._get_view_radius()
+	var radius_bounds: Vector2 = spawner._get_spawn_radius_bounds()
+	_assert(spawner.spawn_view_margin_min > 0, "Spawner has positive min view margin")
+	_assert(radius_bounds.x > view_radius, "Spawner min radius is outside visible viewport")
+	_assert(radius_bounds.y > radius_bounds.x, "Spawner max radius > min radius")
 	_assert(spawner.base_spawn_interval > 0, "Spawner has positive base interval")
 
 	# Reset spawner state

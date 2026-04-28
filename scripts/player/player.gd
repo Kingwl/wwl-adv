@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-@export var move_speed: float = 150.0
+@export var move_speed: float = 170.0
 
 var _invincible: bool = false
 var _dying: bool = false
@@ -72,17 +72,7 @@ func _setup_animations() -> void:
 	_sprite.play("idle")
 
 func _physics_process(_delta: float) -> void:
-	var input_dir := Vector2.ZERO
-	input_dir.x = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
-	input_dir.y = Input.get_action_strength("move_down") - Input.get_action_strength("move_up")
-
-	# Virtual joystick input
-	var joystick := get_tree().get_first_node_in_group("virtual_joystick")
-	if joystick:
-		input_dir += joystick.get_direction()
-
-	if input_dir.length() > 0:
-		input_dir = input_dir.normalized()
+	var input_dir := _get_move_input()
 	velocity = input_dir * move_speed
 	move_and_slide()
 
@@ -98,6 +88,25 @@ func _physics_process(_delta: float) -> void:
 	else:
 		if _sprite.animation != "idle":
 			_sprite.play("idle")
+
+func _get_move_input() -> Vector2:
+	var keyboard_dir := Vector2.ZERO
+	keyboard_dir.x = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
+	keyboard_dir.y = Input.get_action_strength("move_down") - Input.get_action_strength("move_up")
+
+	var joystick_dir := Vector2.ZERO
+	var joystick := get_tree().get_first_node_in_group("virtual_joystick")
+	if joystick:
+		joystick_dir = joystick.get_direction()
+
+	return _compose_move_input(keyboard_dir, joystick_dir)
+
+func _compose_move_input(keyboard_dir: Vector2, joystick_dir: Vector2) -> Vector2:
+	if joystick_dir.length_squared() > 0.0001:
+		return joystick_dir.limit_length(1.0)
+	if keyboard_dir.length_squared() > 0.0001:
+		return keyboard_dir.normalized()
+	return Vector2.ZERO
 
 func take_damage(amount: int) -> void:
 	if _invincible or _dying:

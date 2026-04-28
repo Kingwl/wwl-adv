@@ -24,6 +24,8 @@ enum Category { DAMAGE, DEFENSE, BUFF }
 @export var heal_amount: int = 0
 @export var orbit_count: int = 0
 @export var reflect_percent: float = 0.0
+@export var field_radius: float = 0.0
+@export var acquire_range: float = 0.0
 
 @export var tags: Array[StringName] = []
 

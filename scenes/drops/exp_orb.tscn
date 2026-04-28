@@ -15,3 +15,4 @@ script = ExtResource("1_exp")
 shape = SubResource("CircleShape2D_ghi")
 
 [node name="Visual" type="AnimatedSprite2D" parent="."]
+scale = Vector2(1.35, 1.35)

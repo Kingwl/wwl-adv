@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const BASE_PICKUP_RADIUS := 120.0
+
 @onready var _panel: PanelContainer = $Panel
 @onready var _basic_grid: GridContainer = $Panel/ScrollContainer/VBoxContainer/BasicSection/GridContainer
 @onready var _weapons_list: VBoxContainer = $Panel/ScrollContainer/VBoxContainer/WeaponsSection/WeaponsList
@@ -52,7 +54,7 @@ func _refresh() -> void:
 func _refresh_basic_stats() -> void:
 	var player := get_tree().get_first_node_in_group("player")
 	var move_speed: float = player.move_speed if player else 0.0
-	var pickup_radius: float = 50.0 + GameState.run.get("pickup_radius_bonus", 0.0)
+	var pickup_radius: float = BASE_PICKUP_RADIUS + GameState.run.get("pickup_radius_bonus", 0.0)
 
 	var rows := [
 		["生命值", "%d / %d" % [GameState.run.hp, GameState.run.max_hp]],

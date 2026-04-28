@@ -207,6 +207,7 @@ pierce = 0
 heal_amount = 0
 orbit_count = 0
 reflect_percent = 0.0
+acquire_range = 280.0
 tags = Array[StringName]([&"弹体", &"控制"])
 icon = ExtResource("2_icon")
 max_level = 8

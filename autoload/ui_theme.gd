@@ -1,6 +1,6 @@
 extends Node
 
-const UI_FONT: FontFile = preload("res://assets/fonts/NotoSansCJKsc-Regular.otf")
+const UI_FONT: FontFile = preload("res://assets/fonts/NotoSansCJKsc-WWL-Subset.otf")
 const UI_FONT_SIZE := 18
 
 const FONT_THEME_TYPES := [

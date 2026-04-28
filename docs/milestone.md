@@ -105,7 +105,7 @@
 - [ ] 武器组合 / 联动系统（暂不实现，预留扩展）
 
 ### 性能与发布
-- [ ] Web 导出优化（纹理压缩、包体大小）
+- [x] Web 导出优化（字体子集化、排除测试 / 预览资源，当前 Web 包体约 41M）
 - [ ] Android / iOS 导出配置
 - [ ] 发热与帧率测试
 
@@ -121,3 +121,4 @@
 | 自动化测试 | 395 passed, 0 failed |
 | 引擎版本 | Godot 4.x（最近测试 4.6.2，GL Compatibility） |
 | 目标平台 | Web / Android / iOS |
+| Web 导出体积 | 约 41M（index.wasm 36M，index.pck 5.1M） |

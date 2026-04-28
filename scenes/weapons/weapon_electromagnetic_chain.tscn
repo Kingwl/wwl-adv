@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_electromagnetic_chain.gd" id="1_chain"]
+[ext_resource type="Resource" path="res://resources/weapons/electromagnetic_chain.tres" id="2_data"]
+
+[node name="WeaponElectromagneticChain" type="Node"]
+script = ExtResource("1_chain")
+weapon_data = ExtResource("2_data")

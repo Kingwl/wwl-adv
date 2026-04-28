@@ -1,0 +1,65 @@
+extends Node
+## 数据管理器 autoload。负责扫描各类资源目录并提供查询接口。
+
+const WEAPONS_DIR := "res://resources/weapons"
+const ENEMIES_DIR := "res://resources/enemies"
+const UPGRADES_DIR := "res://resources/upgrades"
+
+var _weapons_by_id: Dictionary = {}
+var _enemies_by_id: Dictionary = {}
+var _upgrades_by_id: Dictionary = {}
+
+func _ready() -> void:
+	_load_all_weapons()
+	_load_all_enemies()
+	_load_all_upgrades()
+
+func _load_resources(dir_path: String, target_dict: Dictionary) -> void:
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		push_warning("DataManager: 资源目录尚未创建：%s" % dir_path)
+		return
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while entry != "":
+		if not dir.current_is_dir() and entry.ends_with(".tres"):
+			var path := "%s/%s" % [dir_path, entry]
+			var res: Resource = load(path)
+			if res and "id" in res:
+				target_dict[res.id] = res
+		entry = dir.get_next()
+	dir.list_dir_end()
+
+func _load_all_weapons() -> void:
+	_load_resources(WEAPONS_DIR, _weapons_by_id)
+
+func _load_all_enemies() -> void:
+	_load_resources(ENEMIES_DIR, _enemies_by_id)
+
+func _load_all_upgrades() -> void:
+	_load_resources(UPGRADES_DIR, _upgrades_by_id)
+
+func get_weapon(id: String) -> Resource:
+	return _weapons_by_id.get(id)
+
+func all_weapons() -> Array:
+	return _weapons_by_id.values()
+
+func get_enemy(id: String) -> Resource:
+	return _enemies_by_id.get(id)
+
+func all_enemies() -> Array:
+	return _enemies_by_id.values()
+
+func get_upgrade(id: String) -> Resource:
+	return _upgrades_by_id.get(id)
+
+func all_upgrades() -> Array:
+	return _upgrades_by_id.values()
+
+func get_random_upgrades(count: int, filter: Callable = Callable()) -> Array:
+	var pool := all_upgrades()
+	if filter.is_valid():
+		pool = pool.filter(filter)
+	pool.shuffle()
+	return pool.slice(0, count)

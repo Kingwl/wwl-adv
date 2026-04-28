@@ -1,0 +1,24 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/projectile.gd" id="1_proj"]
+[ext_resource type="Texture2D" path="res://assets/art/weapons/projectile_arrow.png" id="2_tex"]
+[ext_resource type="Shader" path="res://assets/art/chroma_key.gdshader" id="3_shader"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_proj"]
+radius = 6.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_proj"]
+shader = ExtResource("3_shader")
+
+[node name="Projectile" type="Area2D"]
+z_index = 8
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("1_proj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_proj")
+
+[node name="Visual" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_proj")
+texture = ExtResource("2_tex")

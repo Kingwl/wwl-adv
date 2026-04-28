@@ -1,0 +1,237 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=29 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/art/weapons/icons_sliced/icon_04.png" id="2_icon"]
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_thorns"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path.gd" id="90_path"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path_level.gd" id="91_level"]
+
+[sub_resource type="Resource" id="Resource_thor_p0_l2"]
+script = ExtResource("91_level")
+level = 2
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"reflect_plus_10"
+description = "反弹比例+10%"
+
+[sub_resource type="Resource" id="Resource_thor_p0_l3"]
+script = ExtResource("91_level")
+level = 3
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 10
+special_tag = &""
+description = "范围+10"
+
+[sub_resource type="Resource" id="Resource_thor_p0_l4"]
+script = ExtResource("91_level")
+level = 4
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"reflect_plus_10"
+description = "反弹比例+10%"
+
+[sub_resource type="Resource" id="Resource_thor_p0_l5"]
+script = ExtResource("91_level")
+level = 5
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 10
+special_tag = &""
+description = "范围+10"
+
+[sub_resource type="Resource" id="Resource_thor_p0_l6"]
+script = ExtResource("91_level")
+level = 6
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"reflect_plus_10"
+description = "反弹比例+10%"
+
+[sub_resource type="Resource" id="Resource_thor_p0_l7"]
+script = ExtResource("91_level")
+level = 7
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 10
+special_tag = &""
+description = "范围+10"
+
+[sub_resource type="Resource" id="Resource_thor_p0_l8"]
+script = ExtResource("91_level")
+level = 8
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"reflect_plus_10"
+description = "反弹比例+10%"
+
+[sub_resource type="Resource" id="Resource_thor_path0"]
+script = ExtResource("90_path")
+path_id = &"spikes"
+display_name = "尖刺"
+description = "追求反弹比例"
+levels = Array[ExtResource("91_level")]([SubResource("Resource_thor_p0_l2"), SubResource("Resource_thor_p0_l3"), SubResource("Resource_thor_p0_l4"), SubResource("Resource_thor_p0_l5"), SubResource("Resource_thor_p0_l6"), SubResource("Resource_thor_p0_l7"), SubResource("Resource_thor_p0_l8")])
+
+[sub_resource type="Resource" id="Resource_thor_p1_l2"]
+script = ExtResource("91_level")
+level = 2
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 10
+special_tag = &""
+description = "范围+10"
+
+[sub_resource type="Resource" id="Resource_thor_p1_l3"]
+script = ExtResource("91_level")
+level = 3
+damage_bonus = 2
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"thorns_damage"
+description = "反弹伤害+2"
+
+[sub_resource type="Resource" id="Resource_thor_p1_l4"]
+script = ExtResource("91_level")
+level = 4
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 10
+special_tag = &""
+description = "范围+10"
+
+[sub_resource type="Resource" id="Resource_thor_p1_l5"]
+script = ExtResource("91_level")
+level = 5
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"wider_thorns"
+description = "范围+15"
+
+[sub_resource type="Resource" id="Resource_thor_p1_l6"]
+script = ExtResource("91_level")
+level = 6
+damage_bonus = 3
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"thorns_damage"
+description = "反弹伤害+3"
+
+[sub_resource type="Resource" id="Resource_thor_p1_l7"]
+script = ExtResource("91_level")
+level = 7
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 10
+special_tag = &""
+description = "范围+10"
+
+[sub_resource type="Resource" id="Resource_thor_p1_l8"]
+script = ExtResource("91_level")
+level = 8
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 15
+special_tag = &""
+description = "范围+15"
+
+[sub_resource type="Resource" id="Resource_thor_path1"]
+script = ExtResource("90_path")
+path_id = &"barbs"
+display_name = "倒钩"
+description = "追求范围与额外伤害"
+levels = Array[ExtResource("91_level")]([SubResource("Resource_thor_p1_l2"), SubResource("Resource_thor_p1_l3"), SubResource("Resource_thor_p1_l4"), SubResource("Resource_thor_p1_l5"), SubResource("Resource_thor_p1_l6"), SubResource("Resource_thor_p1_l7"), SubResource("Resource_thor_p1_l8")])
+
+[sub_resource type="Resource" id="Resource_thor_p2_l2"]
+script = ExtResource("91_level")
+level = 2
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 10
+special_tag = &""
+description = "范围+10"
+
+[sub_resource type="Resource" id="Resource_thor_p2_l3"]
+script = ExtResource("91_level")
+level = 3
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"thorns_heal"
+description = "反弹时恢复1点生命"
+
+[sub_resource type="Resource" id="Resource_thor_p2_l4"]
+script = ExtResource("91_level")
+level = 4
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 10
+special_tag = &""
+description = "范围+10"
+
+[sub_resource type="Resource" id="Resource_thor_p2_l5"]
+script = ExtResource("91_level")
+level = 5
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"thorns_heal"
+description = "反弹时恢复1点生命"
+
+[sub_resource type="Resource" id="Resource_thor_p2_l6"]
+script = ExtResource("91_level")
+level = 6
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 10
+special_tag = &""
+description = "范围+10"
+
+[sub_resource type="Resource" id="Resource_thor_p2_l7"]
+script = ExtResource("91_level")
+level = 7
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"thorns_heal"
+description = "反弹时恢复1点生命"
+
+[sub_resource type="Resource" id="Resource_thor_p2_l8"]
+script = ExtResource("91_level")
+level = 8
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 15
+special_tag = &"thorns_vengeance"
+description = "范围+15，反弹时恢复2点生命"
+
+[sub_resource type="Resource" id="Resource_thor_path2"]
+script = ExtResource("90_path")
+path_id = &"vengeance"
+display_name = "复仇"
+description = "追求反击恢复"
+levels = Array[ExtResource("91_level")]([SubResource("Resource_thor_p2_l2"), SubResource("Resource_thor_p2_l3"), SubResource("Resource_thor_p2_l4"), SubResource("Resource_thor_p2_l5"), SubResource("Resource_thor_p2_l6"), SubResource("Resource_thor_p2_l7"), SubResource("Resource_thor_p2_l8")])
+
+[resource]
+script = ExtResource("1_thorns")
+id = &"thorns"
+display_name = "荆棘护甲"
+description = "受伤时反弹伤害给周围敌人"
+weapon_type = 2
+category = 1
+damage = 0
+cooldown = 0.0
+range = 60.0
+projectile_speed = 0.0
+projectile_count = 0
+pierce = 0
+heal_amount = 0
+orbit_count = 0
+reflect_percent = 0.5
+tags = Array[StringName]([&"防御", &"反击"])
+icon = ExtResource("2_icon")
+max_level = 8
+paths = Array[ExtResource("90_path")]([SubResource("Resource_thor_path0"), SubResource("Resource_thor_path1"), SubResource("Resource_thor_path2")])

@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_frost_ring.gd" id="1_frost"]
+[ext_resource type="Resource" path="res://resources/weapons/frost_ring.tres" id="2_data"]
+
+[node name="WeaponFrostRing" type="Node"]
+script = ExtResource("1_frost")
+weapon_data = ExtResource("2_data")

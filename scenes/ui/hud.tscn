@@ -1,0 +1,123 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp"]
+bg_color = Color(0.85, 0.2, 0.2, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_exp"]
+bg_color = Color(0.23, 0.65, 1, 1)
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="TopBar" type="HBoxContainer" parent="."]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 50.0
+offset_left = 16.0
+offset_right = -16.0
+theme_override_constants/separation = 0
+
+[node name="KillLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "击杀: 0"
+theme_override_font_sizes/font_size = 20
+
+[node name="TimeLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 1
+text = "00:00"
+theme_override_font_sizes/font_size = 24
+
+[node name="GoldLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 2
+text = "金币: 0"
+theme_override_font_sizes/font_size = 20
+
+[node name="StatsButton" type="Button" parent="TopBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(48, 28)
+text = "属性"
+theme_override_font_sizes/font_size = 14
+
+[node name="HPPanel" type="Control" parent="."]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -250.0
+offset_right = 340.0
+offset_bottom = -200.0
+
+[node name="HPBar" type="ProgressBar" parent="HPPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 28.0
+theme_override_styles/fill = SubResource("StyleBoxFlat_hp")
+
+[node name="HPLabel" type="Label" parent="HPPanel/HPBar"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -40.0
+offset_top = -10.0
+offset_right = 40.0
+offset_bottom = 10.0
+text = "100 / 100"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 14
+
+[node name="WeaponBar" type="HBoxContainer" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -180.0
+offset_right = 200.0
+offset_bottom = -110.0
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="EXPPanel" type="Control" parent="."]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -340.0
+offset_top = -100.0
+offset_right = -20.0
+offset_bottom = -60.0
+
+[node name="ExpBar" type="ProgressBar" parent="EXPPanel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 20.0
+theme_override_styles/fill = SubResource("StyleBoxFlat_exp")
+
+[node name="LevelLabel" type="Label" parent="EXPPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -40.0
+offset_top = -30.0
+offset_right = 40.0
+offset_bottom = -6.0
+text = "Lv.1"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18

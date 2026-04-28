@@ -1,0 +1,237 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=29 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/art/weapons/icons_sliced/icon_10.png" id="2_icon"]
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_poison_vial"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path.gd" id="90_path"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path_level.gd" id="91_level"]
+
+[sub_resource type="Resource" id="Resource_pois_p0_l2"]
+script = ExtResource("91_level")
+level = 2
+damage_bonus = 1
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+1"
+
+[sub_resource type="Resource" id="Resource_pois_p0_l3"]
+script = ExtResource("91_level")
+level = 3
+damage_bonus = 1
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+1"
+
+[sub_resource type="Resource" id="Resource_pois_p0_l4"]
+script = ExtResource("91_level")
+level = 4
+damage_bonus = 1
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+1"
+
+[sub_resource type="Resource" id="Resource_pois_p0_l5"]
+script = ExtResource("91_level")
+level = 5
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"stronger_poison"
+description = "毒素伤害+1"
+
+[sub_resource type="Resource" id="Resource_pois_p0_l6"]
+script = ExtResource("91_level")
+level = 6
+damage_bonus = 1
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+1"
+
+[sub_resource type="Resource" id="Resource_pois_p0_l7"]
+script = ExtResource("91_level")
+level = 7
+damage_bonus = 1
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+1"
+
+[sub_resource type="Resource" id="Resource_pois_p0_l8"]
+script = ExtResource("91_level")
+level = 8
+damage_bonus = 2
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"deadly_poison"
+description = "毒素伤害+2，伤害+2"
+
+[sub_resource type="Resource" id="Resource_pois_path0"]
+script = ExtResource("90_path")
+path_id = &"toxic"
+display_name = "剧毒"
+description = "追求毒素伤害"
+levels = Array[ExtResource("91_level")]([SubResource("Resource_pois_p0_l2"), SubResource("Resource_pois_p0_l3"), SubResource("Resource_pois_p0_l4"), SubResource("Resource_pois_p0_l5"), SubResource("Resource_pois_p0_l6"), SubResource("Resource_pois_p0_l7"), SubResource("Resource_pois_p0_l8")])
+
+[sub_resource type="Resource" id="Resource_pois_p1_l2"]
+script = ExtResource("91_level")
+level = 2
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 20
+special_tag = &""
+description = "范围+20"
+
+[sub_resource type="Resource" id="Resource_pois_p1_l3"]
+script = ExtResource("91_level")
+level = 3
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"wider_poison"
+description = "毒雾范围+20"
+
+[sub_resource type="Resource" id="Resource_pois_p1_l4"]
+script = ExtResource("91_level")
+level = 4
+damage_bonus = 0
+cooldown_bonus = -0.3
+range_bonus = 0
+special_tag = &""
+description = "冷却-0.3秒"
+
+[sub_resource type="Resource" id="Resource_pois_p1_l5"]
+script = ExtResource("91_level")
+level = 5
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 20
+special_tag = &"longer_poison"
+description = "毒雾持续时间+2秒"
+
+[sub_resource type="Resource" id="Resource_pois_p1_l6"]
+script = ExtResource("91_level")
+level = 6
+damage_bonus = 1
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+1"
+
+[sub_resource type="Resource" id="Resource_pois_p1_l7"]
+script = ExtResource("91_level")
+level = 7
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 20
+special_tag = &""
+description = "范围+20"
+
+[sub_resource type="Resource" id="Resource_pois_p1_l8"]
+script = ExtResource("91_level")
+level = 8
+damage_bonus = 0
+cooldown_bonus = -0.3
+range_bonus = 20
+special_tag = &"eternal_poison"
+description = "范围+20，冷却-0.3秒，持续时间+2秒"
+
+[sub_resource type="Resource" id="Resource_pois_path1"]
+script = ExtResource("90_path")
+path_id = &"plague"
+display_name = "瘟疫"
+description = "追求大范围长时间"
+levels = Array[ExtResource("91_level")]([SubResource("Resource_pois_p1_l2"), SubResource("Resource_pois_p1_l3"), SubResource("Resource_pois_p1_l4"), SubResource("Resource_pois_p1_l5"), SubResource("Resource_pois_p1_l6"), SubResource("Resource_pois_p1_l7"), SubResource("Resource_pois_p1_l8")])
+
+[sub_resource type="Resource" id="Resource_pois_p2_l2"]
+script = ExtResource("91_level")
+level = 2
+damage_bonus = 0
+cooldown_bonus = -0.3
+range_bonus = 0
+special_tag = &""
+description = "冷却-0.3秒"
+
+[sub_resource type="Resource" id="Resource_pois_p2_l3"]
+script = ExtResource("91_level")
+level = 3
+damage_bonus = 1
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+1"
+
+[sub_resource type="Resource" id="Resource_pois_p2_l4"]
+script = ExtResource("91_level")
+level = 4
+damage_bonus = 0
+cooldown_bonus = -0.3
+range_bonus = 0
+special_tag = &""
+description = "冷却-0.3秒"
+
+[sub_resource type="Resource" id="Resource_pois_p2_l5"]
+script = ExtResource("91_level")
+level = 5
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"faster_throw"
+description = "冷却-0.2秒"
+
+[sub_resource type="Resource" id="Resource_pois_p2_l6"]
+script = ExtResource("91_level")
+level = 6
+damage_bonus = 1
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+1"
+
+[sub_resource type="Resource" id="Resource_pois_p2_l7"]
+script = ExtResource("91_level")
+level = 7
+damage_bonus = 0
+cooldown_bonus = -0.3
+range_bonus = 0
+special_tag = &""
+description = "冷却-0.3秒"
+
+[sub_resource type="Resource" id="Resource_pois_p2_l8"]
+script = ExtResource("91_level")
+level = 8
+damage_bonus = 2
+cooldown_bonus = -0.3
+range_bonus = 0
+special_tag = &"double_throw"
+description = "伤害+2，冷却-0.3秒"
+
+[sub_resource type="Resource" id="Resource_pois_path2"]
+script = ExtResource("90_path")
+path_id = &"venom"
+display_name = "猛毒"
+description = "追求高频率"
+levels = Array[ExtResource("91_level")]([SubResource("Resource_pois_p2_l2"), SubResource("Resource_pois_p2_l3"), SubResource("Resource_pois_p2_l4"), SubResource("Resource_pois_p2_l5"), SubResource("Resource_pois_p2_l6"), SubResource("Resource_pois_p2_l7"), SubResource("Resource_pois_p2_l8")])
+
+[resource]
+script = ExtResource("1_poison_vial")
+id = &"poison_vial"
+display_name = "毒液罐"
+description = "命中后地面留下毒雾，持续伤害敌人"
+weapon_type = 2
+category = 0
+damage = 6
+cooldown = 3.0
+range = 200.0
+projectile_speed = 0.0
+projectile_count = 1
+pierce = 0
+heal_amount = 0
+orbit_count = 0
+reflect_percent = 0.0
+tags = Array[StringName]([&"范围", &"持续"])
+icon = ExtResource("2_icon")
+max_level = 8
+paths = Array[ExtResource("90_path")]([SubResource("Resource_pois_path0"), SubResource("Resource_pois_path1"), SubResource("Resource_pois_path2")])

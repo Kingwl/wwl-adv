@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_orbit.gd" id="1_orbit"]
+[ext_resource type="Resource" path="res://resources/weapons/orbit.tres" id="2_data"]
+
+[node name="WeaponOrbit" type="Node"]
+script = ExtResource("1_orbit")
+weapon_data = ExtResource("2_data")

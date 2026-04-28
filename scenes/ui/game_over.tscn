@@ -1,0 +1,114 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/game_over.gd" id="1_go"]
+
+[node name="GameOver" type="CanvasLayer"]
+visible = false
+script = ExtResource("1_go")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -260.0
+offset_top = -260.0
+offset_right = 260.0
+offset_bottom = 260.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+text = "游戏结束"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 40
+
+[node name="Stats" type="VBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TimeRow" type="HBoxContainer" parent="Panel/VBoxContainer/Stats"]
+layout_mode = 2
+alignment = 1
+
+[node name="TimeLabel" type="Label" parent="Panel/VBoxContainer/Stats/TimeRow"]
+layout_mode = 2
+text = "存活时间："
+
+[node name="TimeValue" type="Label" parent="Panel/VBoxContainer/Stats/TimeRow"]
+layout_mode = 2
+text = "00:00"
+
+[node name="KillsRow" type="HBoxContainer" parent="Panel/VBoxContainer/Stats"]
+layout_mode = 2
+alignment = 1
+
+[node name="KillsLabel" type="Label" parent="Panel/VBoxContainer/Stats/KillsRow"]
+layout_mode = 2
+text = "击杀数："
+
+[node name="KillsValue" type="Label" parent="Panel/VBoxContainer/Stats/KillsRow"]
+layout_mode = 2
+text = "0"
+
+[node name="LevelRow" type="HBoxContainer" parent="Panel/VBoxContainer/Stats"]
+layout_mode = 2
+alignment = 1
+
+[node name="LevelLabel" type="Label" parent="Panel/VBoxContainer/Stats/LevelRow"]
+layout_mode = 2
+text = "达到等级："
+
+[node name="LevelValue" type="Label" parent="Panel/VBoxContainer/Stats/LevelRow"]
+layout_mode = 2
+text = "Lv.1"
+
+[node name="GoldRow" type="HBoxContainer" parent="Panel/VBoxContainer/Stats"]
+layout_mode = 2
+alignment = 1
+
+[node name="GoldLabel" type="Label" parent="Panel/VBoxContainer/Stats/GoldRow"]
+layout_mode = 2
+text = "金币获得："
+
+[node name="GoldValue" type="Label" parent="Panel/VBoxContainer/Stats/GoldRow"]
+layout_mode = 2
+text = "0"
+
+[node name="WeaponsSection" type="VBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="WeaponsTitle" type="Label" parent="Panel/VBoxContainer/WeaponsSection"]
+layout_mode = 2
+text = "本局武器"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
+
+[node name="WeaponsContainer" type="HBoxContainer" parent="Panel/VBoxContainer/WeaponsSection"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="Spacer" type="Control" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="RestartButton" type="Button" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(200, 48)
+layout_mode = 2
+text = "再来一局"
+
+[node name="QuitButton" type="Button" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(200, 48)
+layout_mode = 2
+text = "返回主菜单"
+
+[connection signal="pressed" from="Panel/VBoxContainer/RestartButton" to="." method="_on_restart_pressed"]
+[connection signal="pressed" from="Panel/VBoxContainer/QuitButton" to="." method="_on_quit_pressed"]

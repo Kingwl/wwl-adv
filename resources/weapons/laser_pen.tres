@@ -1,0 +1,237 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=29 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/art/weapons/icons_sliced/icon_12.png" id="2_icon"]
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_laser_pen"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path.gd" id="90_path"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path_level.gd" id="91_level"]
+
+[sub_resource type="Resource" id="Resource_lase_p0_l2"]
+script = ExtResource("91_level")
+level = 2
+damage_bonus = 2
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+2"
+
+[sub_resource type="Resource" id="Resource_lase_p0_l3"]
+script = ExtResource("91_level")
+level = 3
+damage_bonus = 2
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+2"
+
+[sub_resource type="Resource" id="Resource_lase_p0_l4"]
+script = ExtResource("91_level")
+level = 4
+damage_bonus = 0
+cooldown_bonus = -0.2
+range_bonus = 0
+special_tag = &""
+description = "冷却-0.2秒"
+
+[sub_resource type="Resource" id="Resource_lase_p0_l5"]
+script = ExtResource("91_level")
+level = 5
+damage_bonus = 3
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"wider_beam"
+description = "激光宽度+50%"
+
+[sub_resource type="Resource" id="Resource_lase_p0_l6"]
+script = ExtResource("91_level")
+level = 6
+damage_bonus = 3
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+3"
+
+[sub_resource type="Resource" id="Resource_lase_p0_l7"]
+script = ExtResource("91_level")
+level = 7
+damage_bonus = 0
+cooldown_bonus = -0.2
+range_bonus = 0
+special_tag = &""
+description = "冷却-0.2秒"
+
+[sub_resource type="Resource" id="Resource_lase_p0_l8"]
+script = ExtResource("91_level")
+level = 8
+damage_bonus = 5
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"intense_beam"
+description = "伤害+5，激光宽度+100%"
+
+[sub_resource type="Resource" id="Resource_lase_path0"]
+script = ExtResource("90_path")
+path_id = &"beam"
+display_name = "光束"
+description = "追求极致伤害"
+levels = Array[ExtResource("91_level")]([SubResource("Resource_lase_p0_l2"), SubResource("Resource_lase_p0_l3"), SubResource("Resource_lase_p0_l4"), SubResource("Resource_lase_p0_l5"), SubResource("Resource_lase_p0_l6"), SubResource("Resource_lase_p0_l7"), SubResource("Resource_lase_p0_l8")])
+
+[sub_resource type="Resource" id="Resource_lase_p1_l2"]
+script = ExtResource("91_level")
+level = 2
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 50
+special_tag = &""
+description = "射程+50"
+
+[sub_resource type="Resource" id="Resource_lase_p1_l3"]
+script = ExtResource("91_level")
+level = 3
+damage_bonus = 2
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"pierce_beam"
+description = "激光可穿透1个敌人"
+
+[sub_resource type="Resource" id="Resource_lase_p1_l4"]
+script = ExtResource("91_level")
+level = 4
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 50
+special_tag = &""
+description = "射程+50"
+
+[sub_resource type="Resource" id="Resource_lase_p1_l5"]
+script = ExtResource("91_level")
+level = 5
+damage_bonus = 3
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+3"
+
+[sub_resource type="Resource" id="Resource_lase_p1_l6"]
+script = ExtResource("91_level")
+level = 6
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 50
+special_tag = &""
+description = "射程+50"
+
+[sub_resource type="Resource" id="Resource_lase_p1_l7"]
+script = ExtResource("91_level")
+level = 7
+damage_bonus = 3
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+3"
+
+[sub_resource type="Resource" id="Resource_lase_p1_l8"]
+script = ExtResource("91_level")
+level = 8
+damage_bonus = 0
+cooldown_bonus = -0.3
+range_bonus = 50
+special_tag = &"extended_range"
+description = "射程+50，冷却-0.3秒"
+
+[sub_resource type="Resource" id="Resource_lase_path1"]
+script = ExtResource("90_path")
+path_id = &"sniper"
+display_name = "狙击"
+description = "追求射程与穿透"
+levels = Array[ExtResource("91_level")]([SubResource("Resource_lase_p1_l2"), SubResource("Resource_lase_p1_l3"), SubResource("Resource_lase_p1_l4"), SubResource("Resource_lase_p1_l5"), SubResource("Resource_lase_p1_l6"), SubResource("Resource_lase_p1_l7"), SubResource("Resource_lase_p1_l8")])
+
+[sub_resource type="Resource" id="Resource_lase_p2_l2"]
+script = ExtResource("91_level")
+level = 2
+damage_bonus = 0
+cooldown_bonus = -0.3
+range_bonus = 0
+special_tag = &""
+description = "冷却-0.3秒"
+
+[sub_resource type="Resource" id="Resource_lase_p2_l3"]
+script = ExtResource("91_level")
+level = 3
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"dual_beam"
+description = "同时发射2道激光"
+
+[sub_resource type="Resource" id="Resource_lase_p2_l4"]
+script = ExtResource("91_level")
+level = 4
+damage_bonus = 1
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+1"
+
+[sub_resource type="Resource" id="Resource_lase_p2_l5"]
+script = ExtResource("91_level")
+level = 5
+damage_bonus = 0
+cooldown_bonus = -0.3
+range_bonus = 0
+special_tag = &""
+description = "冷却-0.3秒"
+
+[sub_resource type="Resource" id="Resource_lase_p2_l6"]
+script = ExtResource("91_level")
+level = 6
+damage_bonus = 0
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &"triple_beam"
+description = "同时发射3道激光"
+
+[sub_resource type="Resource" id="Resource_lase_p2_l7"]
+script = ExtResource("91_level")
+level = 7
+damage_bonus = 2
+cooldown_bonus = 0.0
+range_bonus = 0
+special_tag = &""
+description = "伤害+2"
+
+[sub_resource type="Resource" id="Resource_lase_p2_l8"]
+script = ExtResource("91_level")
+level = 8
+damage_bonus = 0
+cooldown_bonus = -0.4
+range_bonus = 0
+special_tag = &""
+description = "冷却-0.4秒"
+
+[sub_resource type="Resource" id="Resource_lase_path2"]
+script = ExtResource("90_path")
+path_id = &"rapid"
+display_name = "速射"
+description = "追求频率与数量"
+levels = Array[ExtResource("91_level")]([SubResource("Resource_lase_p2_l2"), SubResource("Resource_lase_p2_l3"), SubResource("Resource_lase_p2_l4"), SubResource("Resource_lase_p2_l5"), SubResource("Resource_lase_p2_l6"), SubResource("Resource_lase_p2_l7"), SubResource("Resource_lase_p2_l8")])
+
+[resource]
+script = ExtResource("1_laser_pen")
+id = &"laser_pen"
+display_name = "激光笔"
+description = "向最近敌人方向发射直线激光"
+weapon_type = 2
+category = 0
+damage = 5
+cooldown = 1.5
+range = 250.0
+projectile_speed = 0.0
+projectile_count = 1
+pierce = 0
+heal_amount = 0
+orbit_count = 0
+reflect_percent = 0.0
+tags = Array[StringName]([&"范围", &"持续"])
+icon = ExtResource("2_icon")
+max_level = 8
+paths = Array[ExtResource("90_path")]([SubResource("Resource_lase_path0"), SubResource("Resource_lase_path1"), SubResource("Resource_lase_path2")])

@@ -1,0 +1,192 @@
+extends CanvasLayer
+
+@onready var _time_label: Label = $TopBar/TimeLabel
+@onready var _kill_label: Label = $TopBar/KillLabel
+@onready var _gold_label: Label = $TopBar/GoldLabel
+@onready var _hp_bar: ProgressBar = $HPPanel/HPBar
+@onready var _hp_label: Label = $HPPanel/HPBar/HPLabel
+@onready var _exp_bar: ProgressBar = $EXPPanel/ExpBar
+@onready var _level_label: Label = $EXPPanel/LevelLabel
+@onready var _weapon_bar: HBoxContainer = $WeaponBar
+@onready var _stats_button: Button = $TopBar/StatsButton
+
+var _slot_style_normal: StyleBoxFlat
+var _slot_style_max: StyleBoxFlat
+
+func _ready() -> void:
+	_setup_bar_styles()
+	_add_gold_icon()
+	_add_heart_icon()
+	_init_weapon_slots()
+	_stats_button.pressed.connect(_on_stats_pressed)
+	GameState.hp_changed.connect(_on_hp_changed)
+	GameState.exp_changed.connect(_on_exp_changed)
+	GameState.gold_changed.connect(_on_gold_changed)
+	GameState.run_started.connect(_on_run_started)
+	_on_run_started()
+
+func _process(_delta: float) -> void:
+	_time_label.text = GameState.get_time_string()
+	_kill_label.text = "击杀: %d" % GameState.run.kills
+	_update_weapon_bar()
+
+func _init_weapon_slots() -> void:
+	_slot_style_normal = StyleBoxFlat.new()
+	_slot_style_normal.bg_color = Color(0.06, 0.07, 0.1, 0.9)
+	_slot_style_normal.border_color = Color(0.25, 0.3, 0.45, 1.0)
+	_slot_style_normal.border_width_left = 2
+	_slot_style_normal.border_width_top = 2
+	_slot_style_normal.border_width_right = 2
+	_slot_style_normal.border_width_bottom = 2
+
+	_slot_style_max = StyleBoxFlat.new()
+	_slot_style_max.bg_color = Color(0.1, 0.08, 0.02, 0.95)
+	_slot_style_max.border_color = Color(0.95, 0.78, 0.25, 1.0)
+	_slot_style_max.border_width_left = 2
+	_slot_style_max.border_width_top = 2
+	_slot_style_max.border_width_right = 2
+	_slot_style_max.border_width_bottom = 2
+
+	for i in range(6):
+		var slot := PanelContainer.new()
+		slot.custom_minimum_size = Vector2(56, 56)
+		slot.name = "Slot%d" % i
+		slot.add_theme_stylebox_override("panel", _slot_style_normal)
+
+		var vbox := VBoxContainer.new()
+		vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+
+		var icon_container := Control.new()
+		icon_container.name = "IconContainer"
+		icon_container.custom_minimum_size = Vector2(28, 28)
+		icon_container.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
+		var icon_rect := TextureRect.new()
+		icon_rect.name = "IconRect"
+		icon_rect.anchor_right = 1.0
+		icon_rect.anchor_bottom = 1.0
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+
+		var img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
+		img.fill(Color(0, 0, 0, 0.6))
+		var cooldown_tex := ImageTexture.create_from_image(img)
+
+		var cooldown_overlay := TextureProgressBar.new()
+		cooldown_overlay.name = "CooldownOverlay"
+		cooldown_overlay.anchor_right = 1.0
+		cooldown_overlay.anchor_bottom = 1.0
+		cooldown_overlay.texture_progress = cooldown_tex
+		cooldown_overlay.fill_mode = TextureProgressBar.FILL_BOTTOM_TO_TOP
+		cooldown_overlay.max_value = 1.0
+		cooldown_overlay.value = 0.0
+		cooldown_overlay.nine_patch_stretch = true
+
+		icon_container.add_child(icon_rect)
+		icon_container.add_child(cooldown_overlay)
+
+		var level_label := Label.new()
+		level_label.name = "LevelLabel"
+		level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		level_label.add_theme_font_size_override("font_size", 11)
+		level_label.text = ""
+
+		vbox.add_child(icon_container)
+		vbox.add_child(level_label)
+		slot.add_child(vbox)
+		_weapon_bar.add_child(slot)
+
+func _update_weapon_bar() -> void:
+	var player := get_tree().get_first_node_in_group("player")
+	if not player:
+		return
+	var weapons := player.get_node_or_null("Weapons")
+	if not weapons:
+		return
+
+	var slots := _weapon_bar.get_children()
+	var weapon_idx := 0
+	for w in weapons.get_children():
+		if w is WeaponBase and w.weapon_data:
+			if weapon_idx < slots.size():
+				var slot: PanelContainer = slots[weapon_idx]
+				var vbox := slot.get_child(0)
+				var icon_container: Control = vbox.get_node("IconContainer")
+				var icon_rect: TextureRect = icon_container.get_node("IconRect")
+				var cooldown_overlay: TextureProgressBar = icon_container.get_node("CooldownOverlay")
+				var level_label: Label = vbox.get_node("LevelLabel")
+				icon_rect.texture = w.weapon_data.icon
+				cooldown_overlay.value = w.get_cooldown_progress()
+				level_label.text = "Lv.%d" % w.level
+				if w.level >= w.weapon_data.max_level:
+					slot.add_theme_stylebox_override("panel", _slot_style_max)
+				else:
+					slot.add_theme_stylebox_override("panel", _slot_style_normal)
+				weapon_idx += 1
+
+	for i in range(weapon_idx, slots.size()):
+		var slot: PanelContainer = slots[i]
+		var vbox := slot.get_child(0)
+		var icon_container: Control = vbox.get_node("IconContainer")
+		var icon_rect: TextureRect = icon_container.get_node("IconRect")
+		var cooldown_overlay: TextureProgressBar = icon_container.get_node("CooldownOverlay")
+		var level_label: Label = vbox.get_node("LevelLabel")
+		icon_rect.texture = null
+		cooldown_overlay.value = 0.0
+		level_label.text = ""
+		slot.add_theme_stylebox_override("panel", _slot_style_normal)
+
+func _setup_bar_styles() -> void:
+	var hp_fill := StyleBoxTexture.new()
+	hp_fill.texture = preload("res://assets/art/ui/hp_bar_fill.png")
+	hp_fill.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	hp_fill.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	_hp_bar.add_theme_stylebox_override("fill", hp_fill)
+
+	var exp_fill := StyleBoxTexture.new()
+	exp_fill.texture = preload("res://assets/art/ui/exp_bar_fill.png")
+	exp_fill.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	exp_fill.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	_exp_bar.add_theme_stylebox_override("fill", exp_fill)
+
+func _add_gold_icon() -> void:
+	var icon := TextureRect.new()
+	icon.texture = preload("res://assets/art/ui/icon_gold.png")
+	icon.custom_minimum_size = Vector2(20, 20)
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_gold_label.get_parent().add_child(icon)
+	_gold_label.get_parent().move_child(icon, _gold_label.get_index())
+
+func _add_heart_icon() -> void:
+	var icon := TextureRect.new()
+	icon.texture = preload("res://assets/art/ui/icon_heart.png")
+	icon.custom_minimum_size = Vector2(24, 24)
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon.position = Vector2(-28, 2)
+	_hp_bar.add_sibling(icon)
+
+func _on_run_started() -> void:
+	_on_hp_changed(GameState.run.hp, GameState.run.max_hp)
+	_on_exp_changed(GameState.run.exp, GameState.run.exp_to_next_level)
+	_on_gold_changed(GameState.run.gold)
+
+func _on_hp_changed(current: int, max_hp: int) -> void:
+	_hp_bar.max_value = max_hp
+	_hp_bar.value = current
+	_hp_label.text = "%d / %d" % [current, max_hp]
+
+func _on_exp_changed(current: int, required: int) -> void:
+	_exp_bar.max_value = required
+	_exp_bar.value = current
+	_level_label.text = "Lv.%d" % GameState.run.level
+
+func _on_gold_changed(amount: int) -> void:
+	_gold_label.text = "金币: %d" % amount
+
+func _on_stats_pressed() -> void:
+	var stats_panel := get_tree().current_scene.get_node_or_null("StatsPanel")
+	if stats_panel:
+		stats_panel.toggle()

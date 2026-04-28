@@ -1,0 +1,34 @@
+# Godot 4+ specific
+.godot/
+.import/
+
+# Imported translations (auto-generated from CSV)
+*.translation
+
+# Mono / C# specific (keep even if not used yet)
+.mono/
+data_*/
+mono_crash.*.json
+
+# Export presets contain keystore passwords / signing identities
+# Each developer should configure their own; share via export_presets.cfg.template if needed
+export_presets.cfg
+
+# Build outputs
+build/
+builds/
+exports/
+
+# Local scratch files
+tmp/
+
+# IDE / editor
+.vscode/
+.idea/
+*.iml
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp

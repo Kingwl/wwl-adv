@@ -1,0 +1,110 @@
+# WWL Adventure — Agent 引导文档
+
+本文档面向 AI Agent（Claude / Cursor / Copilot 等），帮助快速理解项目上下文和常见修改路径。
+
+## 快速定位
+
+| 你想改什么 | 先看哪里 |
+|-----------|---------|
+| 玩家手感（移速、无敌时间、受击反馈） | `scripts/player/player.gd` |
+| 敌人生成频率/波次曲线 | `scripts/enemy/enemy_spawner.gd` |
+| 敌人属性（HP、速度、伤害、掉落） | `scripts/enemy/enemy.gd` + `scripts/data/enemy_data.gd` |
+| 武器伤害/范围/冷却 | `scripts/weapons/weapon_*.gd` + `scripts/weapon/weapon_base.gd` |
+| 新武器类型 | 参考 `scripts/weapons/weapon_melee.gd` 继承 `WeaponBase`，添加到 `scenes/weapons/` |
+| 升级选项/效果 | `scripts/game/upgrade_system.gd` |
+| 升级UI样式 | `scenes/ui/upgrade_select.tscn` + `scripts/ui/upgrade_select.gd` |
+| HUD 显示内容 | `scripts/ui/hud.gd` + `scenes/ui/hud.tscn` |
+| 输入映射 | `project.godot` `[input]` 段 |
+| 碰撞层级 | `project.godot` `[layer_names]` 段 |
+| 全局数值（初始HP、经验公式等） | `autoload/game_state.gd` |
+| 新数据资源（武器/敌人/升级） | `scripts/data/weapon_data.gd` / `enemy_data.gd` / `upgrade_data.gd` |
+
+## 项目基本事实
+
+- **引擎**: Godot 4.x (GL Compatibility 渲染器；当前项目配置为 4.6，最近测试使用 4.6.2)
+- **目标平台**: Web / Android / iOS
+- **分辨率**: 720x1280，`canvas_items` 拉伸模式
+- **视角**: 2D 俯视角
+- **核心玩法**: 吸血鬼幸存者 like — 控制移动、自动攻击、击杀升级
+- **当前武器数**: 17
+- **当前敌人数**: 1（基础追踪型；生成器支持读取 `resources/enemies/`，但当前没有敌人 `.tres`）
+- **输入**: 键盘 WASD/方向键 + 触屏虚拟摇杆
+
+## 添加新内容的标准流程
+
+### 添加一种新武器
+
+1. 在 `scripts/weapons/` 创建脚本，继承 `WeaponBase`
+2. 实现 `_activate()` 方法定义攻击逻辑；持续型武器可重写 `_process()`
+3. 在 `scenes/weapons/` 创建 `.tscn` 场景（根节点为 `Node`）
+4. 在 `resources/weapons/` 创建对应 `WeaponData` `.tres`，填写图标、数值、分类、流派
+5. 在 `scripts/game/upgrade_system.gd` 的 `WEAPON_SCENES` 注册 `weapon_id -> scene_path`
+6. 在 `tests/auto_test.gd` 补充必要断言，并运行 `./tests/run_tests.sh`
+
+### 添加一种新敌人
+
+1. 在 `scripts/data/enemy_data.gd` 了解已有字段
+2. 在 `resources/enemies/` 创建 `.tres` 资源文件（可选，也可硬编码）
+3. 敌人生成器 `scripts/enemy/enemy_spawner.gd` 会自动读取 `resources/enemies/` 下的资源
+
+### 添加一种升级选项
+
+1. 简单角色属性升级可在 `scripts/game/upgrade_system.gd` 的 `_generate_options()` / helper 方法中创建 `UpgradeData`
+2. 武器解锁和强化使用 `WEAPON_UNLOCK` / `WEAPON_LEVEL`，武器流派选择使用 `WEAPON_PATH`
+3. 武器流派每级效果优先写入 `WeaponPathLevel`，由 `WeaponBase._apply_path_effects()` 应用
+4. 角色属性升级使用 `PLAYER_STAT`，并在 `_apply_stat_upgrade()` 中处理新的属性类型
+5. 也可以在 `resources/upgrades/` 放外部升级资源，`DataManager.all_upgrades()` 会被加入候选池
+
+## 测试规范
+
+### 武器相关改动必须同步更新测试
+
+任何修改以下文件的变更，**必须同步更新测试并验证通过**：
+
+- `scripts/weapon/weapon_base.gd` — 武器基类生命周期或属性计算
+- `scripts/weapons/weapon_*.gd` — 任一具体武器的攻击逻辑
+- `scripts/data/weapon_data.gd` — 武器数据字段增减
+- `scripts/game/upgrade_system.gd` — 武器解锁/强化选项或效果
+- `resources/weapons/*.tres` — 武器默认数值调整
+
+**执行方式**：
+
+```bash
+./tests/run_tests.sh
+```
+
+测试必须全部通过（`0 failed`）才能视为完成。如果新行为未覆盖，在 `tests/auto_test.gd` 的对应 phase 中补充断言。
+
+### 当前测试覆盖
+
+- 场景加载验证（Player / HUD / UI 系统存在）
+- 升级三选一（选项生成、UI 点击、效果生效、同轮去重、满级过滤）
+- **每种武器的增加** — 遍历 `WEAPON_SCENES` 逐一解锁，验证 `weapon_data`、图标和初始等级
+- **武器使用** — 运行多帧后验证所有武器基础数值、触发逻辑和持续型武器状态
+- 武器流派系统（路径选择、等级上限、special_tag 效果）
+- 敌人受伤、掉落、状态效果、碰撞伤害和生成器曲线
+- 玩家移动、受击无敌、治疗、死亡结算
+- HUD、StatsPanel、暂停菜单、游戏结束界面同步
+- 弹体穿透、射程销毁、环绕球、恢复和反伤等专项行为
+
+## 已知限制
+
+- 武器已经 `.tres` 资源化；敌人和通用升级资源仍待内容化
+- 敌人类型仍只有基础追踪型
+- 没有音效系统
+- 没有存档系统
+- 移动端安全区、发布包体和真机性能仍待验证
+
+## 项目进度记录
+
+有重要进展（新增系统、完成阶段性目标、通过关键测试）时，**同步更新 `docs/milestone.md`**。
+
+- 已完成项打 `[x]`，待完成项保持 `[ ]`
+- 新增武器、敌人、UI 系统时，在对应分类下补充条目
+- 测试覆盖率变化时，更新"统计"表格中的 passed / failed 数值
+
+## 扩展阅读
+
+- [architecture.md](./architecture.md) — 技术架构、场景树、信号流
+- [game_design.md](./game_design.md) — 核心循环、数值设计、未来规划
+- [milestone.md](./milestone.md) — 项目里程碑与待办事项

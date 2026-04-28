@@ -165,6 +165,25 @@ func _phase_level_up() -> void:
 			if i < options.size():
 				if options[i].weapon_id or options[i].upgrade_type == UpgradeData.UpgradeType.PLAYER_STAT:
 					_assert(has_icon, "Upgrade card %d has icon" % i)
+
+		var reroll_button := upgrade_select.get_node_or_null("PanelContainer/VBoxContainer/ActionsContainer/RerollButton") as Button
+		var skip_button := upgrade_select.get_node_or_null("PanelContainer/VBoxContainer/ActionsContainer/SkipButton") as Button
+		_assert(reroll_button != null, "UpgradeSelect has reroll button")
+		_assert(skip_button != null, "UpgradeSelect has skip button")
+		if reroll_button:
+			var reroll_seen := [false]
+			upgrade_select.reroll_requested.connect(func(): reroll_seen[0] = true)
+			reroll_button.pressed.emit()
+			await _wait(0.05)
+			_assert(reroll_seen[0], "Reroll button emits reroll_requested")
+		if skip_button:
+			upgrade_select.show_options(options)
+			var skip_seen := [false]
+			upgrade_select.skip_requested.connect(func(): skip_seen[0] = true)
+			skip_button.pressed.emit()
+			await _wait(0.05)
+			_assert(skip_seen[0], "Skip button emits skip_requested")
+			_assert(not upgrade_select.visible, "Skip button hides UpgradeSelect")
 		upgrade_select.visible = false
 
 		# Test PLAYER_STAT option specifically has the stat upgrade icon
@@ -185,6 +204,19 @@ func _phase_level_up() -> void:
 						break
 		_assert(stat_has_icon, "PLAYER_STAT upgrade card has stat icon")
 		upgrade_select.visible = false
+
+		get_tree().paused = true
+		upgrade_system._show_generated_options()
+		await _wait(0.05)
+		upgrade_system._on_reroll_requested()
+		await _wait(0.05)
+		_assert(upgrade_select.visible, "Reroll keeps UpgradeSelect visible")
+		_assert(get_tree().paused, "Reroll keeps game paused")
+		_assert(upgrade_select._options_container.get_child_count() == 3, "Reroll refreshes all cards")
+		upgrade_system._on_skip_requested()
+		await _wait(0.05)
+		_assert(not upgrade_select.visible, "Skip hides UpgradeSelect")
+		_assert(not get_tree().paused, "Skip resumes game")
 
 	# Apply first option directly
 	upgrade_system._on_option_selected(options[0])
@@ -682,13 +714,23 @@ func _phase_special_tags() -> void:
 		_assert(back_enemy._hp == back_hp_before, "Back enemy does NOT take damage when attack_dir is RIGHT")
 		_assert(side_enemy._hp == side_hp_before, "Side enemy (90°) does NOT take damage in 90° sector")
 
+		var attack_shape: Dictionary = melee._get_attack_shape(player, Vector2.RIGHT)
+		_assert(attack_shape["origin"] == player.global_position, "Melee attack shape starts at player")
+		_assert(abs(float(attack_shape["radius"]) - melee.get_range()) < 0.01, "Melee attack shape radius matches damage range")
+		_assert(abs(float(attack_shape["sector_angle"]) - melee._get_sector_angle()) < 0.001, "Melee attack shape sector matches damage sector")
+		_assert(melee._is_point_in_attack_shape(front_enemy.global_position, attack_shape), "Melee attack shape includes hit target")
+		_assert(not melee._is_point_in_attack_shape(back_enemy.global_position, attack_shape), "Melee attack shape excludes target behind player")
+		_assert(not melee._is_point_in_attack_shape(side_enemy.global_position, attack_shape), "Melee attack shape excludes target outside sector")
 		var effect_position: Vector2 = melee._get_slash_effect_position(player.global_position, Vector2.RIGHT)
-		var effect_offset: Vector2 = effect_position - player.global_position
-		_assert(effect_offset.x > 0.0 and abs(effect_offset.y) < 0.001, "Melee slash effect is pushed toward attack direction")
-		_assert(abs(effect_offset.length() - melee.get_range() * 0.2) < 0.01, "Melee slash effect offset follows weapon range")
+		_assert(effect_position == player.global_position, "Melee slash effect pivot matches damage origin")
 		var slash_scale: Vector2 = melee._get_slash_effect_scale()
 		_assert(abs((slash_scale.x * 80.0) - melee.get_range()) < 0.01, "Melee slash visual radius matches damage range")
 		_assert(abs(melee._get_slash_effect_rotation(Vector2.RIGHT)) < 0.001, "Melee slash effect rotation matches attack direction")
+		var sector_points: PackedVector2Array = melee._build_slash_sector_points(melee.get_range(), melee._get_sector_angle())
+		_assert(sector_points.size() == 20, "Melee slash sector visual has center plus arc points")
+		_assert(sector_points[0] == Vector2.ZERO, "Melee slash sector visual starts at damage origin")
+		_assert(abs(sector_points[1].length() - melee.get_range()) < 0.01, "Melee slash sector visual reaches damage radius")
+		_assert(abs(sector_points[sector_points.size() - 1].length() - melee.get_range()) < 0.01, "Melee slash sector visual ends at damage radius")
 		var slash_frames := VFXHelper.build_sprite_frames(
 			"res://assets/art/effects/by_type/fx_slash",
 			"slash",
@@ -701,6 +743,25 @@ func _phase_special_tags() -> void:
 		front_enemy.queue_free()
 		back_enemy.queue_free()
 		side_enemy.queue_free()
+		await _wait(0.1)
+
+		melee._active_attack_windows.clear()
+		var late_enemy := enemy_scene.instantiate()
+		late_enemy.global_position = player.global_position + Vector2.LEFT * 30.0
+		_enemies_parent.add_child(late_enemy)
+		await _wait(0.1)
+		var late_hp_before: int = late_enemy._hp
+		melee._start_attack_window(player, Vector2.RIGHT)
+		_assert(late_enemy._hp == late_hp_before, "Melee active window does not hit target outside visual sector")
+		late_enemy.global_position = player.global_position + Vector2.RIGHT * 30.0
+		melee._update_attack_windows(0.05)
+		var late_hp_after_hit: int = late_enemy._hp
+		_assert(late_hp_after_hit < late_hp_before, "Melee active window hits target entering visible sector")
+		melee._update_attack_windows(0.05)
+		_assert(late_enemy._hp == late_hp_after_hit, "Melee active window does not hit same target twice")
+		melee._update_attack_windows(0.5)
+		_assert(melee._active_attack_windows.is_empty(), "Melee active window expires with slash animation")
+		late_enemy.queue_free()
 		await _wait(0.1)
 
 	# Test strike counts

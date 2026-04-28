@@ -67,6 +67,7 @@
 - [x] UI 按钮贴图化（button_normal / hover / pressed）
 - [x] 主菜单背景替换为 ground_tile.png 平铺
 - [x] 武器分类标签在 UI 中显示（攻击 / 防御 / 增益）
+- [x] 升级选择支持刷新全部卡片和跳过本次选择
 - [x] Web UI 中文字体打包与运行时 fallback 主题注入
 
 ### 测试与质量

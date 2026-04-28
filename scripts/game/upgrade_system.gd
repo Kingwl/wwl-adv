@@ -25,12 +25,46 @@ func _ready() -> void:
 
 func _on_level_up(_new_level: int) -> void:
 	get_tree().paused = true
-	var upgrade_select := get_tree().current_scene.get_node_or_null("UpgradeSelect")
+	_show_generated_options()
+
+func _show_generated_options() -> void:
+	var upgrade_select := _get_upgrade_select()
 	if upgrade_select:
-		var options := _generate_options()
-		upgrade_select.show_options(options)
-		if not upgrade_select.option_selected.is_connected(_on_option_selected):
-			upgrade_select.option_selected.connect(_on_option_selected)
+		_connect_upgrade_select(upgrade_select)
+		upgrade_select.show_options(_generate_options())
+
+func _get_upgrade_select() -> Node:
+	var upgrade_select := get_tree().get_first_node_in_group("upgrade_select")
+	if upgrade_select:
+		return upgrade_select
+
+	var current_scene := get_tree().current_scene
+	if not current_scene:
+		return null
+
+	upgrade_select = current_scene.get_node_or_null("UpgradeSelect")
+	if upgrade_select:
+		return upgrade_select
+
+	return current_scene.find_child("UpgradeSelect", true, false)
+
+func _connect_upgrade_select(upgrade_select) -> void:
+	if not upgrade_select.option_selected.is_connected(_on_option_selected):
+		upgrade_select.option_selected.connect(_on_option_selected)
+	if not upgrade_select.reroll_requested.is_connected(_on_reroll_requested):
+		upgrade_select.reroll_requested.connect(_on_reroll_requested)
+	if not upgrade_select.skip_requested.is_connected(_on_skip_requested):
+		upgrade_select.skip_requested.connect(_on_skip_requested)
+
+func _on_reroll_requested() -> void:
+	get_tree().paused = true
+	_show_generated_options()
+
+func _on_skip_requested() -> void:
+	var upgrade_select := _get_upgrade_select()
+	if upgrade_select:
+		upgrade_select.visible = false
+	get_tree().paused = false
 
 func _generate_options() -> Array[UpgradeData]:
 	var pool: Array[UpgradeData] = []

@@ -1,13 +1,18 @@
 extends CanvasLayer
 
 signal option_selected(upgrade: UpgradeData)
+signal reroll_requested
+signal skip_requested
 
 @onready var _panel: PanelContainer = $PanelContainer
 @onready var _options_container: HBoxContainer = $PanelContainer/VBoxContainer/OptionsContainer
+@onready var _reroll_button: Button = $PanelContainer/VBoxContainer/ActionsContainer/RerollButton
+@onready var _skip_button: Button = $PanelContainer/VBoxContainer/ActionsContainer/SkipButton
 
 var _card_style_base: StyleBoxFlat
 
 func _ready() -> void:
+	add_to_group("upgrade_select")
 	visible = false
 	_card_style_base = StyleBoxFlat.new()
 	_card_style_base.bg_color = Color(0.06, 0.07, 0.1, 0.95)
@@ -16,6 +21,7 @@ func _ready() -> void:
 	_card_style_base.corner_radius_bottom_left = 6
 	_card_style_base.corner_radius_bottom_right = 6
 	_setup_panel_style()
+	_setup_button_styles()
 
 func _setup_panel_style() -> void:
 	var style := StyleBoxTexture.new()
@@ -23,6 +29,29 @@ func _setup_panel_style() -> void:
 	style.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
 	style.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
 	_panel.add_theme_stylebox_override("panel", style)
+
+func _setup_button_styles() -> void:
+	_style_button(_reroll_button)
+	_style_button(_skip_button)
+
+func _style_button(btn: Button) -> void:
+	var normal := StyleBoxTexture.new()
+	normal.texture = preload("res://assets/art/ui/button_normal.png")
+	normal.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	normal.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	btn.add_theme_stylebox_override("normal", normal)
+
+	var hover := StyleBoxTexture.new()
+	hover.texture = preload("res://assets/art/ui/button_hover.png")
+	hover.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	hover.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	btn.add_theme_stylebox_override("hover", hover)
+
+	var pressed := StyleBoxTexture.new()
+	pressed.texture = preload("res://assets/art/ui/button_pressed.png")
+	pressed.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	pressed.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
+	btn.add_theme_stylebox_override("pressed", pressed)
 
 func show_options(options: Array) -> void:
 	visible = true
@@ -204,4 +233,11 @@ func _get_option_icon(option: UpgradeData) -> Texture2D:
 
 func _on_option_pressed(option: UpgradeData) -> void:
 	option_selected.emit(option)
+	visible = false
+
+func _on_reroll_pressed() -> void:
+	reroll_requested.emit()
+
+func _on_skip_pressed() -> void:
+	skip_requested.emit()
 	visible = false

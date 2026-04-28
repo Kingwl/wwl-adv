@@ -55,10 +55,11 @@ layout_mode = 2
 text = "开始游戏"
 
 [node name="ContinueButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=344418569]
+visible = false
 custom_minimum_size = Vector2(220, 48)
 layout_mode = 2
 disabled = true
-text = "继续(暂未实现)"
+text = "继续游戏"
 
 [node name="QuitButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=642655260]
 custom_minimum_size = Vector2(220, 48)

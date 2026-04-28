@@ -1,11 +1,14 @@
 extends Control
 
+@onready var _continue_button: Button = $CenterContainer/VBoxContainer/ContinueButton
+
 func _ready() -> void:
 	get_tree().paused = false
 	_setup_background()
 	_style_button($CenterContainer/VBoxContainer/StartButton)
-	_style_button($CenterContainer/VBoxContainer/ContinueButton)
+	_style_button(_continue_button)
 	_style_button($CenterContainer/VBoxContainer/QuitButton)
+	_continue_button.visible = false
 
 func _setup_background() -> void:
 	var bg: ColorRect = $Background
@@ -45,7 +48,6 @@ func _style_button(btn: Button) -> void:
 	btn.add_theme_stylebox_override("pressed", pressed)
 
 func _on_start_pressed() -> void:
-	GameState.start_new_run()
 	get_tree().change_scene_to_file("res://scenes/game/game.tscn")
 
 func _on_quit_pressed() -> void:

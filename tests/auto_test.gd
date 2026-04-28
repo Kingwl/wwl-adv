@@ -10,6 +10,9 @@ var _phase := 0
 func _ready() -> void:
 	process_mode = PROCESS_MODE_ALWAYS
 	print("=== WWL ADVENTURE INTEGRATION TEST ===")
+	SaveManager.configure_paths_for_tests("user://wwl_auto_test_save_v1.json")
+	SaveManager.delete_save_files_for_tests()
+	SaveManager.load_or_create()
 
 	_game = load("res://scenes/game/game.tscn").instantiate()
 	add_child(_game)
@@ -43,9 +46,10 @@ func _run_phase() -> void:
 		21: await _phase_projectile_system()
 		22: await _phase_weapon_orbit()
 		23: await _phase_passive_regen_thorns()
-		24: _finish()
+		24: await _phase_save_system()
+		25: _finish()
 	_phase += 1
-	if _phase <= 24:
+	if _phase <= 25:
 		await _wait(0.1)
 		_run_phase()
 
@@ -91,6 +95,8 @@ func _phase_load() -> void:
 		var tile_rect := ground_tile as TextureRect
 		_assert(tile_rect.stretch_mode == TextureRect.STRETCH_TILE, "Main menu background uses tile stretch mode")
 		_assert(tile_rect.anchor_left == 0.0 and tile_rect.anchor_top == 0.0 and tile_rect.anchor_right == 1.0 and tile_rect.anchor_bottom == 1.0, "Main menu background fills viewport anchors")
+	var continue_button: Button = main_menu.get_node_or_null("CenterContainer/VBoxContainer/ContinueButton")
+	_assert(continue_button != null and not continue_button.visible, "Main menu hides battle continue button")
 	main_menu.queue_free()
 	await _wait(0.3)
 
@@ -1384,6 +1390,7 @@ func _phase_player_combat() -> void:
 	var game_over: Node = _game.get_node_or_null("GameOver")
 	if game_over:
 		game_over.visible = false
+	_game.set("_run_finished", false)
 	GameState.take_damage(9999)
 	await _wait(0.3)
 	_assert(game_over.visible, "GameOver shown after lethal damage")
@@ -1749,6 +1756,28 @@ func _phase_player_movement() -> void:
 	_assert(half_push.x > 0.0 and half_push.length() < 1.0, "Joystick maps partial push to partial strength")
 	var full_push: Vector2 = joystick._direction_from_offset(Vector2.RIGHT * 80.0)
 	_assert(abs(full_push.length() - 1.0) < 0.01, "Joystick clamps full push to unit strength")
+	get_tree().paused = false
+	joystick._base.visible = true
+	joystick.active_width_ratio = 1.0
+	var viewport_width := get_viewport().get_visible_rect().size.x
+	var right_touch_position := Vector2(viewport_width * 0.75, 600.0)
+	var press := InputEventScreenTouch.new()
+	press.index = 7
+	press.pressed = true
+	press.position = right_touch_position
+	joystick._input(press)
+	_assert(joystick._touch_index == 7, "Joystick accepts right-half touch")
+	var drag := InputEventScreenDrag.new()
+	drag.index = 7
+	drag.position = right_touch_position + Vector2(50.0, 0.0)
+	joystick._input(drag)
+	_assert(joystick.get_direction().x > 0.0, "Joystick moves from right-half drag")
+	var release := InputEventScreenTouch.new()
+	release.index = 7
+	release.pressed = false
+	release.position = drag.position
+	joystick._input(release)
+	_assert(joystick.get_direction() == Vector2.ZERO, "Joystick resets after right-half touch release")
 	joystick.queue_free()
 
 	player.set_physics_process(true)
@@ -2181,8 +2210,40 @@ func _phase_passive_regen_thorns() -> void:
 					w.queue_free()
 	await _wait(0.1)
 
+func _phase_save_system() -> void:
+	print("[PHASE 24] Save System")
+	get_tree().paused = false
+	_game.set("_run_finished", false)
+	var game_over: Node = _game.get_node_or_null("GameOver")
+	if game_over:
+		game_over.visible = false
+
+	var total_gold_before := int(SaveManager.get_profile_value("total_gold", 0))
+	var lifetime_kills_before := int(SaveManager.get_profile_value("lifetime_kills", 0))
+	var total_runs_before := int(SaveManager.get_profile_value("total_runs", 0))
+	GameState.start_new_run(12345)
+	GameState.add_gold(11)
+	GameState.add_kill()
+	GameState.add_kill()
+	GameState.run.level = 5
+	GameState.run.run_time = 99.0
+	_assert(int(SaveManager.get_profile_value("total_gold", 0)) == total_gold_before + 11, "Gold pickup updates profile immediately")
+	_assert(int(SaveManager.get_profile_value("lifetime_kills", 0)) == lifetime_kills_before + 2, "Kills update profile immediately")
+	_assert(SaveManager.record_run_finished(), "Completed run updates profile summary")
+	_assert(int(SaveManager.get_profile_value("total_runs", 0)) == total_runs_before + 1, "Profile total runs updated")
+	_assert(int(SaveManager.get_profile_value("total_gold", 0)) == total_gold_before + 11, "Profile total gold updated")
+	_assert(int(SaveManager.get_profile_value("best_level", 1)) >= 5, "Profile best level updated")
+	_assert(int(SaveManager.get_profile_value("best_kills", 0)) >= 2, "Profile best kills updated")
+	var profile := SaveManager.get_profile()
+	var last_run: Dictionary = profile.get("last_run", {})
+	_assert(int(last_run.get("gold", 0)) == 11 and int(last_run.get("kills", 0)) == 2, "Last run stores numeric summary")
+	var profile_json := JSON.stringify(profile)
+	_assert(profile_json.find("Texture2D") == -1 and profile_json.find("Node") == -1, "Profile does not serialize engine objects")
+	_assert(profile_json.find("position") == -1 and profile_json.find("weapons") == -1, "Profile does not store battle state")
+
 func _finish() -> void:
 	print("========================================")
 	print("RESULTS: %d passed, %d failed" % [_passed, _failed])
 	print("========================================")
+	SaveManager.delete_save_files_for_tests()
 	get_tree().quit(_failed)

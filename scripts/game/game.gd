@@ -2,6 +2,7 @@ extends Node2D
 
 var _regen_timer: float = 0.0
 var _regen_last_level: int = 0
+var _run_finished: bool = false
 
 func _ready() -> void:
 	GameState.run_ended.connect(_on_run_ended)
@@ -11,6 +12,8 @@ func _ready() -> void:
 	GameState.start_new_run()
 
 func _process(delta: float) -> void:
+	if _run_finished:
+		return
 	GameState.add_run_time(delta)
 	_process_passive_enhancements(delta)
 
@@ -54,6 +57,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		$StatsPanel.toggle()
 
 func _on_run_ended(_victory: bool) -> void:
+	if _run_finished:
+		return
+	_run_finished = true
+	SaveManager.record_run_finished()
 	get_tree().paused = true
 	$GameOver.show_stats()
 
@@ -62,5 +69,6 @@ func _on_restart() -> void:
 	get_tree().reload_current_scene()
 
 func _on_quit_to_menu() -> void:
+	SaveManager.save_profile()
 	get_tree().paused = false
 	get_tree().call_deferred("change_scene_to_file", "res://scenes/ui/main_menu.tscn")

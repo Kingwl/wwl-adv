@@ -1,7 +1,7 @@
 # 游戏设计文档
 
 > 游戏 UI 信息架构、HUD、升级选择、暂停和结算界面设计见 [`ui_design.md`](./ui_design.md)。
-> 本地存档和继续游戏设计见 [`save_system_design.md`](./save_system_design.md)。
+> 本地数值存档设计见 [`save_system_design.md`](./save_system_design.md)。
 
 ## 游戏概述
 
@@ -112,6 +112,13 @@ exp_required = 15 * 1.2^(level - 1)
 
 单局最多持有 6 把基础武器和 6 种角色强化。升级候选会过滤已满级武器、满槽后的新武器 / 新强化，并保证同一轮不会重复出现同一个武器 ID。升级面板支持刷新全部候选卡片，也支持跳过本次选择直接继续游戏。
 
+### 存档
+
+- `SaveManager` 通过 `user://save_v1.json` 保存本地单槽数值档案，并保留 `user://save_v1.bak`。
+- 获得金币和击杀敌人时即时更新累计金币 / 累计击杀。
+- 死亡 / 结算时更新总局数、最佳成绩和最近一局摘要。
+- 不保存玩家位置、HP、EXP、武器、强化、敌人、弹体、掉落物等战斗状态；刷新或重启后从主菜单重新开局。
+
 ### UI
 
 - 主菜单：开始游戏
@@ -157,7 +164,7 @@ exp_required = 15 * 1.2^(level - 1)
 - [ ] Boss 战或阶段目标
 - [ ] 武器组合 / 联动系统
 - [ ] 更多地图机制和环境危险
-- [ ] 局外设置和存档（设计见 [`save_system_design.md`](./save_system_design.md)）
+- [ ] 局外设置页和配置持久化（设计见 [`save_system_design.md`](./save_system_design.md)）
 
 ### 长期
 

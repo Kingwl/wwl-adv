@@ -17,6 +17,7 @@
 | 输入映射 | `project.godot` `[input]` 段 |
 | 碰撞层级 | `project.godot` `[layer_names]` 段 |
 | 全局数值（初始HP、经验公式等） | `autoload/game_state.gd` |
+| 本地数值存档 | `autoload/save_manager.gd` + `autoload/game_state.gd` + `scripts/game/game.gd` |
 | 新数据资源（武器/敌人/升级） | `scripts/data/weapon_data.gd` / `enemy_data.gd` / `upgrade_data.gd` |
 
 ## 项目基本事实
@@ -93,7 +94,7 @@
 - 武器已经 `.tres` 资源化；敌人和通用升级资源仍待内容化
 - 敌人类型仍只有基础追踪型
 - 没有音效系统
-- 没有存档系统
+- 存档当前只保存局外数值，不保存或恢复战斗状态
 - 移动端安全区、发布包体和真机性能仍待验证
 
 ## 项目进度记录

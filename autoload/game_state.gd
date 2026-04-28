@@ -65,6 +65,7 @@ func heal(amount: int) -> void:
 
 func add_gold(amount: int) -> void:
 	run.gold += amount
+	SaveManager.add_total_gold(amount)
 	gold_changed.emit(run.gold)
 
 func add_exp(amount: int) -> void:
@@ -78,6 +79,7 @@ func add_exp(amount: int) -> void:
 
 func add_kill() -> void:
 	run.kills += 1
+	SaveManager.add_lifetime_kills(1)
 
 func add_run_time(delta: float) -> void:
 	run.run_time += delta

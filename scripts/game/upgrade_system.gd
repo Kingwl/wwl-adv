@@ -5,7 +5,6 @@ const WEAPON_SCENES: Dictionary = {
 	&"projectile_basic": "res://scenes/weapons/weapon_projectile.tscn",
 	&"thunder": "res://scenes/weapons/weapon_thunder.tscn",
 	&"orbit": "res://scenes/weapons/weapon_orbit.tscn",
-	&"regen": "res://scenes/weapons/weapon_regen.tscn",
 	&"thorns": "res://scenes/weapons/weapon_thorns.tscn",
 	&"shotgun": "res://scenes/weapons/weapon_shotgun.tscn",
 	&"fire_bottle": "res://scenes/weapons/weapon_fire_bottle.tscn",
@@ -70,7 +69,7 @@ func _generate_options() -> Array[UpgradeData]:
 	var pool: Array[UpgradeData] = []
 
 	# === 角色强化 ===
-	for stat_upgrade in [_make_speed_up(), _make_hp_up(), _make_pickup_up()]:
+	for stat_upgrade in [_make_speed_up(), _make_hp_up(), _make_pickup_up(), _make_regen_up()]:
 		if GameState.can_add_enhancement(stat_upgrade.id):
 			pool.append(stat_upgrade)
 
@@ -293,6 +292,16 @@ func _make_pickup_up() -> UpgradeData:
 	d.pickup_radius_bonus = 30.0
 	return d
 
+func _make_regen_up() -> UpgradeData:
+	var d := UpgradeData.new()
+	d.id = GameState.REGEN_ENHANCEMENT_ID
+	d.display_name = "生命源泉"
+	d.description = "立即恢复 5 点生命；之后每 5 秒自动恢复生命，等级越高治疗量越高"
+	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	d.hp_bonus = GameState.REGEN_BASE_HEAL
+	d.icon = preload("res://assets/art/weapons/icons_sliced/icon_05.png")
+	return d
+
 func _make_unlock(weapon_id: StringName) -> UpgradeData:
 	var d := UpgradeData.new()
 	d.id = "unlock_%s" % weapon_id
@@ -320,6 +329,14 @@ func _make_path_option(weapon: WeaponBase, path: WeaponPath) -> UpgradeData:
 	d.weapon_id = weapon.weapon_data.id
 	d.path_id = path.path_id
 	d.icon = path.icon if path.icon else weapon.weapon_data.icon
+	var first_effect := path.get_level_effect(2)
+	if first_effect:
+		var effect_desc := _describe_path_effect(weapon, first_effect)
+		var immediate_desc := "选择后升到 Lv.2，立即获得：%s" % effect_desc
+		d.description = immediate_desc if d.description.is_empty() else "%s\n%s" % [d.description, immediate_desc]
+		d.damage_bonus = first_effect.damage_bonus
+		d.cooldown_bonus = first_effect.cooldown_bonus
+		d.range_bonus = first_effect.range_bonus
 	return d
 
 func _make_level_from_path(weapon: WeaponBase, path: WeaponPath, effect: WeaponPathLevel) -> UpgradeData:
@@ -330,19 +347,7 @@ func _make_level_from_path(weapon: WeaponBase, path: WeaponPath, effect: WeaponP
 		d.display_name = "%s Lv.%d" % [weapon.weapon_data.display_name, weapon.level + 1]
 	else:
 		d.display_name = "%s·%s Lv.%d" % [weapon.weapon_data.display_name, path_name, weapon.level + 1]
-	if effect.description:
-		d.description = effect.description
-	else:
-		var parts: Array[String] = []
-		if effect.damage_bonus != 0:
-			parts.append("伤害+%d" % effect.damage_bonus)
-		if effect.cooldown_bonus != 0:
-			parts.append("冷却%+.2f" % effect.cooldown_bonus)
-		if effect.range_bonus != 0:
-			parts.append("范围+%d" % int(effect.range_bonus))
-		if parts.is_empty():
-			parts.append("%s强化" % weapon.weapon_data.display_name)
-		d.description = "  |  ".join(parts)
+	d.description = _describe_path_effect(weapon, effect)
 	d.upgrade_type = UpgradeData.UpgradeType.WEAPON_LEVEL
 	d.weapon_id = weapon.weapon_data.id
 	d.damage_bonus = effect.damage_bonus
@@ -350,6 +355,22 @@ func _make_level_from_path(weapon: WeaponBase, path: WeaponPath, effect: WeaponP
 	d.range_bonus = effect.range_bonus
 	d.icon = weapon.weapon_data.icon
 	return d
+
+func _describe_path_effect(weapon: WeaponBase, effect: WeaponPathLevel) -> String:
+	if not effect:
+		return ""
+	if effect.description:
+		return effect.description
+	var parts: Array[String] = []
+	if effect.damage_bonus != 0:
+		parts.append("伤害+%d" % effect.damage_bonus)
+	if effect.cooldown_bonus != 0:
+		parts.append("冷却%+.2f" % effect.cooldown_bonus)
+	if effect.range_bonus != 0:
+		parts.append("范围+%d" % int(effect.range_bonus))
+	if parts.is_empty():
+		parts.append("%s强化" % weapon.weapon_data.display_name)
+	return "  |  ".join(parts)
 
 func _get_hardcoded_level_option(weapon_id: StringName) -> UpgradeData:
 	match weapon_id:
@@ -379,8 +400,6 @@ func _get_hardcoded_level_option(weapon_id: StringName) -> UpgradeData:
 			return _make_level_opt("saw_dmg", "锯齿打磨", "锯片陷阱伤害 +3", &"saw_blade", 3)
 		&"rocket_pack":
 			return _make_level_opt("rocket_dmg", "燃料升级", "火箭背包伤害 +2", &"rocket_pack", 2)
-		&"regen":
-			return _make_level_opt("regen_up", "源泉强化", "恢复量 +2", &"regen", 2)
 		&"melee_basic":
 			return _make_level_opt("melee_dmg", "利刃强化", "近战武器伤害 +5", &"melee_basic", 5)
 	return null

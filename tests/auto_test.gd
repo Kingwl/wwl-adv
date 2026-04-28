@@ -42,7 +42,7 @@ func _run_phase() -> void:
 		20: await _phase_enemy_spawner()
 		21: await _phase_projectile_system()
 		22: await _phase_weapon_orbit()
-		23: await _phase_weapon_regen_thorns()
+		23: await _phase_passive_regen_thorns()
 		24: _finish()
 	_phase += 1
 	if _phase <= 24:
@@ -116,11 +116,17 @@ func _phase_gameplay() -> void:
 				var icon_rect = icon_container.get_node_or_null("IconRect") if icon_container else null
 				_assert(icon_rect is TextureRect and icon_rect.texture != null, "HUD weapon bar slot shows icon")
 				var cooldown_overlay = icon_container.get_node_or_null("CooldownOverlay") if icon_container else null
-				_assert(cooldown_overlay is TextureProgressBar, "HUD weapon bar slot has cooldown overlay")
+				_assert(cooldown_overlay is Control, "HUD weapon bar slot has cooldown overlay")
 				if cooldown_overlay:
-					_assert(cooldown_overlay.value >= 0.0 and cooldown_overlay.value <= 1.0, "Cooldown overlay value in valid range")
+					var cooldown_fill = cooldown_overlay.get_node_or_null("CooldownFill")
+					_assert(cooldown_fill is ColorRect, "Cooldown overlay uses height-changing fill")
+					if cooldown_fill and not weapons.is_empty() and weapons[0].has_method("get_cooldown_progress"):
+						var cooldown_progress: float = weapons[0].get_cooldown_progress()
+						var expected_anchor_top := 1.0 - clampf(cooldown_progress, 0.0, 1.0)
+						_assert(abs(cooldown_fill.anchor_top - expected_anchor_top) < 0.01, "Cooldown overlay height tracks cooldown progress")
+						_assert(cooldown_overlay.visible == (cooldown_progress > 0.01), "Cooldown overlay hides when ready")
 
-		# Camera follow check: move player and verify camera follows
+			# Camera follow check: move player and verify camera follows
 		var camera: Camera2D = player.get_node_or_null("Camera2D")
 		if camera:
 			var start_cam_pos := camera.global_position
@@ -421,6 +427,24 @@ func _phase_pause() -> void:
 	_assert(pause_menu != null, "PauseMenu node found")
 
 	if pause_menu:
+		_assert(pause_menu.has_signal("quit_to_menu_pressed"), "PauseMenu exposes quit-to-menu signal")
+		var quit_button: Button = pause_menu.get_node_or_null("Panel/VBoxContainer/QuitButton")
+		_assert(quit_button != null, "PauseMenu quit button exists")
+		if quit_button:
+			var direct_game_quit_connections := 0
+			for connection in quit_button.pressed.get_connections():
+				var callable: Callable = connection.get("callable")
+				if callable.get_object() == _game:
+					direct_game_quit_connections += 1
+			_assert(direct_game_quit_connections == 0, "PauseMenu quit button does not directly change game scene")
+
+		var game_quit_signal_connections := 0
+		for connection in pause_menu.get_signal_connection_list(&"quit_to_menu_pressed"):
+			var callable: Callable = connection.get("callable")
+			if callable.get_object() == _game and callable.get_method() == &"_on_quit_to_menu":
+				game_quit_signal_connections += 1
+		_assert(game_quit_signal_connections == 1, "PauseMenu quit signal is connected to Game once")
+
 		pause_menu._show_pause()
 		await _wait(0.3)
 		_assert(pause_menu.visible, "PauseMenu is visible")
@@ -553,15 +577,25 @@ func _phase_path_system() -> void:
 	var orig_level := melee.level
 	var orig_path := melee.current_path_id
 	var orig_dmg := melee._current_damage
+	var upgrade_system: Node = _game.get_node_or_null("UpgradeSystem")
+	_assert(upgrade_system != null, "UpgradeSystem exists for path choice test")
 
 	# Reset to level 1, no path
 	melee.level = 1
 	melee.current_path_id = &""
 	melee._recalc_stats()
 
-	# Test berserker path
-	melee.set_path(&"berserker")
-	melee.level_up()
+	# Test berserker path through the upgrade choice flow
+	var berserker_path: WeaponPath = null
+	for path in melee.weapon_data.paths:
+		if path.path_id == &"berserker":
+			berserker_path = path
+			break
+	_assert(berserker_path != null, "Berserker path data exists")
+	var path_option: UpgradeData = upgrade_system._make_path_option(melee, berserker_path)
+	_assert(path_option.description.contains("立即获得"), "Path choice card describes immediate Lv.2 upgrade")
+	_assert(path_option.damage_bonus == 5, "Path choice carries first path damage bonus for display")
+	upgrade_system._apply_upgrade(path_option)
 	_assert(melee.current_path_id == &"berserker", "Berserker path set correctly")
 	_assert(melee.level == 2, "Path selection triggers level up to 2")
 	# Berserker Lv.2: damage +5 + base growth
@@ -1049,20 +1083,6 @@ func _phase_weapon_path_tags() -> void:
 		thorns._recalc_stats()
 		thorns._apply_path_effects()
 		_assert(thorns._get_reflect_percent() == 0.6, "spikes Lv.2 reflect_plus_10 adds +0.1")
-
-	# === regen ===
-	var regen := _find_weapon(&"regen")
-	if regen:
-		regen.level = 1
-		regen.current_path_id = &""
-		regen._recalc_stats()
-		_assert(regen._get_heal() == 5, "Regen base heal is 5")
-
-		regen.set_path(&"fountain")
-		regen.level = 2
-		regen._recalc_stats()
-		regen._apply_path_effects()
-		_assert(regen._get_heal() == 7, "fountain Lv.2 heal_plus_2 adds +2")
 
 	# === boomerang ===
 	var boomer := _find_weapon(&"boomerang")
@@ -1871,14 +1891,19 @@ func _phase_enemy_spawner() -> void:
 	var base_dmg: int = e1._damage
 	var base_speed: float = e1._base_speed
 
-	var time_factor_120: float = 1.0 + 120.0 / 120.0
-	var expected_hp: int = int(base_hp * time_factor_120)
-	var expected_dmg: int = int(base_dmg * time_factor_120)
-	var expected_speed: float = base_speed * time_factor_120
+	spawner._elapsed_time = 120.0
+	var stat_factor_120: float = spawner._get_stat_scale()
+	var speed_factor_120: float = spawner._get_speed_scale()
+	var expected_hp: int = int(base_hp * stat_factor_120)
+	var expected_dmg: int = int(base_dmg * stat_factor_120)
+	var expected_speed: float = base_speed * speed_factor_120
 
 	_assert(expected_hp == base_hp * 2, "Difficulty scaling doubles HP at 120s")
 	_assert(expected_dmg == base_dmg * 2, "Difficulty scaling doubles damage at 120s")
-	_assert(abs(expected_speed - base_speed * 2.0) < 0.1, "Difficulty scaling doubles speed at 120s")
+	_assert(speed_factor_120 < stat_factor_120, "Difficulty speed scaling grows slower than HP/damage")
+	_assert(abs(expected_speed - base_speed * 1.4) < 0.1, "Difficulty speed scaling is 1.4x at 120s")
+	spawner._elapsed_time = spawner.speed_scale_period * 2.0
+	_assert(abs(spawner._get_speed_scale() - spawner.max_speed_scale) < 0.01, "Difficulty speed scaling has cap")
 
 	# Test weighted pick favors higher weights
 	var test_enemies: Array = []
@@ -2059,8 +2084,8 @@ func _phase_weapon_orbit() -> void:
 		child.queue_free()
 	await _wait(0.1)
 
-func _phase_weapon_regen_thorns() -> void:
-	print("[PHASE 23] Weapon Regen & Thorns")
+func _phase_passive_regen_thorns() -> void:
+	print("[PHASE 23] Passive Regen & Thorns")
 
 	var upgrade_system: Node = _game.get_node_or_null("UpgradeSystem")
 	var player: Node = get_tree().get_first_node_in_group("player")
@@ -2077,19 +2102,44 @@ func _phase_weapon_regen_thorns() -> void:
 		child.queue_free()
 	await _wait(0.1)
 
-	# --- Regen test ---
-	upgrade_system._unlock_weapon(&"regen")
-	await _wait(0.2)
-	var regen: WeaponBase = _find_weapon(&"regen")
-	_assert(regen != null, "Regen weapon unlocked")
+	# --- Passive regen test ---
+	var regen_unlock := UpgradeData.new()
+	regen_unlock.id = GameState.REGEN_ENHANCEMENT_ID
+	regen_unlock.display_name = "生命源泉"
+	regen_unlock.description = "Test passive regen"
+	regen_unlock.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	regen_unlock.hp_bonus = GameState.REGEN_BASE_HEAL
 
-	if regen:
-		GameState.run.hp = 10
-		GameState.run.max_hp = 100
-		var prev_hp: int = GameState.run.hp
-		regen._activate()
-		await _wait(0.1)
-		_assert(GameState.run.hp > prev_hp, "Regen heals player")
+	var saved_enhancements: Dictionary = (GameState.run.get("enhancements", {}) as Dictionary).duplicate(true)
+	var saved_order: Array = (GameState.run.get("enhancement_order", []) as Array).duplicate()
+	GameState.run["enhancements"] = {}
+	GameState.run["enhancement_order"] = []
+	GameState.run.hp = 10
+	GameState.run.max_hp = 100
+	upgrade_system._on_option_selected(regen_unlock)
+	_assert(_find_weapon(GameState.REGEN_ENHANCEMENT_ID) == null, "Regen does not unlock as weapon")
+	_assert(GameState.get_enhancement_level(GameState.REGEN_ENHANCEMENT_ID) == 1, "Regen is tracked as enhancement")
+	_assert(GameState.run.hp == 15, "Regen enhancement heals immediately on pickup")
+
+	GameState.run.hp = 10
+	_game.set("_regen_last_level", 1)
+	_game.set("_regen_timer", 0.0)
+	_game.call("_process_passive_enhancements", 0.1)
+	await _wait(0.1)
+	_assert(GameState.run.hp == 15, "Passive regen heals player over time")
+
+	var regen_data: Dictionary = GameState.run["enhancements"][str(GameState.REGEN_ENHANCEMENT_ID)]
+	regen_data["level"] = 2
+	GameState.run["enhancements"][str(GameState.REGEN_ENHANCEMENT_ID)] = regen_data
+	GameState.run.hp = 10
+	_game.set("_regen_last_level", 2)
+	_game.set("_regen_timer", 0.0)
+	_game.call("_process_passive_enhancements", 0.1)
+	await _wait(0.1)
+	_assert(GameState.run.hp == 17, "Passive regen heal scales with enhancement level")
+
+	GameState.run["enhancements"] = saved_enhancements
+	GameState.run["enhancement_order"] = saved_order
 
 	# --- Thorns test ---
 	upgrade_system._unlock_weapon(&"thorns")
@@ -2127,7 +2177,7 @@ func _phase_weapon_regen_thorns() -> void:
 	if weapons:
 		for w in weapons.get_children():
 			if w is WeaponBase and w.weapon_data:
-				if w.weapon_data.id in [&"regen", &"thorns"]:
+				if w.weapon_data.id == &"thorns":
 					w.queue_free()
 	await _wait(0.1)
 

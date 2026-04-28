@@ -7,7 +7,7 @@
 | 类型 | 位置 | 状态 |
 |------|------|------|
 | 角色动画 | `assets/art/characters/` | 已接入玩家 idle / run / hit / death，敌人 walk / hit / death |
-| 武器图标 | `assets/art/weapons/icons/` | 17 种武器已接入 |
+| 武器图标 | `assets/art/weapons/icons/` | 16 种武器图标已接入；生命源泉作为强化图标复用 |
 | 弹体素材 | `assets/art/weapons/projectiles/` | 箭矢、冰片、回旋镖等已接入 |
 | 攻击特效 | `assets/art/effects/by_type/fx_*/*.png` | 已按类型拆分为逐帧目录，供 `AnimatedSprite2D` 使用 |
 | 动态缩放特效 | `assets/art/effects/generated_missing/dynamic/` | 激光三段、闪电链节点、火/毒 tile、火箭火焰段已生成 |

@@ -1,6 +1,7 @@
 extends Control
 
 func _ready() -> void:
+	get_tree().paused = false
 	_setup_background()
 	_style_button($CenterContainer/VBoxContainer/StartButton)
 	_style_button($CenterContainer/VBoxContainer/ContinueButton)

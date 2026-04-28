@@ -18,7 +18,8 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 - 基础追踪敌人和随时间增强的生成器
 - 经验 / 金币掉落与拾取
 - 升级三选一，支持角色强化、武器解锁、武器强化和武器流派
-- 17 种武器，均有 `.tscn` 场景和 `resources/weapons/*.tres` 数据资源
+- 16 种武器，均有 `.tscn` 场景和 `resources/weapons/*.tres` 数据资源
+- 角色强化与武器槽分离，生命源泉作为被动恢复强化
 - HUD、暂停菜单、属性面板、升级选择、游戏结束界面、虚拟摇杆
 - 角色、敌人、武器特效、掉落物、UI 图标等美术资源接入
 - Headless Godot 自动化集成测试
@@ -45,7 +46,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 ./tests/run_tests.sh
 ```
 
-当前最近一次验证结果：`459 passed, 0 failed`。
+当前最近一次验证结果：`467 passed, 0 failed`。
 
 ## 目录结构
 
@@ -56,7 +57,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 │   ├── game/                  # 游戏主场景
 │   ├── player/                # 玩家场景
 │   ├── enemy/                 # 敌人和生成器
-│   ├── weapons/               # 17 种武器及弹体/区域子场景
+│   ├── weapons/               # 16 种武器及弹体/区域子场景
 │   ├── drops/                 # 经验球、金币
 │   └── ui/                    # 主菜单、HUD、升级、暂停、结算、属性面板等
 ├── scripts/
@@ -70,7 +71,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 │   └── data/                  # WeaponData / EnemyData / UpgradeData 等资源类
 ├── autoload/                  # GameState、DataManager 等全局单例
 ├── resources/
-│   ├── weapons/               # 17 个武器 .tres 数据资源
+│   ├── weapons/               # 16 个武器 .tres 数据资源
 │   ├── enemies/               # 预留：敌人资源
 │   └── upgrades/              # 预留：外部升级资源
 ├── assets/                    # 角色、敌人、武器、特效、UI 美术资源

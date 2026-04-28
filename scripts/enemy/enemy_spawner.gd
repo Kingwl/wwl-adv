@@ -3,6 +3,9 @@ extends Node
 @export var spawn_view_margin_min: float = 80.0
 @export var spawn_view_margin_max: float = 300.0
 @export var base_spawn_interval: float = 2.0
+@export var stat_scale_period: float = 120.0
+@export var speed_scale_period: float = 300.0
+@export var max_speed_scale: float = 1.75
 
 var _player: Node2D
 var _elapsed_time: float = 0.0
@@ -44,14 +47,23 @@ func _spawn_enemy() -> void:
 	if enemies_parent:
 		enemies_parent.add_child(enemy)
 		# Apply time-based difficulty scaling
-		var time_factor := 1.0 + _elapsed_time / 120.0
-		enemy._hp = int(enemy._hp * time_factor)
-		enemy._base_speed *= time_factor
-		enemy._damage = int(enemy._damage * time_factor)
+		var stat_factor := _get_stat_scale()
+		var speed_factor := _get_speed_scale()
+		enemy._hp = int(enemy._hp * stat_factor)
+		enemy._base_speed *= speed_factor
+		enemy._damage = int(enemy._damage * stat_factor)
+		enemy._setup_health_bar()
 
 func _get_spawn_interval() -> float:
 	var difficulty_multiplier := 1.0 + (_elapsed_time / 60.0) * 0.5
 	return max(0.3, base_spawn_interval / difficulty_multiplier)
+
+func _get_stat_scale() -> float:
+	return 1.0 + _elapsed_time / maxf(stat_scale_period, 1.0)
+
+func _get_speed_scale() -> float:
+	var uncapped_scale := 1.0 + _elapsed_time / maxf(speed_scale_period, 1.0)
+	return minf(uncapped_scale, max_speed_scale)
 
 func _get_spawn_radius_bounds() -> Vector2:
 	var view_radius := _get_view_radius()

@@ -15,7 +15,7 @@ WWL Adventure/
 │   ├── enemy/
 │   │   ├── enemy.tscn      # 基础敌人（CharacterBody2D）
 │   │   └── enemy_spawner.tscn
-│   ├── weapons/            # 17 种武器、弹体、区域效果子场景
+│   ├── weapons/            # 16 种武器、弹体、区域效果子场景
 │   ├── drops/              # 经验球、金币
 │   └── ui/                 # 主菜单、HUD、升级、暂停、结算、属性面板、摇杆、血条
 ├── scripts/
@@ -28,7 +28,7 @@ WWL Adventure/
 │   ├── game/          # Game、UpgradeSystem
 │   └── ui/
 └── resources/
-    ├── weapons/       # 17 个武器 .tres 数据资源
+    ├── weapons/       # 16 个武器 .tres 数据资源
     ├── enemies/       # 预留：敌人资源
     └── upgrades/      # 预留：外部升级资源
 ```
@@ -125,7 +125,7 @@ Enemy._physics_process()
 
 当前状态：
 
-- `resources/weapons/` 已有 17 个武器数据资源
+- `resources/weapons/` 已有 16 个武器数据资源
 - `resources/enemies/` 和 `resources/upgrades/` 目录存在，但当前核心敌人和大多数升级选项仍由代码提供
 - `DataManager` 启动时会扫描上述目录，`UpgradeSystem` 会把外部升级资源加入候选池
 
@@ -154,14 +154,15 @@ Enemy._physics_process()
 
 - 解锁：`UpgradeData.WEAPON_UNLOCK` 实例化 `WEAPON_SCENES[weapon_id]`
 - 强化：`UpgradeData.WEAPON_LEVEL` 调用 `level_up()` 并叠加 bonus
-- 流派：`UpgradeData.WEAPON_PATH` 设置 `current_path_id` 后升到 2 级
+- 流派：`UpgradeData.WEAPON_PATH` 设置 `current_path_id` 后升到 2 级，并应用该流派 Lv.2 效果
 - 属性：`UpgradeData.PLAYER_STAT` 修改玩家移速、HP、拾取范围等
 
 ## 敌人和掉落
 
-- `EnemySpawner` 以玩家为中心，在 450-700 像素环形区域生成敌人
+- `EnemySpawner` 以玩家为中心，在可视区外的视口半对角线 + `80~300` 像素环形区域生成敌人
 - 生成间隔随时间缩短，最低 0.3 秒
-- 敌人 HP、速度、伤害按 `1.0 + elapsed_time / 120.0` 缩放
+- 敌人 HP、伤害按 `1.0 + elapsed_time / 120.0` 缩放
+- 敌人速度单独按 `1.0 + elapsed_time / 300.0` 缩放，并封顶到 `1.75x`
 - 若 `resources/enemies/` 有可用 `EnemyData`，生成器会按 `spawn_weight` 加权选择
 - 敌人死亡后生成经验球和金币，掉落物受玩家拾取范围 bonus 影响
 

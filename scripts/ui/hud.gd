@@ -13,6 +13,7 @@ extends CanvasLayer
 
 var _slot_style_normal: StyleBoxFlat
 var _slot_style_max: StyleBoxFlat
+const COOLDOWN_VISIBLE_THRESHOLD := 0.01
 
 func _ready() -> void:
 	_setup_bar_styles()
@@ -81,19 +82,20 @@ func _create_slot(slot_name: String, slot_size: Vector2, icon_size: Vector2, wit
 	icon_container.add_child(icon_rect)
 
 	if with_cooldown:
-		var img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
-		img.fill(Color(0, 0, 0, 0.6))
-		var cooldown_tex := ImageTexture.create_from_image(img)
-
-		var cooldown_overlay := TextureProgressBar.new()
+		var cooldown_overlay := Control.new()
 		cooldown_overlay.name = "CooldownOverlay"
 		cooldown_overlay.anchor_right = 1.0
 		cooldown_overlay.anchor_bottom = 1.0
-		cooldown_overlay.texture_progress = cooldown_tex
-		cooldown_overlay.fill_mode = TextureProgressBar.FILL_BOTTOM_TO_TOP
-		cooldown_overlay.max_value = 1.0
-		cooldown_overlay.value = 0.0
-		cooldown_overlay.nine_patch_stretch = true
+		cooldown_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cooldown_overlay.visible = false
+
+		var cooldown_fill := ColorRect.new()
+		cooldown_fill.name = "CooldownFill"
+		cooldown_fill.anchor_right = 1.0
+		cooldown_fill.anchor_bottom = 1.0
+		cooldown_fill.color = Color(0.0, 0.0, 0.0, 0.62)
+		cooldown_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cooldown_overlay.add_child(cooldown_fill)
 		icon_container.add_child(cooldown_overlay)
 
 	var level_label := Label.new()
@@ -124,10 +126,10 @@ func _update_weapon_bar() -> void:
 				var vbox := slot.get_child(0)
 				var icon_container: Control = vbox.get_node("IconContainer")
 				var icon_rect: TextureRect = icon_container.get_node("IconRect")
-				var cooldown_overlay: TextureProgressBar = icon_container.get_node("CooldownOverlay")
+				var cooldown_overlay: Control = icon_container.get_node("CooldownOverlay")
 				var level_label: Label = vbox.get_node("LevelLabel")
 				icon_rect.texture = w.weapon_data.icon
-				cooldown_overlay.value = w.get_cooldown_progress()
+				_set_cooldown_overlay(cooldown_overlay, w.get_cooldown_progress())
 				level_label.text = "Lv.%d" % w.level
 				if w.level >= w.weapon_data.max_level:
 					slot.add_theme_stylebox_override("panel", _slot_style_max)
@@ -140,12 +142,22 @@ func _update_weapon_bar() -> void:
 		var vbox := slot.get_child(0)
 		var icon_container: Control = vbox.get_node("IconContainer")
 		var icon_rect: TextureRect = icon_container.get_node("IconRect")
-		var cooldown_overlay: TextureProgressBar = icon_container.get_node("CooldownOverlay")
+		var cooldown_overlay: Control = icon_container.get_node("CooldownOverlay")
 		var level_label: Label = vbox.get_node("LevelLabel")
 		icon_rect.texture = null
-		cooldown_overlay.value = 0.0
+		_set_cooldown_overlay(cooldown_overlay, 0.0)
 		level_label.text = ""
 		slot.add_theme_stylebox_override("panel", _slot_style_normal)
+
+func _set_cooldown_overlay(cooldown_overlay: Control, progress: float) -> void:
+	var amount := clampf(progress, 0.0, 1.0)
+	cooldown_overlay.visible = amount > COOLDOWN_VISIBLE_THRESHOLD
+	var cooldown_fill: ColorRect = cooldown_overlay.get_node("CooldownFill")
+	cooldown_fill.anchor_top = 1.0 - amount
+	cooldown_fill.offset_left = 0.0
+	cooldown_fill.offset_top = 0.0
+	cooldown_fill.offset_right = 0.0
+	cooldown_fill.offset_bottom = 0.0
 
 func _update_enhancement_bar() -> void:
 	var slots := _enhancement_bar.get_children()

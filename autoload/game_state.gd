@@ -14,6 +14,10 @@ const STARTING_EXP_TO_LEVEL := 15
 const MAX_WEAPON_SLOTS := 6
 const MAX_ENHANCEMENT_SLOTS := 6
 const STAT_UPGRADE_ICON := preload("res://assets/art/ui/icon_stat_upgrade.png")
+const REGEN_ENHANCEMENT_ID := &"regen"
+const REGEN_BASE_HEAL := 5
+const REGEN_HEAL_PER_LEVEL := 2
+const REGEN_INTERVAL := 5.0
 
 var run := {
 	"hp": STARTING_HP,
@@ -138,6 +142,12 @@ func get_enhancements() -> Array[Dictionary]:
 		if enhancements.has(str(key)):
 			result.append(enhancements[str(key)])
 	return result
+
+func get_regen_heal_amount() -> int:
+	var level := get_enhancement_level(REGEN_ENHANCEMENT_ID)
+	if level <= 0:
+		return 0
+	return REGEN_BASE_HEAL + (level - 1) * REGEN_HEAL_PER_LEVEL
 
 func _calc_exp_required(level: int) -> int:
 	return int(STARTING_EXP_TO_LEVEL * pow(1.2, level - 1))

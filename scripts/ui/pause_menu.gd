@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+signal quit_to_menu_pressed
+
 @onready var _stats_label: Label = $Panel/VBoxContainer/StatsLabel
 @onready var _weapons_container: HBoxContainer = $Panel/VBoxContainer/WeaponsSection/WeaponsContainer
 @onready var _enhancements_container: HBoxContainer = $Panel/VBoxContainer/EnhancementsSection/EnhancementsContainer
@@ -183,5 +185,4 @@ func _on_resume_pressed() -> void:
 	_resume()
 
 func _on_quit_pressed() -> void:
-	get_tree().paused = false
-	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
+	quit_to_menu_pressed.emit()

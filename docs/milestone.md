@@ -19,12 +19,11 @@
 - [x] 游戏结束画面（时间、击杀）
 - [x] 主菜单 → 游戏流程
 
-### 武器系统（17 种）
+### 武器系统（16 种）
 - [x] 近战武器（weapon_melee）
 - [x] 远程弹体（weapon_projectile）
 - [x] 落雷（weapon_thunder）
 - [x] 环绕球（weapon_orbit）
-- [x] 生命恢复（weapon_regen）
 - [x] 荆棘反伤（weapon_thorns）
 - [x] 火焰瓶（weapon_fire_bottle）
 - [x] 冰冻环（weapon_frost_ring）
@@ -40,6 +39,7 @@
 - [x] 所有武器统一继承 WeaponBase
 - [x] 每种武器均有独立 `.tscn` 场景
 - [x] 升级解锁 / 强化 / 流派机制（UpgradeSystem）
+- [x] 生命源泉改为角色被动恢复强化，不占武器槽
 
 ### 美术资源集成
 - [x] 玩家角色帧动画（idle / run，64×64）
@@ -48,7 +48,7 @@
 - [x] 多帧攻击特效使用 AnimatedSprite2D 播放帧动画（slash / thunder / holy / chain / thorns / saw / orb / fire_field / mine_blink / trail）
 - [x] 全部子弹 / 投射物替换为 Sprite2D
 - [x] 经验球、金币替换为 Sprite2D
-- [x] 武器图标替换为 sliced icons（17 种）
+- [x] 武器图标替换为 sliced icons（16 种武器 + 角色强化图标）
 - [x] 虚拟摇杆替换为 TextureRect（joystick_base / joystick_knob）
 - [x] 背景替换为 TextureRect（ground_tile）
 - [x] 所有资源按最终显示尺寸绘制，无运行时 scale
@@ -75,7 +75,7 @@
 - [x] 自动化集成测试框架（headless Godot）
 - [x] 场景加载验证（Player / HUD / UI）
 - [x] 升级系统测试（选项生成、点击、效果生效）
-- [x] 每种武器增加 + 使用测试（17 种全覆盖）
+- [x] 每种武器增加 + 使用测试（16 种全覆盖），生命源泉覆盖为被动强化测试
 - [x] 暂停菜单测试（显示 / 恢复 / 武器和强化槽位）
 - [x] 游戏结束测试（结算数据）
 - [x] 相机跟随验证
@@ -117,10 +117,11 @@
 
 | 指标 | 数值 |
 |------|------|
-| 武器种类 | 17 |
+| 武器种类 | 16 |
 | 敌人类型 | 1（基础追踪型，未资源化） |
 | UI 场景 | 8 |
-| 自动化测试 | 459 passed, 0 failed |
+| 自动化测试 | 467 passed, 0 failed |
+| HUD 冷却遮罩 | 高度连续变化 |
 | 引擎版本 | Godot 4.x（最近测试 4.6.2，GL Compatibility） |
 | 目标平台 | Web / Android / iOS |
 | Web 导出体积 | 约 41M（index.wasm 36M，index.pck 5.1M） |

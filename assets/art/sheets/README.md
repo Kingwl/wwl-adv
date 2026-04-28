@@ -35,7 +35,7 @@ Expected icon order:
 | 3 | `icon_thunder.png` | 天雷引 |
 | 4 | `icon_orbit.png` | 护盾球 |
 | 5 | `icon_thorns.png` | 荆棘护甲 |
-| 6 | `icon_regen.png` | 生命源泉 |
+| 6 | `icon_regen.png` | 生命源泉强化 |
 | 7 | `icon_shotgun.png` | 散弹枪 |
 | 8 | `icon_fire_bottle.png` | 火焰瓶 |
 | 9 | `icon_frost_ring.png` | 冰霜环 |
@@ -65,7 +65,7 @@ Expected attack-effect set:
 | `fx_mine_blink_sheet.png` | 地雷待机闪烁 |
 | `fx_explosion_sheet.png` | 地雷 / 通用爆炸 |
 | `fx_laser_sheet.png` | 激光笔 |
-| `fx_regen_sheet.png` | 生命源泉 |
+| `fx_regen_sheet.png` | 生命源泉强化 |
 | `fx_thorns_sheet.png` | 荆棘护甲 |
 | `fx_chain_sheet.png` | 电磁链 |
 | `fx_rocket_fire_sheet.png` | 火箭背包火焰 |

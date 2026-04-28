@@ -72,7 +72,7 @@ assets/art/
 
 ## 二、武器图标（Weapons — HUD / 升级UI）
 
-17 种武器各需一张图标，显示在升级选择卡片和暂停菜单武器栏中。
+16 种武器各需一张图标，显示在升级选择卡片和暂停菜单武器栏中；生命源泉使用强化图标显示在升级卡和强化栏中。
 
 | 资源名 | 用途 | 尺寸 | 格式 | 备注 |
 |--------|------|------|------|------|
@@ -81,7 +81,7 @@ assets/art/
 | `icon_thunder.png` | 天雷引 | 32x32 | PNG | 闪电符号 |
 | `icon_orbit.png` | 护盾球 | 32x32 | PNG | 环绕的球体 |
 | `icon_thorns.png` | 荆棘护甲 | 32x32 | PNG | 带刺的盾 |
-| `icon_regen.png` | 生命源泉 | 32x32 | PNG | 绿色十字/水滴 |
+| `icon_regen.png` | 生命源泉强化 | 32x32 | PNG | 绿色十字/水滴 |
 | `icon_shotgun.png` | 散弹枪 | 32x32 | PNG | 双管枪 |
 | `icon_fire_bottle.png` | 火焰瓶 | 32x32 | PNG | 燃烧瓶 |
 | `icon_frost_ring.png` | 冰霜环 | 32x32 | PNG | 雪花/冰环 |
@@ -113,7 +113,7 @@ assets/art/
 | `fx_mine_blink_sheet.png` | 地雷（待机） | 2 | 16x16 | 32x16 | 2 | 是 | 循环 | 红灯闪烁 |
 | `fx_explosion_sheet.png` | 地雷/通用爆炸 | 8 | 64x64 | 512x64 | 12 | 否 | ~0.7s | 橙红色爆炸 |
 | `fx_laser_sheet.png` | 激光笔 | 4 | 256x16 | 1024x16 | 8 | 否 | ~0.5s | 光束闪烁+末端消散 |
-| `fx_regen_sheet.png` | 生命源泉 | 4 | 32x32 | 128x32 | 4 | 是 | 循环 | 绿色十字浮动光点 |
+| `fx_regen_sheet.png` | 生命源泉强化 | 4 | 32x32 | 128x32 | 4 | 是 | 循环 | 绿色十字浮动光点 |
 | `fx_thorns_sheet.png` | 荆棘护甲 | 4 | 48x48 | 192x48 | 4 | 是 | 循环 | 尖刺脉冲红光 |
 | `fx_chain_sheet.png` | 电磁链 | 3 | 32x32 | 96x32 | 12 | 否 | ~0.25s | 闪电弧跳跃 |
 | `fx_rocket_fire_sheet.png` | 火箭背包 | 4 | 32x32 | 128x32 | 8 | 是 | 循环 | 身后火焰区域 |

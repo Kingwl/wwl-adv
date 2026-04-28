@@ -8,7 +8,7 @@
 
 当前实现状态：
 
-- 17 种武器
+- 16 种武器
 - 每种武器均有独立 `.tscn` 场景
 - 每种武器均有 `resources/weapons/*.tres` 数据资源
 - 每种武器默认等级上限 8
@@ -20,7 +20,7 @@
 |------|------|------|----------|
 | 攻击 | DAMAGE | 主动输出、范围伤害、弹幕、陷阱 | 基础利刃、弓箭精通、天雷引、散弹枪、火焰瓶、圣光棱镜、毒液罐、地雷、激光笔、回旋镖、电磁链、锯片陷阱、火箭背包 |
 | 防御 | DEFENSE | 自保、控制、反伤 | 护盾球、荆棘护甲、冰霜环 |
-| 增益 | BUFF | 治疗 / 辅助 | 生命源泉 |
+| 增益 | BUFF | 治疗 / 辅助 | 预留；生命源泉已迁移为角色强化 |
 
 分类标签已在升级选择、暂停菜单、结算界面和 StatsPanel 中展示。
 
@@ -96,7 +96,6 @@ enum Category { DAMAGE, DEFENSE, BUFF }
 | `projectile_basic` | 弓箭精通 | 攻击 | 自动瞄准最近敌人的弹体 |
 | `thunder` | 天雷引 | 攻击 | 随机选敌落雷范围伤害 |
 | `orbit` | 护盾球 | 防御 | 围绕玩家旋转并持续碰撞伤害 |
-| `regen` | 生命源泉 | 增益 | 周期性治疗玩家 |
 | `thorns` | 荆棘护甲 | 防御 | 玩家受伤时范围反伤 |
 | `shotgun` | 散弹枪 | 攻击 | 多弹丸扇形射击 |
 | `fire_bottle` | 火焰瓶 | 攻击 | 投掷后留下火场 |
@@ -116,10 +115,10 @@ enum Category { DAMAGE, DEFENSE, BUFF }
 
 `UpgradeSystem._generate_options()` 生成候选池：
 
-1. 角色强化：疾风步、生命强化、磁力增幅
+1. 角色强化：疾风步、生命强化、磁力增幅、生命源泉
 2. 未持有武器：从 `WEAPON_SCENES` 生成解锁选项，并从 `resources/weapons/{id}.tres` 读取名称、描述、图标
 3. 已持有武器：
-   - 若武器有路径、等级为 1 且尚未选流派，提供流派选择
+   - 若武器有路径、等级为 1 且尚未选流派，提供流派选择；卡片会展示选择后立即获得的 Lv.2 路径效果
    - 若武器已选流派，提供下一等级的 `WeaponPathLevel` 效果
    - 若武器无路径，回退到硬编码强化选项
 4. 外部升级：追加 `DataManager.all_upgrades()`
@@ -138,8 +137,8 @@ enum Category { DAMAGE, DEFENSE, BUFF }
 |------|------|
 | `WEAPON_UNLOCK` | 实例化 `WEAPON_SCENES[weapon_id]` 并加入 `Player/Weapons` |
 | `WEAPON_LEVEL` | 调用 `WeaponBase.level_up()`，再叠加 `UpgradeData` bonus |
-| `WEAPON_PATH` | 调用 `set_path(path_id)`，然后升到 2 级并应用路径效果 |
-| `PLAYER_STAT` | 修改玩家移速、最大 HP、当前 HP、拾取范围等 |
+| `WEAPON_PATH` | 调用 `set_path(path_id)`，然后升到 2 级并应用该路径 Lv.2 效果 |
+| `PLAYER_STAT` | 修改玩家移速、最大 HP、当前 HP、拾取范围等；生命源泉会进入强化槽并由 `Game._process_passive_enhancements()` 定时恢复 |
 
 ## 数据资源文件
 
@@ -158,7 +157,6 @@ resources/weapons/
 ├── orbit.tres
 ├── poison_vial.tres
 ├── projectile_basic.tres
-├── regen.tres
 ├── rocket_pack.tres
 ├── saw_blade.tres
 ├── shotgun.tres

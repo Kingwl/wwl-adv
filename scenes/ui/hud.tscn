@@ -83,9 +83,22 @@ anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -200.0
-offset_top = -180.0
+offset_top = -190.0
 offset_right = 200.0
-offset_bottom = -110.0
+offset_bottom = -132.0
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="EnhancementBar" type="HBoxContainer" parent="."]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -170.0
+offset_top = -126.0
+offset_right = 170.0
+offset_bottom = -78.0
 theme_override_constants/separation = 8
 alignment = 1
 
@@ -96,9 +109,9 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = -340.0
-offset_top = -100.0
+offset_top = -58.0
 offset_right = -20.0
-offset_bottom = -60.0
+offset_bottom = -18.0
 
 [node name="ExpBar" type="ProgressBar" parent="EXPPanel"]
 layout_mode = 1

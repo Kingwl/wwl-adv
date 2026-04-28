@@ -69,14 +69,14 @@ func _on_skip_requested() -> void:
 func _generate_options() -> Array[UpgradeData]:
 	var pool: Array[UpgradeData] = []
 
-	# === 角色属性 ===
-	pool.append(_make_speed_up())
-	pool.append(_make_hp_up())
-	pool.append(_make_pickup_up())
+	# === 角色强化 ===
+	for stat_upgrade in [_make_speed_up(), _make_hp_up(), _make_pickup_up()]:
+		if GameState.can_add_enhancement(stat_upgrade.id):
+			pool.append(stat_upgrade)
 
 	# === 武器解锁 ===
 	for weapon_id in WEAPON_SCENES.keys():
-		if not _find_weapon(weapon_id):
+		if _can_unlock_weapon(weapon_id):
 			pool.append(_make_unlock(weapon_id))
 
 	# === 已解锁武器：流派选择或升级 ===
@@ -135,8 +135,12 @@ func _generate_options() -> Array[UpgradeData]:
 			else:
 				if u.upgrade_type != UpgradeData.UpgradeType.WEAPON_UNLOCK:
 					continue
+				if not _has_weapon_slot_available():
+					continue
 			filtered.append(u)
 		else:
+			if u.upgrade_type == UpgradeData.UpgradeType.PLAYER_STAT and not GameState.can_add_enhancement(u.id):
+				continue
 			filtered.append(u)
 
 	filtered.shuffle()
@@ -169,7 +173,28 @@ func _apply_upgrade(upgrade: UpgradeData) -> void:
 		UpgradeData.UpgradeType.WEAPON_PATH:
 			_apply_path_choice(upgrade)
 		UpgradeData.UpgradeType.PLAYER_STAT:
+			if not GameState.add_enhancement(upgrade):
+				return
 			_apply_stat_upgrade(player, upgrade)
+
+func _get_weapon_count() -> int:
+	var player := get_tree().get_first_node_in_group("player")
+	if not player:
+		return 0
+	var weapons := player.get_node_or_null("Weapons")
+	if not weapons:
+		return 0
+	var count := 0
+	for w in weapons.get_children():
+		if w is WeaponBase and w.weapon_data:
+			count += 1
+	return count
+
+func _has_weapon_slot_available() -> bool:
+	return _get_weapon_count() < GameState.MAX_WEAPON_SLOTS
+
+func _can_unlock_weapon(weapon_id: StringName) -> bool:
+	return not _find_weapon(weapon_id) and _has_weapon_slot_available()
 
 func _find_weapon(weapon_id: StringName) -> WeaponBase:
 	var player := get_tree().get_first_node_in_group("player")
@@ -183,10 +208,12 @@ func _find_weapon(weapon_id: StringName) -> WeaponBase:
 			return w
 	return null
 
-func _unlock_weapon(weapon_id: StringName) -> void:
+func _unlock_weapon(weapon_id: StringName, ignore_slot_limit: bool = false) -> void:
 	var scene_path: String = WEAPON_SCENES.get(weapon_id, "")
 	if scene_path.is_empty():
 		push_warning("Unknown weapon_id: %s" % weapon_id)
+		return
+	if not ignore_slot_limit and not _can_unlock_weapon(weapon_id):
 		return
 
 	var player := get_tree().get_first_node_in_group("player")

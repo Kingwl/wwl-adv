@@ -11,6 +11,9 @@ signal level_up(new_level: int)
 const STARTING_HP := 100
 const STARTING_GOLD := 0
 const STARTING_EXP_TO_LEVEL := 15
+const MAX_WEAPON_SLOTS := 6
+const MAX_ENHANCEMENT_SLOTS := 6
+const STAT_UPGRADE_ICON := preload("res://assets/art/ui/icon_stat_upgrade.png")
 
 var run := {
 	"hp": STARTING_HP,
@@ -23,6 +26,8 @@ var run := {
 	"kills": 0,
 	"seed": 0,
 	"pickup_radius_bonus": 0.0,
+	"enhancements": {},
+	"enhancement_order": [],
 }
 
 func start_new_run(rng_seed: int = 0) -> void:
@@ -39,6 +44,8 @@ func start_new_run(rng_seed: int = 0) -> void:
 		"kills": 0,
 		"seed": rng_seed,
 		"pickup_radius_bonus": 0.0,
+		"enhancements": {},
+		"enhancement_order": [],
 	}
 	run_started.emit()
 
@@ -76,6 +83,61 @@ func get_time_string() -> String:
 	var minutes := total_seconds / 60
 	var seconds := total_seconds % 60
 	return "%02d:%02d" % [minutes, seconds]
+
+func get_enhancement_count() -> int:
+	return (run.get("enhancement_order", []) as Array).size()
+
+func get_enhancement_level(enhancement_id: StringName) -> int:
+	var enhancements: Dictionary = run.get("enhancements", {})
+	var key := str(enhancement_id)
+	if not enhancements.has(key):
+		return 0
+	return int(enhancements[key].get("level", 0))
+
+func can_add_enhancement(enhancement_id: StringName) -> bool:
+	if get_enhancement_level(enhancement_id) > 0:
+		return true
+	return get_enhancement_count() < MAX_ENHANCEMENT_SLOTS
+
+func add_enhancement(upgrade: UpgradeData) -> bool:
+	if not upgrade or upgrade.id.is_empty():
+		return false
+	var key := str(upgrade.id)
+	var enhancements: Dictionary = run.get("enhancements", {})
+	var order: Array = run.get("enhancement_order", [])
+	if not enhancements.has(key):
+		if order.size() >= MAX_ENHANCEMENT_SLOTS:
+			return false
+		enhancements[key] = {
+			"id": key,
+			"display_name": upgrade.display_name,
+			"description": upgrade.description,
+			"level": 1,
+			"icon": upgrade.icon if upgrade.icon else STAT_UPGRADE_ICON,
+		}
+		order.append(key)
+	else:
+		var data: Dictionary = enhancements[key]
+		data["level"] = int(data.get("level", 1)) + 1
+		data["display_name"] = upgrade.display_name
+		data["description"] = upgrade.description
+		if upgrade.icon:
+			data["icon"] = upgrade.icon
+		elif not data.has("icon"):
+			data["icon"] = STAT_UPGRADE_ICON
+		enhancements[key] = data
+	run["enhancements"] = enhancements
+	run["enhancement_order"] = order
+	return true
+
+func get_enhancements() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var enhancements: Dictionary = run.get("enhancements", {})
+	var order: Array = run.get("enhancement_order", [])
+	for key in order:
+		if enhancements.has(str(key)):
+			result.append(enhancements[str(key)])
+	return result
 
 func _calc_exp_required(level: int) -> int:
 	return int(STARTING_EXP_TO_LEVEL * pow(1.2, level - 1))

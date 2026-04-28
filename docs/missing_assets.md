@@ -37,7 +37,7 @@
 | `button_normal/hover/pressed.png` | 220x48 | 按钮三态 |
 | `hp_bar_fill.png` / `exp_bar_fill.png` | 256x24 / 256x20 | HUD 进度条填充 |
 | `icon_heart.png` / `icon_gold.png` | 16x16 | HUD 图标 |
-| `icon_stat_upgrade.png` | 32x32 | 角色属性升级卡图标 |
+| `icon_stat_upgrade.png` | 32x32 | 角色强化升级卡图标 |
 
 ## 当前格式说明
 

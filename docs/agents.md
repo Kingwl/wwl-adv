@@ -49,10 +49,10 @@
 
 ### 添加一种升级选项
 
-1. 简单角色属性升级可在 `scripts/game/upgrade_system.gd` 的 `_generate_options()` / helper 方法中创建 `UpgradeData`
+1. 简单角色强化可在 `scripts/game/upgrade_system.gd` 的 `_generate_options()` / helper 方法中创建 `UpgradeData`
 2. 武器解锁和强化使用 `WEAPON_UNLOCK` / `WEAPON_LEVEL`，武器流派选择使用 `WEAPON_PATH`
 3. 武器流派每级效果优先写入 `WeaponPathLevel`，由 `WeaponBase._apply_path_effects()` 应用
-4. 角色属性升级使用 `PLAYER_STAT`，并在 `_apply_stat_upgrade()` 中处理新的属性类型
+4. 角色强化使用 `PLAYER_STAT`，并在 `_apply_stat_upgrade()` 中处理新的属性类型
 5. 也可以在 `resources/upgrades/` 放外部升级资源，`DataManager.all_upgrades()` 会被加入候选池
 
 ## 测试规范

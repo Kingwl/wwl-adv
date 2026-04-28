@@ -116,7 +116,7 @@ enum Category { DAMAGE, DEFENSE, BUFF }
 
 `UpgradeSystem._generate_options()` 生成候选池：
 
-1. 角色属性升级：疾风步、生命强化、磁力增幅
+1. 角色强化：疾风步、生命强化、磁力增幅
 2. 未持有武器：从 `WEAPON_SCENES` 生成解锁选项，并从 `resources/weapons/{id}.tres` 读取名称、描述、图标
 3. 已持有武器：
    - 若武器有路径、等级为 1 且尚未选流派，提供流派选择

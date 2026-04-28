@@ -169,7 +169,7 @@ func _get_type_name(t: UpgradeData.UpgradeType) -> String:
 		UpgradeData.UpgradeType.WEAPON_PATH:
 			return "流派选择"
 		UpgradeData.UpgradeType.PLAYER_STAT:
-			return "角色属性"
+			return "角色强化"
 	return "未知"
 
 func _get_weapon_category_name(weapon_id: StringName) -> String:

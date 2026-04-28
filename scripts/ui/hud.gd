@@ -8,6 +8,7 @@ extends CanvasLayer
 @onready var _exp_bar: ProgressBar = $EXPPanel/ExpBar
 @onready var _level_label: Label = $EXPPanel/LevelLabel
 @onready var _weapon_bar: HBoxContainer = $WeaponBar
+@onready var _enhancement_bar: HBoxContainer = $EnhancementBar
 @onready var _stats_button: Button = $TopBar/StatsButton
 
 var _slot_style_normal: StyleBoxFlat
@@ -18,6 +19,7 @@ func _ready() -> void:
 	_add_gold_icon()
 	_add_heart_icon()
 	_init_weapon_slots()
+	_init_enhancement_slots()
 	_stats_button.pressed.connect(_on_stats_pressed)
 	GameState.hp_changed.connect(_on_hp_changed)
 	GameState.exp_changed.connect(_on_exp_changed)
@@ -29,6 +31,7 @@ func _process(_delta: float) -> void:
 	_time_label.text = GameState.get_time_string()
 	_kill_label.text = "击杀: %d" % GameState.run.kills
 	_update_weapon_bar()
+	_update_enhancement_bar()
 
 func _init_weapon_slots() -> void:
 	_slot_style_normal = StyleBoxFlat.new()
@@ -47,27 +50,37 @@ func _init_weapon_slots() -> void:
 	_slot_style_max.border_width_right = 2
 	_slot_style_max.border_width_bottom = 2
 
-	for i in range(6):
-		var slot := PanelContainer.new()
-		slot.custom_minimum_size = Vector2(56, 56)
-		slot.name = "Slot%d" % i
-		slot.add_theme_stylebox_override("panel", _slot_style_normal)
+	for i in range(GameState.MAX_WEAPON_SLOTS):
+		_weapon_bar.add_child(_create_slot("Slot%d" % i, Vector2(56, 56), Vector2(28, 28), true))
 
-		var vbox := VBoxContainer.new()
-		vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+func _init_enhancement_slots() -> void:
+	for i in range(GameState.MAX_ENHANCEMENT_SLOTS):
+		_enhancement_bar.add_child(_create_slot("EnhancementSlot%d" % i, Vector2(46, 46), Vector2(24, 24), false))
 
-		var icon_container := Control.new()
-		icon_container.name = "IconContainer"
-		icon_container.custom_minimum_size = Vector2(28, 28)
-		icon_container.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+func _create_slot(slot_name: String, slot_size: Vector2, icon_size: Vector2, with_cooldown: bool) -> PanelContainer:
+	var slot := PanelContainer.new()
+	slot.custom_minimum_size = slot_size
+	slot.name = slot_name
+	slot.add_theme_stylebox_override("panel", _slot_style_normal)
 
-		var icon_rect := TextureRect.new()
-		icon_rect.name = "IconRect"
-		icon_rect.anchor_right = 1.0
-		icon_rect.anchor_bottom = 1.0
-		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 
+	var icon_container := Control.new()
+	icon_container.name = "IconContainer"
+	icon_container.custom_minimum_size = icon_size
+	icon_container.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+
+	var icon_rect := TextureRect.new()
+	icon_rect.name = "IconRect"
+	icon_rect.anchor_right = 1.0
+	icon_rect.anchor_bottom = 1.0
+	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+
+	icon_container.add_child(icon_rect)
+
+	if with_cooldown:
 		var img := Image.create(1, 1, false, Image.FORMAT_RGBA8)
 		img.fill(Color(0, 0, 0, 0.6))
 		var cooldown_tex := ImageTexture.create_from_image(img)
@@ -81,20 +94,18 @@ func _init_weapon_slots() -> void:
 		cooldown_overlay.max_value = 1.0
 		cooldown_overlay.value = 0.0
 		cooldown_overlay.nine_patch_stretch = true
-
-		icon_container.add_child(icon_rect)
 		icon_container.add_child(cooldown_overlay)
 
-		var level_label := Label.new()
-		level_label.name = "LevelLabel"
-		level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		level_label.add_theme_font_size_override("font_size", 11)
-		level_label.text = ""
+	var level_label := Label.new()
+	level_label.name = "LevelLabel"
+	level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	level_label.add_theme_font_size_override("font_size", 10)
+	level_label.text = ""
 
-		vbox.add_child(icon_container)
-		vbox.add_child(level_label)
-		slot.add_child(vbox)
-		_weapon_bar.add_child(slot)
+	vbox.add_child(icon_container)
+	vbox.add_child(level_label)
+	slot.add_child(vbox)
+	return slot
 
 func _update_weapon_bar() -> void:
 	var player := get_tree().get_first_node_in_group("player")
@@ -135,6 +146,25 @@ func _update_weapon_bar() -> void:
 		cooldown_overlay.value = 0.0
 		level_label.text = ""
 		slot.add_theme_stylebox_override("panel", _slot_style_normal)
+
+func _update_enhancement_bar() -> void:
+	var slots := _enhancement_bar.get_children()
+	var enhancements := GameState.get_enhancements()
+	for i in range(slots.size()):
+		var slot: PanelContainer = slots[i]
+		var vbox := slot.get_child(0)
+		var icon_container: Control = vbox.get_node("IconContainer")
+		var icon_rect: TextureRect = icon_container.get_node("IconRect")
+		var level_label: Label = vbox.get_node("LevelLabel")
+		if i < enhancements.size():
+			var enhancement: Dictionary = enhancements[i]
+			icon_rect.texture = enhancement.get("icon", GameState.STAT_UPGRADE_ICON)
+			level_label.text = "Lv.%d" % int(enhancement.get("level", 1))
+			slot.add_theme_stylebox_override("panel", _slot_style_normal)
+		else:
+			icon_rect.texture = null
+			level_label.text = ""
+			slot.add_theme_stylebox_override("panel", _slot_style_normal)
 
 func _setup_bar_styles() -> void:
 	var hp_fill := StyleBoxTexture.new()

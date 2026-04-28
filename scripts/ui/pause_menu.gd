@@ -2,6 +2,7 @@ extends CanvasLayer
 
 @onready var _stats_label: Label = $Panel/VBoxContainer/StatsLabel
 @onready var _weapons_container: HBoxContainer = $Panel/VBoxContainer/WeaponsSection/WeaponsContainer
+@onready var _enhancements_container: HBoxContainer = $Panel/VBoxContainer/EnhancementsSection/EnhancementsContainer
 
 func _ready() -> void:
 	visible = false
@@ -52,6 +53,7 @@ func _show_pause() -> void:
 	get_tree().paused = true
 	_update_stats()
 	_populate_weapons()
+	_populate_enhancements()
 
 func _resume() -> void:
 	visible = false
@@ -67,7 +69,7 @@ func _populate_weapons() -> void:
 		child.queue_free()
 
 	var weapons := _get_player_weapons()
-	for i in range(6):
+	for i in range(GameState.MAX_WEAPON_SLOTS):
 		var slot := VBoxContainer.new()
 		slot.alignment = BoxContainer.ALIGNMENT_CENTER
 		slot.custom_minimum_size = Vector2(64, 80)
@@ -107,6 +109,42 @@ func _populate_weapons() -> void:
 			slot.add_child(empty_label)
 
 		_weapons_container.add_child(slot)
+
+func _populate_enhancements() -> void:
+	for child in _enhancements_container.get_children():
+		child.queue_free()
+
+	var enhancements := GameState.get_enhancements()
+	for i in range(GameState.MAX_ENHANCEMENT_SLOTS):
+		var slot := VBoxContainer.new()
+		slot.alignment = BoxContainer.ALIGNMENT_CENTER
+		slot.custom_minimum_size = Vector2(54, 62)
+
+		if i < enhancements.size():
+			var enhancement: Dictionary = enhancements[i]
+			var icon := TextureRect.new()
+			icon.texture = enhancement.get("icon", GameState.STAT_UPGRADE_ICON)
+			icon.custom_minimum_size = Vector2(28, 28)
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+			icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			slot.add_child(icon)
+
+			var label := Label.new()
+			label.text = "%s\nLv.%d" % [enhancement.get("display_name", "?"), int(enhancement.get("level", 1))]
+			label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			label.add_theme_font_size_override("font_size", 10)
+			label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.9, 1))
+			slot.add_child(label)
+		else:
+			var empty_label := Label.new()
+			empty_label.text = "[空]"
+			empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			empty_label.add_theme_font_size_override("font_size", 10)
+			empty_label.add_theme_color_override("font_color", Color(0.35, 0.35, 0.4, 1))
+			slot.add_child(empty_label)
+
+		_enhancements_container.add_child(slot)
 
 func _category_name(cat: WeaponData.Category) -> String:
 	match cat:

@@ -4,6 +4,7 @@ const BASE_PICKUP_RADIUS := 120.0
 
 @onready var _panel: PanelContainer = $Panel
 @onready var _basic_grid: GridContainer = $Panel/ScrollContainer/VBoxContainer/BasicSection/GridContainer
+@onready var _enhancements_list: VBoxContainer = $Panel/ScrollContainer/VBoxContainer/EnhancementsSection/EnhancementsList
 @onready var _weapons_list: VBoxContainer = $Panel/ScrollContainer/VBoxContainer/WeaponsSection/WeaponsList
 
 func _ready() -> void:
@@ -49,6 +50,7 @@ func toggle() -> void:
 
 func _refresh() -> void:
 	_refresh_basic_stats()
+	_refresh_enhancements()
 	_refresh_weapons()
 
 func _refresh_basic_stats() -> void:
@@ -83,6 +85,48 @@ func _refresh_basic_stats() -> void:
 		value_label.add_theme_font_size_override("font_size", 16)
 		value_label.add_theme_color_override("font_color", Color(0.95, 0.95, 1, 1))
 		_basic_grid.add_child(value_label)
+
+func _refresh_enhancements() -> void:
+	for child in _enhancements_list.get_children():
+		child.queue_free()
+
+	var enhancements := GameState.get_enhancements()
+	if enhancements.is_empty():
+		var empty := Label.new()
+		empty.text = "暂无强化"
+		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty.add_theme_font_size_override("font_size", 14)
+		empty.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55, 1))
+		_enhancements_list.add_child(empty)
+		return
+
+	for enhancement in enhancements:
+		var row := HBoxContainer.new()
+		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_theme_constant_override("separation", 8)
+
+		var icon := TextureRect.new()
+		icon.texture = enhancement.get("icon", GameState.STAT_UPGRADE_ICON)
+		icon.custom_minimum_size = Vector2(24, 24)
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+		row.add_child(icon)
+
+		var name_label := Label.new()
+		name_label.text = str(enhancement.get("display_name", "?"))
+		name_label.add_theme_font_size_override("font_size", 15)
+		name_label.add_theme_color_override("font_color", Color(0.95, 0.95, 1, 1))
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name_label)
+
+		var level_label := Label.new()
+		level_label.text = "Lv.%d" % int(enhancement.get("level", 1))
+		level_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		level_label.add_theme_font_size_override("font_size", 13)
+		level_label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.8, 1))
+		row.add_child(level_label)
+
+		_enhancements_list.add_child(row)
 
 func _refresh_weapons() -> void:
 	for child in _weapons_list.get_children():

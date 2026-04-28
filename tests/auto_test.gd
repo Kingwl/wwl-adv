@@ -255,6 +255,7 @@ func _phase_weapon_unlocks() -> void:
 	var scenes: Dictionary = upgrade_system.WEAPON_SCENES
 
 	var unlocked_count := 0
+	var cap_checked := false
 	for weapon_id in scenes.keys():
 		if _find_weapon(weapon_id) != null:
 			unlocked_count += 1
@@ -267,7 +268,24 @@ func _phase_weapon_unlocks() -> void:
 		unlock.upgrade_type = UpgradeData.UpgradeType.WEAPON_UNLOCK
 		unlock.weapon_id = weapon_id
 
-		upgrade_system._on_option_selected(unlock)
+		var count_before := _get_weapon_count()
+		if count_before < GameState.MAX_WEAPON_SLOTS:
+			upgrade_system._on_option_selected(unlock)
+		else:
+			upgrade_system._on_option_selected(unlock)
+			await _wait(0.05)
+			_assert(_find_weapon(weapon_id) == null, "Weapon slot cap blocks normal unlock for %s" % weapon_id)
+			_assert(_get_weapon_count() == count_before, "Weapon count stays at slot cap")
+			if not cap_checked:
+				var cap_options: Array[UpgradeData] = upgrade_system._generate_options()
+				var has_unlock_option := false
+				for u in cap_options:
+					if u.upgrade_type == UpgradeData.UpgradeType.WEAPON_UNLOCK:
+						has_unlock_option = true
+						break
+				_assert(not has_unlock_option, "Full weapon slots hide new weapon options")
+				cap_checked = true
+			upgrade_system._unlock_weapon(weapon_id, true)
 		await _wait(0.05)
 
 		var w := _find_weapon(weapon_id)
@@ -280,7 +298,7 @@ func _phase_weapon_unlocks() -> void:
 			_assert(w.level == 1, "Weapon %s starts at level 1" % weapon_id)
 		unlocked_count += 1
 
-	_assert(unlocked_count == scenes.size(), "All %d weapons unlocked" % scenes.size())
+	_assert(unlocked_count == scenes.size(), "All %d weapons unlocked for coverage" % scenes.size())
 	print("  Unlocked %d weapons" % unlocked_count)
 
 	# Test weapon level up
@@ -410,7 +428,12 @@ func _phase_pause() -> void:
 		var weapons_container: HBoxContainer = pause_menu._weapons_container
 		_assert(weapons_container != null, "PauseMenu weapons container exists")
 		var slot_labels: Array = weapons_container.get_children()
-		_assert(slot_labels.size() == 6, "PauseMenu shows 6 weapon slots")
+		_assert(slot_labels.size() == GameState.MAX_WEAPON_SLOTS, "PauseMenu shows 6 weapon slots")
+
+		var enhancements_container: HBoxContainer = pause_menu._enhancements_container
+		_assert(enhancements_container != null, "PauseMenu enhancements container exists")
+		if enhancements_container:
+			_assert(enhancements_container.get_child_count() == GameState.MAX_ENHANCEMENT_SLOTS, "PauseMenu shows 6 enhancement slots")
 
 		# Verify weapon slots display icons
 		for slot in slot_labels:
@@ -453,6 +476,7 @@ func _phase_game_over() -> void:
 		# Verify game over weapon slots display icons
 		var weapons_container: HBoxContainer = game_over.get_node_or_null("Panel/VBoxContainer/WeaponsSection/WeaponsContainer")
 		if weapons_container:
+			_assert(weapons_container.get_child_count() == GameState.MAX_WEAPON_SLOTS, "GameOver shows 6 weapon slots")
 			for slot in weapons_container.get_children():
 				if slot is VBoxContainer:
 					var has_icon := false
@@ -461,6 +485,10 @@ func _phase_game_over() -> void:
 							has_icon = true
 							break
 					_assert(has_icon, "GameOver weapon slot has icon")
+
+		var enhancements_container: HBoxContainer = game_over.get_node_or_null("Panel/VBoxContainer/EnhancementsSection/EnhancementsContainer")
+		if enhancements_container:
+			_assert(enhancements_container.get_child_count() == GameState.MAX_ENHANCEMENT_SLOTS, "GameOver shows 6 enhancement slots")
 
 	# Unpause so subsequent phases can use non-always timers
 	get_tree().paused = false
@@ -1423,24 +1451,58 @@ func _phase_upgrade_edges() -> void:
 		await _wait(0.2)
 		return
 
-	# Test PLAYER_STAT speed bonus
+	GameState.run["enhancements"] = {}
+	GameState.run["enhancement_order"] = []
+
+	# Test PLAYER_STAT speed bonus and enhancement slot tracking
 	var prev_speed: float = player.move_speed
 	var speed_up := UpgradeData.new()
 	speed_up.id = "test_speed"
+	speed_up.display_name = "Test Speed"
 	speed_up.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	speed_up.speed_bonus = 25.0
 	upgrade_system._on_option_selected(speed_up)
 	_assert(player.move_speed == prev_speed + 25.0, "Speed stat upgrade applies")
+	_assert(GameState.get_enhancement_count() == 1, "First stat upgrade occupies one enhancement slot")
+	_assert(GameState.get_enhancement_level(&"test_speed") == 1, "Enhancement level starts at 1")
+
+	prev_speed = player.move_speed
+	upgrade_system._on_option_selected(speed_up)
+	_assert(player.move_speed == prev_speed + 25.0, "Repeated stat upgrade applies")
+	_assert(GameState.get_enhancement_count() == 1, "Repeated stat upgrade reuses enhancement slot")
+	_assert(GameState.get_enhancement_level(&"test_speed") == 2, "Repeated stat upgrade increases enhancement level")
 
 	# Test PLAYER_STAT max_hp bonus
 	var prev_max_hp: int = GameState.run.max_hp
 	var hp_up := UpgradeData.new()
 	hp_up.id = "test_hp"
+	hp_up.display_name = "Test HP"
 	hp_up.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	hp_up.max_hp_bonus = 30
 	upgrade_system._on_option_selected(hp_up)
 	_assert(GameState.run.max_hp == prev_max_hp + 30, "Max HP stat upgrade applies")
 	_assert(GameState.run.hp > 0, "HP bonus also heals player")
+
+	var fill_idx := 0
+	while GameState.get_enhancement_count() < GameState.MAX_ENHANCEMENT_SLOTS:
+		var filler := UpgradeData.new()
+		filler.id = "test_enhancement_fill_%d" % fill_idx
+		filler.display_name = "Fill %d" % fill_idx
+		filler.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+		upgrade_system._on_option_selected(filler)
+		fill_idx += 1
+	_assert(GameState.get_enhancement_count() == GameState.MAX_ENHANCEMENT_SLOTS, "Enhancement slots cap at 6")
+	_assert(GameState.can_add_enhancement(&"test_speed"), "Existing enhancement can still level when slots are full")
+	_assert(not GameState.can_add_enhancement(&"blocked_new_enhancement"), "New enhancement is blocked when slots are full")
+	var blocked_speed_before: float = player.move_speed
+	var blocked := UpgradeData.new()
+	blocked.id = "blocked_new_enhancement"
+	blocked.display_name = "Blocked"
+	blocked.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	blocked.speed_bonus = 25.0
+	upgrade_system._on_option_selected(blocked)
+	_assert(player.move_speed == blocked_speed_before, "Blocked enhancement does not apply stat effect")
+	_assert(GameState.get_enhancement_count() == GameState.MAX_ENHANCEMENT_SLOTS, "Blocked enhancement does not exceed slot cap")
 
 	# Test weapon max level enforcement via upgrade system
 	var melee := _find_weapon(&"melee_basic")
@@ -1727,6 +1789,14 @@ func _phase_hud_sync() -> void:
 		await _wait(0.05)
 		_assert(kill_label.text == "击杀: 7", "Kill label syncs")
 
+	var weapon_bar: HBoxContainer = hud.get_node_or_null("WeaponBar")
+	if weapon_bar:
+		_assert(weapon_bar.get_child_count() == GameState.MAX_WEAPON_SLOTS, "HUD shows 6 weapon slots")
+
+	var enhancement_bar: HBoxContainer = hud.get_node_or_null("EnhancementBar")
+	if enhancement_bar:
+		_assert(enhancement_bar.get_child_count() == GameState.MAX_ENHANCEMENT_SLOTS, "HUD shows 6 enhancement slots")
+
 	await _wait(0.1)
 
 func _phase_stats_panel() -> void:
@@ -1759,6 +1829,10 @@ func _phase_stats_panel() -> void:
 	var weapons_list: VBoxContainer = stats_panel.get_node_or_null("Panel/ScrollContainer/VBoxContainer/WeaponsSection/WeaponsList")
 	if weapons_list:
 		_assert(weapons_list.get_child_count() > 0, "Weapons list populated")
+
+	var enhancements_list: VBoxContainer = stats_panel.get_node_or_null("Panel/ScrollContainer/VBoxContainer/EnhancementsSection/EnhancementsList")
+	if enhancements_list:
+		_assert(enhancements_list.get_child_count() > 0, "Enhancements list populated")
 
 	# Toggle hidden again
 	stats_panel.toggle()
@@ -1943,13 +2017,20 @@ func _phase_weapon_orbit() -> void:
 	if not orbit:
 		await _wait(0.2)
 		return
+	if orbit.has_method("_rebuild_orbs"):
+		orbit._rebuild_orbs()
+		await _wait(0.1)
 
 	# Verify orbs were spawned
 	var orb_count: int = 0
 	for child in projectiles_parent.get_children():
 		if child is Area2D and child.get_child_count() >= 1:
 			orb_count += 1
-	var expected_orbs: int = orbit.weapon_data.orbit_count if orbit.weapon_data else 2
+	var expected_orbs := 2
+	if orbit.has_method("_get_orbit_count"):
+		expected_orbs = orbit._get_orbit_count()
+	elif orbit.weapon_data:
+		expected_orbs = orbit.weapon_data.orbit_count
 	_assert(orb_count == expected_orbs, "Orbit spawns correct number of orbs")
 
 	# Verify orbs rotate around player

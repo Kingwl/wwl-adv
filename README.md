@@ -17,7 +17,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 - 玩家移动、受击、死亡结算、相机跟随
 - 基础追踪敌人和随时间增强的生成器
 - 经验 / 金币掉落与拾取
-- 升级三选一，支持角色属性、武器解锁、武器强化和武器流派
+- 升级三选一，支持角色强化、武器解锁、武器强化和武器流派
 - 17 种武器，均有 `.tscn` 场景和 `resources/weapons/*.tres` 数据资源
 - HUD、暂停菜单、属性面板、升级选择、游戏结束界面、虚拟摇杆
 - 角色、敌人、武器特效、掉落物、UI 图标等美术资源接入
@@ -27,7 +27,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 
 - 仍只有 1 种基础敌人，敌人资源目录尚未内容化
 - 没有音效系统
-- 没有存档 / 设置持久化
+- 存档 / 设置持久化已有设计文档，尚未实现
 - 移动端安全区、触屏细节和发布包体仍需打磨
 
 ## 快速启动
@@ -45,7 +45,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 ./tests/run_tests.sh
 ```
 
-当前最近一次验证结果：`362 passed, 0 failed`。
+当前最近一次验证结果：`459 passed, 0 failed`。
 
 ## 目录结构
 
@@ -93,6 +93,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 - [`docs/agents.md`](./docs/agents.md) — Agent 协作入口、修改路径、测试规范
 - [`docs/architecture.md`](./docs/architecture.md) — 场景树、信号流、碰撞层级、数据结构
 - [`docs/game_design.md`](./docs/game_design.md) — 核心循环、数值、未来规划
+- [`docs/save_system_design.md`](./docs/save_system_design.md) — 本地存档、继续游戏、schema 和测试计划
 - [`docs/milestone.md`](./docs/milestone.md) — 已完成内容和待办
 
 ## 跨平台导出
@@ -124,7 +125,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 ## 后续 TODO
 
 - [ ] 音效系统（攻击、受击、升级、背景音乐）
-- [ ] 存档系统（持久化进度 / 配置）
+- [ ] 存档系统（持久化进度 / 配置，设计见 `docs/save_system_design.md`）
 - [ ] 移动端适配（安全区、触屏细节、性能）
 - [ ] 敌人数据资源文件化和更多敌人类型
 - [ ] Boss 战、地图机制和更多关卡目标

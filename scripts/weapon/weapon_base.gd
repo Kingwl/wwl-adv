@@ -45,6 +45,7 @@ func level_up() -> void:
 	_recalc_stats()
 	_apply_path_effects()
 	_on_level_up()
+	GameState.notify_weapons_changed()
 
 func _apply_path_effects() -> void:
 	if not weapon_data or current_path_id.is_empty():

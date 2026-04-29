@@ -9,10 +9,14 @@ static func build_sprite_frames(base_path: String, prefix: String, frame_count: 
 	for i in range(frame_count):
 		var num := i + 1
 		var texture_path := base_path + "/" + prefix + "_%02d.png" % num
-		if ResourceLoader.exists(texture_path):
-			var texture := load(texture_path)
+		if not ResourceLoader.exists(texture_path):
+			continue
+		var texture := ResourceLoader.load(texture_path) as Texture2D
+		if texture:
 			frames.add_frame("default", texture)
 			loaded_count += 1
+		else:
+			push_warning("VFXHelper: failed to load texture %s" % texture_path)
 	if loaded_count < frame_count:
 		push_warning("VFXHelper: expected %d frames for %s/%s, loaded %d" % [frame_count, base_path, prefix, loaded_count])
 	frames.set_animation_loop("default", loop)
@@ -26,6 +30,9 @@ static func spawn_animated_one_shot(parent: Node, base_path: String, prefix: Str
 	anim.scale = scale
 	anim.z_index = 15
 	parent.add_child(anim)
+	if not _has_default_frames(anim.sprite_frames):
+		anim.queue_free()
+		return anim
 	anim.play("default")
 	anim.animation_finished.connect(anim.queue_free)
 	return anim
@@ -36,10 +43,17 @@ static func spawn_animated_loop(parent: Node, base_path: String, prefix: String,
 	anim.scale = scale
 	anim.z_index = 15
 	parent.add_child(anim)
+	if not _has_default_frames(anim.sprite_frames):
+		anim.queue_free()
+		return anim
 	anim.play("default")
 	return anim
 
 static func spawn_one_shot_sprite(parent: Node, texture: Texture2D, pos: Vector2, duration: float = 0.15, fade: bool = true, scale: Vector2 = Vector2.ONE) -> Sprite2D:
+	if not texture:
+		push_warning("VFXHelper: one-shot sprite skipped because texture is null")
+		return null
+
 	var sprite := Sprite2D.new()
 	sprite.texture = texture
 	sprite.global_position = pos
@@ -58,6 +72,10 @@ static func spawn_one_shot_sprite(parent: Node, texture: Texture2D, pos: Vector2
 
 static func spawn_tiled_sprite(parent: Node, texture: Texture2D, from_pos: Vector2, to_pos: Vector2, duration: float = 0.2) -> Sprite2D:
 	## 创建一条从 from_pos 到 to_pos 的拉伸 sprite，用于尾迹/激光效果
+	if not texture:
+		push_warning("VFXHelper: tiled sprite skipped because texture is null")
+		return null
+
 	var sprite := Sprite2D.new()
 	sprite.texture = texture
 	sprite.global_position = (from_pos + to_pos) / 2.0
@@ -86,6 +104,9 @@ static func spawn_animated_trail(parent: Node, base_path: String, prefix: String
 	var container := Node2D.new()
 	container.z_index = 15
 	parent.add_child(container)
+	if not _has_default_frames(frames):
+		container.queue_free()
+		return container
 
 	for i in range(count):
 		var t: float = 0.0 if count == 1 else float(i) / float(count - 1)
@@ -104,3 +125,6 @@ static func spawn_animated_trail(parent: Node, base_path: String, prefix: String
 	tween.tween_property(container, "modulate", Color(1, 1, 1, 0), duration)
 	tween.tween_callback(container.queue_free)
 	return container
+
+static func _has_default_frames(frames: SpriteFrames) -> bool:
+	return frames != null and frames.has_animation("default") and frames.get_frame_count("default") > 0

@@ -28,6 +28,7 @@ func _ready() -> void:
 	GameState.exp_changed.connect(_on_exp_changed)
 	GameState.gold_changed.connect(_on_gold_changed)
 	GameState.game_speed_changed.connect(_on_game_speed_changed)
+	GameState.weapons_changed.connect(_on_weapons_changed)
 	GameState.run_started.connect(_on_run_started)
 	_on_run_started()
 	_on_game_speed_changed(GameState.game_speed_multiplier)
@@ -132,6 +133,8 @@ func _update_weapon_bar() -> void:
 				var icon_rect: TextureRect = icon_container.get_node("IconRect")
 				var cooldown_overlay: Control = icon_container.get_node("CooldownOverlay")
 				var level_label: Label = vbox.get_node("LevelLabel")
+				slot.set_meta("weapon_id", w.weapon_data.id)
+				slot.tooltip_text = w.weapon_data.display_name
 				icon_rect.texture = w.weapon_data.icon
 				_set_cooldown_overlay(cooldown_overlay, w.get_cooldown_progress())
 				level_label.text = "Lv.%d" % w.level
@@ -148,6 +151,9 @@ func _update_weapon_bar() -> void:
 		var icon_rect: TextureRect = icon_container.get_node("IconRect")
 		var cooldown_overlay: Control = icon_container.get_node("CooldownOverlay")
 		var level_label: Label = vbox.get_node("LevelLabel")
+		if slot.has_meta("weapon_id"):
+			slot.remove_meta("weapon_id")
+		slot.tooltip_text = ""
 		icon_rect.texture = null
 		_set_cooldown_overlay(cooldown_overlay, 0.0)
 		level_label.text = ""
@@ -218,6 +224,10 @@ func _on_run_started() -> void:
 	_on_hp_changed(GameState.run.hp, GameState.run.max_hp)
 	_on_exp_changed(GameState.run.exp, GameState.run.exp_to_next_level)
 	_on_gold_changed(GameState.run.gold)
+	_update_weapon_bar()
+
+func _on_weapons_changed() -> void:
+	_update_weapon_bar()
 
 func _on_hp_changed(current: int, max_hp: int) -> void:
 	_hp_bar.max_value = max_hp

@@ -222,8 +222,13 @@ func _unlock_weapon(weapon_id: StringName, ignore_slot_limit: bool = false) -> v
 	if not weapons:
 		return
 
-	var weapon: Node = load(scene_path).instantiate()
+	var weapon_scene := ResourceLoader.load(scene_path) as PackedScene
+	if not weapon_scene:
+		push_warning("UpgradeSystem: failed to load weapon scene %s" % scene_path)
+		return
+	var weapon: Node = weapon_scene.instantiate()
 	weapons.add_child(weapon)
+	GameState.notify_weapons_changed()
 
 func _level_up_weapon(weapon_id: StringName, bonus: UpgradeData) -> void:
 	var w := _find_weapon(weapon_id)

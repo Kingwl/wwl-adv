@@ -113,6 +113,16 @@ func _phase_load() -> void:
 	main_menu.queue_free()
 	await _wait(0.3)
 
+	var missing_vfx := VFXHelper.spawn_animated_one_shot(
+		self,
+		"res://assets/art/effects/by_type/__missing__",
+		"missing",
+		2,
+		Vector2.ZERO
+	)
+	await _wait(0.05)
+	_assert(not is_instance_valid(missing_vfx), "Missing VFX frames are skipped safely")
+
 func _phase_gameplay() -> void:
 	print("[PHASE 1] Gameplay")
 	GameState.add_run_time(1.0)
@@ -153,6 +163,22 @@ func _phase_gameplay() -> void:
 			await _wait(0.05)
 			var end_cam_pos := camera.global_position
 			_assert(end_cam_pos.x > start_cam_pos.x, "Camera follows player movement")
+
+		var upgrade_system: Node = _game.get_node_or_null("UpgradeSystem")
+		if upgrade_system:
+			if not _find_weapon(&"electromagnetic_chain"):
+				upgrade_system._unlock_weapon(&"electromagnetic_chain")
+			if not _find_weapon(&"rocket_pack"):
+				upgrade_system._unlock_weapon(&"rocket_pack")
+			await _wait(0.1)
+			var chain := _find_weapon(&"electromagnetic_chain")
+			var rocket := _find_weapon(&"rocket_pack")
+			_assert(chain != null, "Electromagnetic chain can be equipped")
+			_assert(rocket != null, "Rocket pack can be equipped")
+			if hud:
+				hud._update_weapon_bar()
+				_assert(_hud_weapon_bar_has_weapon(hud, &"electromagnetic_chain"), "HUD weapon bar shows electromagnetic chain")
+				_assert(_hud_weapon_bar_has_weapon(hud, &"rocket_pack"), "HUD weapon bar shows rocket pack")
 	await _wait(0.3)
 
 func _phase_level_up() -> void:
@@ -282,7 +308,13 @@ func _phase_weapon_unlocks() -> void:
 	var unlocked_count := 0
 	var cap_checked := false
 	for weapon_id in scenes.keys():
-		if _find_weapon(weapon_id) != null:
+		var existing := _find_weapon(weapon_id)
+		if existing != null:
+			_assert(existing.weapon_data != null, "Weapon %s already equipped has weapon_data" % weapon_id)
+			if existing.weapon_data:
+				_assert(existing.weapon_data.id == weapon_id, "Weapon %s already equipped data id matches" % weapon_id)
+				_assert(existing.weapon_data.icon != null, "Weapon %s already equipped has icon" % weapon_id)
+			_assert(existing.level >= 1, "Weapon %s already equipped has valid level" % weapon_id)
 			unlocked_count += 1
 			continue
 
@@ -560,6 +592,15 @@ func _find_weapon(weapon_id: StringName) -> WeaponBase:
 		if w is WeaponBase and w.weapon_data and w.weapon_data.id == weapon_id:
 			return w
 	return null
+
+func _hud_weapon_bar_has_weapon(hud: Node, weapon_id: StringName) -> bool:
+	var weapon_bar: HBoxContainer = hud.get_node_or_null("WeaponBar")
+	if not weapon_bar:
+		return false
+	for slot in weapon_bar.get_children():
+		if slot.has_meta("weapon_id") and slot.get_meta("weapon_id") == weapon_id:
+			return true
+	return false
 
 func _get_weapon_count() -> int:
 	var player: Node = get_tree().get_first_node_in_group("player")
@@ -1374,6 +1415,10 @@ func _phase_player_combat() -> void:
 	# Reset HP for clean test
 	GameState.run.hp = GameState.run.max_hp
 	GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
+	player._invincible = false
+	player._invincibility_timer = 0.0
+	player._invincible_until_msec = 0
+	player._dying = false
 	await _wait(0.1)
 
 	# Test damage
@@ -1390,9 +1435,16 @@ func _phase_player_combat() -> void:
 	await _wait(0.05)
 	_assert(GameState.run.hp == hp_after_one_hit, "Invincibility frames prevent rapid damage")
 
+	await _wait(0.35)
+	var hp_after_invincibility: int = GameState.run.hp
+	player.take_damage(10)
+	await _wait(0.05)
+	_assert(GameState.run.hp == hp_after_invincibility - 10, "Invincibility frames expire and damage resumes")
+	var hp_after_recovered_hit: int = GameState.run.hp
+
 	# Test heal
 	GameState.heal(5)
-	_assert(GameState.run.hp == hp_after_one_hit + 5, "Heal restores HP")
+	_assert(GameState.run.hp == hp_after_recovered_hit + 5, "Heal restores HP")
 
 	# Test heal does not exceed max
 	GameState.heal(999)
@@ -1668,36 +1720,33 @@ func _phase_enemy_collision() -> void:
 	GameState.run.hp = GameState.run.max_hp
 	GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
 	player._invincible = false
+	player._invincibility_timer = 0.0
+	player._invincible_until_msec = 0
 	player._dying = false
 	player.set_physics_process(true)
 
-	# Spawn enemy and test damage logic directly (avoids physics timing flakiness)
+	# Spawn enemy overlapping the player to cover real continuous contact damage.
 	var enemy_scene := preload("res://scenes/enemy/enemy.tscn")
 	var enemy := enemy_scene.instantiate()
-	enemy.global_position = player.global_position + Vector2.UP * 50.0
+	enemy.global_position = player.global_position
 	enemy._damage = 5
 	enemy._hp = 999999
-	enemy.collision_layer = 0
+	var prev_hp: int = GameState.run.hp
 	enemies_parent.add_child(enemy)
 	await _wait(0.2)
 
 	_assert(enemy._player != null, "Enemy finds player reference")
-
-	# Direct damage application simulating collision
-	var prev_hp: int = GameState.run.hp
-	player._invincible = false
-	player.take_damage(enemy._damage)
-	_assert(GameState.run.hp == prev_hp - 5, "Enemy damage applies to player")
-
-	# Test enemy damage cooldown
-	enemy._can_damage = false
-	var cooldown_timer := get_tree().create_timer(enemy._damage_cooldown, true)
+	_assert(GameState.run.hp == prev_hp - 5, "Enemy contact damage applies to player")
 	_assert(not enemy._can_damage, "Enemy enters damage cooldown")
+
+	var hp_after_first_hit: int = GameState.run.hp
 	await _wait(0.5)
 	_assert(is_instance_valid(enemy) and not enemy._can_damage, "Enemy still in cooldown at 0.5s")
-	await cooldown_timer.timeout
-	enemy._can_damage = true
-	_assert(is_instance_valid(enemy) and enemy._can_damage, "Enemy cooldown expires after ~1s")
+	_assert(GameState.run.hp == hp_after_first_hit, "Enemy cooldown prevents repeated contact damage")
+	await _wait(enemy._damage_cooldown + 0.25)
+	enemy._try_damage_player()
+	await _wait(0.05)
+	_assert(GameState.run.hp <= hp_after_first_hit - 5, "Enemy overlapping player damages again after cooldown")
 
 	# Cleanup
 	if is_instance_valid(enemy):

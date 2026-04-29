@@ -15,12 +15,18 @@ func _ready() -> void:
 	var frames := SpriteFrames.new()
 	for i in range(5):
 		var texture_path := "res://assets/art/effects/by_type/drop_gold_coin/gold_%02d.png" % (i + 1)
-		if ResourceLoader.exists(texture_path):
-			frames.add_frame("default", load(texture_path))
+		if not ResourceLoader.exists(texture_path):
+			continue
+		var texture := ResourceLoader.load(texture_path) as Texture2D
+		if texture:
+			frames.add_frame("default", texture)
+		else:
+			push_warning("GoldPickup: failed to load texture %s" % texture_path)
 	frames.set_animation_loop("default", true)
 	frames.set_animation_speed("default", 6.0)
 	_anim.sprite_frames = frames
-	_anim.play("default")
+	if frames.get_frame_count("default") > 0:
+		_anim.play("default")
 
 func _process(delta: float) -> void:
 	if not _player:

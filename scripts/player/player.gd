@@ -2,6 +2,8 @@ extends CharacterBody2D
 
 @export var move_speed: float = 170.0
 
+const INVINCIBILITY_DURATION := 0.25
+
 const STARTING_WEAPON_SCENES: Dictionary = {
 	&"melee_basic": "res://scenes/weapons/weapon_melee.tscn",
 	&"projectile_basic": "res://scenes/weapons/weapon_projectile.tscn",
@@ -11,6 +13,8 @@ const STARTING_WEAPON_SCENES: Dictionary = {
 }
 
 var _invincible: bool = false
+var _invincibility_timer: float = 0.0
+var _invincible_until_msec: int = 0
 var _dying: bool = false
 @onready var _sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _health_bar: ProgressBar = $HealthBar
@@ -29,6 +33,13 @@ func _ready() -> void:
 
 	for weapon_id in GameState.run.get("starting_weapon_ids", [&"melee_basic"]):
 		_add_starting_weapon(weapons, StringName(weapon_id))
+
+func _process(_delta: float) -> void:
+	if not _invincible:
+		return
+	_invincibility_timer = maxf(0.0, float(_invincible_until_msec - Time.get_ticks_msec()) / 1000.0)
+	if not _is_invincibility_active():
+		_end_invincibility()
 
 func _setup_animations() -> void:
 	var frames := SpriteFrames.new()
@@ -84,8 +95,13 @@ func _add_starting_weapon(weapons: Node, weapon_id: StringName) -> void:
 	var scene_path: String = STARTING_WEAPON_SCENES.get(weapon_id, "")
 	if scene_path.is_empty():
 		scene_path = STARTING_WEAPON_SCENES[&"melee_basic"]
-	var weapon: Node = load(scene_path).instantiate()
+	var weapon_scene := ResourceLoader.load(scene_path) as PackedScene
+	if not weapon_scene:
+		push_warning("Player: failed to load starting weapon scene %s" % scene_path)
+		return
+	var weapon: Node = weapon_scene.instantiate()
 	weapons.add_child(weapon)
+	GameState.notify_weapons_changed()
 
 func _physics_process(_delta: float) -> void:
 	var input_dir := _get_move_input()
@@ -125,7 +141,11 @@ func _compose_move_input(keyboard_dir: Vector2, joystick_dir: Vector2) -> Vector
 	return Vector2.ZERO
 
 func take_damage(amount: int) -> void:
-	if _invincible or _dying:
+	if _invincible:
+		if _is_invincibility_active():
+			return
+		_end_invincibility()
+	if _dying:
 		return
 	# Intercept fatal damage to play death animation first
 	if GameState.run.hp <= amount:
@@ -142,13 +162,21 @@ func take_damage(amount: int) -> void:
 
 func _flash() -> void:
 	_invincible = true
+	_invincibility_timer = INVINCIBILITY_DURATION
+	_invincible_until_msec = Time.get_ticks_msec() + int(INVINCIBILITY_DURATION * 1000.0)
 	_sprite.play("hit")
 	modulate = Color(1, 0.5, 0.5, 0.6)
-	await get_tree().create_timer(0.25).timeout
+
+func _end_invincibility() -> void:
+	_invincibility_timer = 0.0
+	_invincible_until_msec = 0
 	modulate = Color.WHITE
 	_invincible = false
 	if _sprite.animation == "hit":
 		_sprite.play("idle")
+
+func _is_invincibility_active() -> bool:
+	return Time.get_ticks_msec() < _invincible_until_msec
 
 func _on_level_up(_new_level: int) -> void:
 	_show_level_up_visual()

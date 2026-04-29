@@ -2,6 +2,9 @@ extends CharacterBody2D
 
 @export var enemy_data: EnemyData
 
+const CONTACT_DAMAGE_PADDING := 2.0
+const DEFAULT_CONTACT_RADIUS := 16.0
+
 var _hp: int = 12
 var _base_speed: float = 60.0
 var _damage: int = 5
@@ -92,6 +95,7 @@ func _physics_process(_delta: float) -> void:
 		var dir := (_player.global_position - global_position).normalized()
 		velocity = dir * current_speed
 		move_and_slide()
+		_try_damage_player()
 
 		# Flip sprite based on movement direction
 		if velocity.x < 0:
@@ -99,16 +103,38 @@ func _physics_process(_delta: float) -> void:
 		elif velocity.x > 0:
 			_sprite.flip_h = false
 
-		for i in range(get_slide_collision_count()):
-			var collider := get_slide_collision(i).get_collider()
-			if collider == _player and _can_damage:
-				_player.take_damage(_damage)
-				_start_damage_cooldown()
-				break
-
 func apply_status(status: StringName, duration: float, value: float = 0.0) -> void:
 	_statuses[status] = {timer = duration, value = value}
 	_on_status_applied(status, value)
+
+func _try_damage_player() -> void:
+	if not _can_damage or not is_instance_valid(_player):
+		return
+	if not _is_touching_player():
+		return
+	if _player.has_method("take_damage"):
+		_player.take_damage(_damage)
+		_start_damage_cooldown()
+
+func _is_touching_player() -> bool:
+	if not is_instance_valid(_player):
+		return false
+	var contact_radius := _collision_radius(self) + _collision_radius(_player) + CONTACT_DAMAGE_PADDING
+	return global_position.distance_squared_to(_player.global_position) <= contact_radius * contact_radius
+
+func _collision_radius(body: Node2D) -> float:
+	var shape_node := body.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if not shape_node or not shape_node.shape:
+		return DEFAULT_CONTACT_RADIUS
+	var scale_factor := maxf(absf(body.global_scale.x), absf(body.global_scale.y))
+	if shape_node.shape is CircleShape2D:
+		return (shape_node.shape as CircleShape2D).radius * scale_factor
+	if shape_node.shape is RectangleShape2D:
+		return (shape_node.shape as RectangleShape2D).size.length() * 0.5 * scale_factor
+	if shape_node.shape is CapsuleShape2D:
+		var capsule := shape_node.shape as CapsuleShape2D
+		return maxf(capsule.radius, capsule.height * 0.5) * scale_factor
+	return DEFAULT_CONTACT_RADIUS * scale_factor
 
 func _on_status_applied(status: StringName, _value: float) -> void:
 	match status:

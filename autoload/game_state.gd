@@ -8,6 +8,7 @@ signal gold_changed(amount: int)
 signal exp_changed(current: int, required: int)
 signal level_up(new_level: int)
 signal game_speed_changed(multiplier: float)
+signal weapons_changed
 
 const STARTING_HP := 100
 const STARTING_GOLD := 0
@@ -228,6 +229,9 @@ func get_character_field_lifetime_multiplier() -> float:
 
 func get_total_gold() -> int:
 	return int(SaveManager.get_profile_value("total_gold", 0))
+
+func notify_weapons_changed() -> void:
+	weapons_changed.emit()
 
 func set_game_speed(multiplier: float) -> bool:
 	var normalized := _normalize_game_speed(multiplier)

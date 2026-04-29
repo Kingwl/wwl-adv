@@ -90,7 +90,11 @@ func _phase_load() -> void:
 	var main_menu: Node = load("res://scenes/ui/main_menu.tscn").instantiate()
 	add_child(main_menu)
 	await _wait(0.1)
-	_assert(DataManager.all_characters().size() >= 4, "Character data resources loaded")
+	var characters := DataManager.all_characters()
+	_assert(characters.size() >= 4, "Character data resources loaded")
+	for character in characters:
+		_assert(character.icon != null, "Character %s has class icon" % character.id)
+		_assert("walk_sheet" in character and character.walk_sheet != null, "Character %s has walk sheet" % character.id)
 	_assert(DataManager._resource_path_from_dir_entry("res://resources/characters", "adventurer.tres.remap") == "res://resources/characters/adventurer.tres", "Resource scan supports exported remap entries")
 	var menu_bg: Node = main_menu.get_node_or_null("Background")
 	_assert(menu_bg is ColorRect, "Main menu background exists")
@@ -2372,6 +2376,10 @@ func _phase_character_system() -> void:
 	_assert(GameState.run.max_hp == 85 and GameState.run.hp == 85, "Ranger HP applied")
 	if player:
 		_assert(abs(player.move_speed - 190.0) < 0.01, "Ranger move speed applied")
+		var sprite: AnimatedSprite2D = player.get_node_or_null("AnimatedSprite2D")
+		if sprite and sprite.sprite_frames:
+			_assert(sprite.sprite_frames.has_animation("walk_down"), "Selected character uses directional walk animations")
+			_assert(sprite.sprite_frames.get_frame_count("walk_down") == 4, "Selected character walk animation has 4 frames")
 	var projectile := _find_weapon(&"projectile_basic")
 	_assert(projectile != null, "Ranger starts with projectile weapon")
 	if projectile:

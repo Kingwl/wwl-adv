@@ -7,6 +7,7 @@ extends Resource
 @export_multiline var description: String
 @export var icon: Texture2D
 @export var portrait: Texture2D
+@export var walk_sheet: Texture2D
 
 @export_group("基础属性")
 @export var max_hp: int = 100

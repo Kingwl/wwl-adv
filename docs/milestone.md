@@ -69,6 +69,7 @@
 - [x] UI 按钮贴图化（button_normal / hover / pressed）
 - [x] 主菜单背景替换为 ground_tile.png 平铺
 - [x] 主菜单角色选择面板
+- [x] 4 个默认职业专属头像与四向行走动画 sheet
 - [x] 主菜单全局金币展示
 - [x] HUD 1x / 2x 倍速切换
 - [x] 武器分类标签在 UI 中显示（攻击 / 防御 / 增益）

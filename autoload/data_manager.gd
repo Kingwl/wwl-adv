@@ -6,6 +6,12 @@ const ENEMIES_DIR := "res://resources/enemies"
 const UPGRADES_DIR := "res://resources/upgrades"
 const CHARACTERS_DIR := "res://resources/characters"
 const DEFAULT_CHARACTER_ID := &"adventurer"
+const CHARACTER_RESOURCES := [
+	preload("res://resources/characters/adventurer.tres"),
+	preload("res://resources/characters/alchemist.tres"),
+	preload("res://resources/characters/guardian.tres"),
+	preload("res://resources/characters/ranger.tres"),
+]
 
 var _weapons_by_id: Dictionary = {}
 var _enemies_by_id: Dictionary = {}
@@ -26,13 +32,23 @@ func _load_resources(dir_path: String, target_dict: Dictionary) -> void:
 	dir.list_dir_begin()
 	var entry := dir.get_next()
 	while entry != "":
-		if not dir.current_is_dir() and entry.ends_with(".tres"):
-			var path := "%s/%s" % [dir_path, entry]
-			var res: Resource = load(path)
-			if res and "id" in res:
-				target_dict[res.id] = res
+		if not dir.current_is_dir():
+			var path := _resource_path_from_dir_entry(dir_path, entry)
+			if not path.is_empty():
+				_register_resource(load(path), target_dict)
 		entry = dir.get_next()
 	dir.list_dir_end()
+
+func _resource_path_from_dir_entry(dir_path: String, entry: String) -> String:
+	if entry.ends_with(".remap"):
+		entry = entry.trim_suffix(".remap")
+	if not entry.ends_with(".tres"):
+		return ""
+	return "%s/%s" % [dir_path, entry]
+
+func _register_resource(res: Resource, target_dict: Dictionary) -> void:
+	if res and "id" in res:
+		target_dict[res.id] = res
 
 func _load_all_weapons() -> void:
 	_load_resources(WEAPONS_DIR, _weapons_by_id)
@@ -45,6 +61,8 @@ func _load_all_upgrades() -> void:
 
 func _load_all_characters() -> void:
 	_load_resources(CHARACTERS_DIR, _characters_by_id)
+	for character in CHARACTER_RESOURCES:
+		_register_resource(character, _characters_by_id)
 
 func get_weapon(id: String) -> Resource:
 	return _weapons_by_id.get(id)

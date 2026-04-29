@@ -91,6 +91,7 @@ func _phase_load() -> void:
 	add_child(main_menu)
 	await _wait(0.1)
 	_assert(DataManager.all_characters().size() >= 4, "Character data resources loaded")
+	_assert(DataManager._resource_path_from_dir_entry("res://resources/characters", "adventurer.tres.remap") == "res://resources/characters/adventurer.tres", "Resource scan supports exported remap entries")
 	var menu_bg: Node = main_menu.get_node_or_null("Background")
 	_assert(menu_bg is ColorRect, "Main menu background exists")
 	var ground_tile: Node = menu_bg.get_node_or_null("GroundTileBackground") if menu_bg else null

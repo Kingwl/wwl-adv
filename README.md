@@ -47,7 +47,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 ./tests/run_tests.sh
 ```
 
-当前最近一次验证结果：`481 passed, 0 failed`。
+当前最近一次验证结果：`476 passed, 0 failed`。
 
 ## 目录结构
 
@@ -105,9 +105,23 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 1. 编辑器 → **Project → Export → Add → Web**
 2. 首次需 **Manage Export Templates** 下载模板
 3. 输出 `index.html` + `.wasm` + `.pck`
-4. Godot 4 Web 如启用多线程，需要部署服务设置：
+4. 命令行导出：
+
+```bash
+mkdir -p build/web
+/Applications/Godot.app/Contents/MacOS/Godot --headless --path . --export-release Web build/web/index.html
+```
+
+5. GitHub Pages 自动部署：
+   - `.github/workflows/deploy-web.yml` 会在 `main` push 或手动触发时下载 Godot 4.6.2、安装 export templates、运行集成测试、导出 `build/web` 并发布到 Pages。
+   - 根目录 `export_presets.cfg` 不提交，CI 使用 `ci/export_presets.web.cfg` 生成 Web-only preset。
+   - 仓库 Settings → Pages → Build and deployment → Source 需要选择 **GitHub Actions**。
+
+6. Godot 4 Web 如启用多线程，需要部署服务设置：
    - `Cross-Origin-Opener-Policy: same-origin`
    - `Cross-Origin-Embedder-Policy: require-corp`
+
+   当前 Web preset 关闭了 `variant/thread_support`，可以直接部署到 GitHub Pages。
 
 ### Android
 

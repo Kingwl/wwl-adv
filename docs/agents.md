@@ -31,6 +31,7 @@
 - **当前角色强化槽**: 6（生命源泉为被动恢复强化，不占武器槽）
 - **当前敌人数**: 1（基础追踪型；生成器支持读取 `resources/enemies/`，但当前没有敌人 `.tres`）
 - **输入**: 键盘 WASD/方向键 + 触屏虚拟摇杆
+- **Web CI**: `.github/workflows/deploy-web.yml` 使用 Godot 4.6.2 导出并部署 GitHub Pages；CI preset 来自 `ci/export_presets.web.cfg`
 
 ## 添加新内容的标准流程
 
@@ -74,6 +75,8 @@
 ```bash
 ./tests/run_tests.sh
 ```
+
+CI 或自定义安装路径可通过 `GODOT_BIN=/path/to/godot ./tests/run_tests.sh` 指定 Godot 可执行文件。
 
 测试必须全部通过（`0 failed`）才能视为完成。如果新行为未覆盖，在 `tests/auto_test.gd` 的对应 phase 中补充断言。
 

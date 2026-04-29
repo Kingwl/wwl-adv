@@ -71,6 +71,7 @@
 - [x] 升级选择支持刷新全部卡片和跳过本次选择
 - [x] 武器槽与角色强化槽拆分为 6 + 6
 - [x] Web UI 中文字体打包与运行时 fallback 主题注入
+- [x] GitHub Actions Web 导出与 GitHub Pages 自动部署 workflow
 
 ### 测试与质量
 - [x] 自动化集成测试框架（headless Godot）
@@ -121,7 +122,7 @@
 | 武器种类 | 16 |
 | 敌人类型 | 1（基础追踪型，未资源化） |
 | UI 场景 | 8 |
-| 自动化测试 | 481 passed, 0 failed |
+| 自动化测试 | 476 passed, 0 failed |
 | HUD 冷却遮罩 | 高度连续变化 |
 | 引擎版本 | Godot 4.x（最近测试 4.6.2，GL Compatibility） |
 | 目标平台 | Web / Android / iOS |

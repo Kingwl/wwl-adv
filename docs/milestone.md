@@ -74,7 +74,7 @@
 - [x] 武器分类标签在 UI 中显示（攻击 / 防御 / 增益）
 - [x] 升级选择支持刷新全部卡片和跳过本次选择
 - [x] 武器槽与角色强化槽拆分为 6 + 6
-- [x] Web UI 中文字体打包与运行时 fallback 主题注入
+- [x] Web UI 中文字体打包、CI 自动子集化与运行时 fallback 主题注入
 - [x] GitHub Actions Web 导出与 GitHub Pages 自动部署 workflow
 
 ### 测试与质量

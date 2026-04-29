@@ -19,6 +19,7 @@
 | 全局数值（初始HP、经验公式等） | `autoload/game_state.gd` |
 | 本地数值存档 | `autoload/save_manager.gd` + `autoload/game_state.gd` + `scripts/game/game.gd` |
 | 新数据资源（角色/武器/敌人/升级） | `scripts/data/character_data.gd` / `weapon_data.gd` / `enemy_data.gd` / `upgrade_data.gd` |
+| UI 字体子集缺字 | `tools/subset_ui_font.py` + `.github/workflows/deploy-web.yml` |
 
 ## 项目基本事实
 
@@ -33,6 +34,7 @@
 - **当前敌人数**: 1（基础追踪型；生成器支持读取 `resources/enemies/`，但当前没有敌人 `.tres`）
 - **输入**: 键盘 WASD/方向键 + 触屏虚拟摇杆
 - **Web CI**: `.github/workflows/deploy-web.yml` 使用 Godot 4.6.2 导出并部署 GitHub Pages；CI preset 来自 `ci/export_presets.web.cfg`
+- **字体子集**: CI 每次 Web 导出前都会下载完整 `NotoSansCJKsc-Regular.otf`，扫描 `project.godot` / `autoload` / `scripts` / `scenes` / `resources` 文本后重建 `assets/fonts/NotoSansCJKsc-WWL-Subset.otf`
 
 ## 添加新内容的标准流程
 

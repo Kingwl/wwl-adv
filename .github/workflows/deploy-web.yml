@@ -19,6 +19,7 @@ env:
   GODOT_VERSION: 4.6.2
   EXPORT_PRESET: Web
   EXPORT_DIR: build/web
+  UI_FONT_SOURCE_URL: https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf
 
 jobs:
   build:
@@ -72,6 +73,19 @@ jobs:
 
       - name: Prepare export preset
         run: cp ci/export_presets.web.cfg export_presets.cfg
+
+      - name: Rebuild UI font subset
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/fonttools-venv"
+          "$RUNNER_TEMP/fonttools-venv/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/fonttools-venv/bin/python" -m pip install fonttools
+          mkdir -p "$RUNNER_TEMP/fonts"
+          SOURCE_FONT="$RUNNER_TEMP/fonts/NotoSansCJKsc-Regular.otf"
+          curl -L --fail "$UI_FONT_SOURCE_URL" -o "$SOURCE_FONT"
+          "$RUNNER_TEMP/fonttools-venv/bin/python" tools/subset_ui_font.py \
+            --source "$SOURCE_FONT" \
+            --output assets/fonts/NotoSansCJKsc-WWL-Subset.otf
 
       - name: Import Godot assets
         run: '"$GODOT_BIN" --headless --path . --import'

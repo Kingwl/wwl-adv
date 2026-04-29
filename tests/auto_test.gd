@@ -1747,7 +1747,15 @@ func _phase_enemy_collision() -> void:
 	await _wait(0.5)
 	_assert(is_instance_valid(enemy) and not enemy._can_damage, "Enemy still in cooldown at 0.5s")
 	_assert(GameState.run.hp == hp_after_first_hit, "Enemy cooldown prevents repeated contact damage")
-	await _wait(enemy._damage_cooldown + 0.25)
+
+	var cooldown_wait := 0.0
+	while is_instance_valid(enemy) and not enemy._can_damage and cooldown_wait < enemy._damage_cooldown + 1.0:
+		await _wait(0.05)
+		cooldown_wait += 0.05
+	player._invincible = false
+	player._invincibility_timer = 0.0
+	player._invincible_until_msec = 0
+	enemy.global_position = player.global_position
 	enemy._try_damage_player()
 	await _wait(0.05)
 	_assert(GameState.run.hp <= hp_after_first_hit - 5, "Enemy overlapping player damages again after cooldown")

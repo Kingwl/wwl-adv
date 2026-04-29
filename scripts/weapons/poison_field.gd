@@ -9,6 +9,7 @@ const CENTER_ALPHA := 0.72
 const EDGE_ALPHA := 0.22
 const CENTER_SCALE := 1.12
 const EDGE_SCALE := 0.76
+const POISON_TILE_SHEET := preload("res://assets/art/effects/generated_missing/dynamic/fx_poison_tile_sheet.png")
 
 var damage: int = 2
 var lifetime: float = 4.0
@@ -24,17 +25,22 @@ func _ready() -> void:
 	cs.shape = shape
 	add_child(cs)
 
-	_build_tiled_visual("res://assets/art/effects/generated_missing/dynamic/fx_poison_tile_sheet.png")
+	_build_tiled_visual(POISON_TILE_SHEET)
 
 	var tween := create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1, 0), lifetime)
 	tween.tween_callback(queue_free)
 
-func _build_tiled_visual(sheet_path: String) -> void:
-	var sheet := load(sheet_path) as Texture2D
+func _build_tiled_visual(sheet: Texture2D) -> void:
+	if not sheet:
+		push_warning("PoisonField: missing poison tile sheet")
+		return
 	var frame_width := TILE_FRAME_WIDTH
 	var frame_height: int = sheet.get_height()
 	var frame_count := int(sheet.get_width() / frame_width)
+	if frame_count <= 0:
+		push_warning("PoisonField: poison tile sheet has no frames")
+		return
 
 	var frames := SpriteFrames.new()
 	for i in range(frame_count):

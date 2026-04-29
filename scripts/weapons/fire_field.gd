@@ -9,6 +9,7 @@ const CENTER_ALPHA := 0.82
 const EDGE_ALPHA := 0.28
 const CENTER_SCALE := 1.05
 const EDGE_SCALE := 0.72
+const FIRE_TILE_SHEET := preload("res://assets/art/effects/generated_missing/dynamic/fx_fire_tile_sheet.png")
 
 var damage: int = 3
 var lifetime: float = 3.0
@@ -24,17 +25,22 @@ func _ready() -> void:
 	cs.shape = shape
 	add_child(cs)
 
-	_build_tiled_visual("res://assets/art/effects/generated_missing/dynamic/fx_fire_tile_sheet.png")
+	_build_tiled_visual(FIRE_TILE_SHEET)
 
 	var tween := create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1, 0), lifetime)
 	tween.tween_callback(queue_free)
 
-func _build_tiled_visual(sheet_path: String) -> void:
-	var sheet := load(sheet_path) as Texture2D
+func _build_tiled_visual(sheet: Texture2D) -> void:
+	if not sheet:
+		push_warning("FireField: missing fire tile sheet")
+		return
 	var frame_width := TILE_FRAME_WIDTH
 	var frame_height: int = sheet.get_height()
 	var frame_count := int(sheet.get_width() / frame_width)
+	if frame_count <= 0:
+		push_warning("FireField: fire tile sheet has no frames")
+		return
 
 	var frames := SpriteFrames.new()
 	for i in range(frame_count):

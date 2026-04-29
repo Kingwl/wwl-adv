@@ -28,9 +28,9 @@ func _activate() -> void:
 func _recalc_stats() -> void:
 	if not weapon_data:
 		return
-	_current_damage = int(round(weapon_data.damage * (1.0 + (level - 1) * 0.10)))
-	_current_cooldown = max(0.1, weapon_data.cooldown * pow(0.92, level - 1))
-	_current_range = weapon_data.range + (level - 1) * 10.0
+	_current_damage = int(round(weapon_data.damage * (1.0 + (level - 1) * 0.10) * GameState.get_character_damage_multiplier()))
+	_current_cooldown = max(0.1, weapon_data.cooldown * pow(0.92, level - 1) * GameState.get_character_cooldown_multiplier(weapon_data))
+	_current_range = (weapon_data.range + (level - 1) * 10.0) * GameState.get_character_area_multiplier()
 
 func set_path(path_id: StringName) -> void:
 	if not current_path_id.is_empty():

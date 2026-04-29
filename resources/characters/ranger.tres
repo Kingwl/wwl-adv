@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="CharacterData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_data.gd" id="1_character"]
+[ext_resource type="Texture2D" path="res://assets/art/characters/sliced/char_08.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_character")
+id = &"ranger"
+display_name = "游侠"
+description = "高速远程角色，血量较低，适合边走边输出。"
+icon = ExtResource("2_icon")
+portrait = ExtResource("2_icon")
+max_hp = 85
+move_speed = 190.0
+pickup_radius_bonus = 0.0
+exp_gain_multiplier = 1.0
+incoming_damage_multiplier = 1.0
+damage_multiplier = 1.0
+cooldown_multiplier = 1.0
+area_multiplier = 1.0
+projectile_cooldown_multiplier = 0.92
+field_lifetime_multiplier = 1.0
+starting_weapon_ids = Array[StringName]([&"projectile_basic"])
+passive_id = &"quickdraw"
+passive_description = "弹体类武器冷却缩短 8%。"

@@ -31,11 +31,12 @@ func _get_burn_damage() -> int:
 	return dmg
 
 func _get_lifetime() -> float:
+	var base_lifetime := 3.0
 	if has_special_tag(&"eternal_flame"):
-		return 5.0
-	if has_special_tag(&"longer_burn"):
-		return 4.0
-	return 3.0
+		base_lifetime = 5.0
+	elif has_special_tag(&"longer_burn"):
+		base_lifetime = 4.0
+	return base_lifetime * GameState.get_character_field_lifetime_multiplier()
 
 func _get_fire_radius() -> float:
 	var r := _get_field_radius(80.0)

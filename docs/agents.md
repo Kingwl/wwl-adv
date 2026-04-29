@@ -18,7 +18,7 @@
 | 碰撞层级 | `project.godot` `[layer_names]` 段 |
 | 全局数值（初始HP、经验公式等） | `autoload/game_state.gd` |
 | 本地数值存档 | `autoload/save_manager.gd` + `autoload/game_state.gd` + `scripts/game/game.gd` |
-| 新数据资源（武器/敌人/升级） | `scripts/data/weapon_data.gd` / `enemy_data.gd` / `upgrade_data.gd` |
+| 新数据资源（角色/武器/敌人/升级） | `scripts/data/character_data.gd` / `weapon_data.gd` / `enemy_data.gd` / `upgrade_data.gd` |
 
 ## 项目基本事实
 
@@ -28,6 +28,7 @@
 - **视角**: 2D 俯视角
 - **核心玩法**: 吸血鬼幸存者 like — 控制移动、自动攻击、击杀升级
 - **当前武器数**: 16
+- **当前角色数**: 4（全部默认可选，暂不做解锁）
 - **当前角色强化槽**: 6（生命源泉为被动恢复强化，不占武器槽）
 - **当前敌人数**: 1（基础追踪型；生成器支持读取 `resources/enemies/`，但当前没有敌人 `.tres`）
 - **输入**: 键盘 WASD/方向键 + 触屏虚拟摇杆
@@ -89,6 +90,7 @@ CI 或自定义安装路径可通过 `GODOT_BIN=/path/to/godot ./tests/run_tests
 - 武器流派系统（路径选择、等级上限、special_tag 效果）
 - 敌人受伤、掉落、状态效果、碰撞伤害和生成器曲线
 - 玩家移动、受击无敌、治疗、死亡结算
+- 角色数据加载、主菜单角色选择、所选角色开局属性 / 初始武器 / 被动修正
 - HUD、StatsPanel、暂停菜单、游戏结束界面同步
 - 弹体穿透、射程销毁、环绕球、恢复和反伤等专项行为
 

@@ -4,12 +4,16 @@ extends Node
 const WEAPONS_DIR := "res://resources/weapons"
 const ENEMIES_DIR := "res://resources/enemies"
 const UPGRADES_DIR := "res://resources/upgrades"
+const CHARACTERS_DIR := "res://resources/characters"
+const DEFAULT_CHARACTER_ID := &"adventurer"
 
 var _weapons_by_id: Dictionary = {}
 var _enemies_by_id: Dictionary = {}
 var _upgrades_by_id: Dictionary = {}
+var _characters_by_id: Dictionary = {}
 
 func _ready() -> void:
+	_load_all_characters()
 	_load_all_weapons()
 	_load_all_enemies()
 	_load_all_upgrades()
@@ -39,6 +43,9 @@ func _load_all_enemies() -> void:
 func _load_all_upgrades() -> void:
 	_load_resources(UPGRADES_DIR, _upgrades_by_id)
 
+func _load_all_characters() -> void:
+	_load_resources(CHARACTERS_DIR, _characters_by_id)
+
 func get_weapon(id: String) -> Resource:
 	return _weapons_by_id.get(id)
 
@@ -56,6 +63,23 @@ func get_upgrade(id: String) -> Resource:
 
 func all_upgrades() -> Array:
 	return _upgrades_by_id.values()
+
+func get_character(id: String) -> Resource:
+	return _characters_by_id.get(id)
+
+func get_default_character() -> Resource:
+	var data := get_character(str(DEFAULT_CHARACTER_ID))
+	if data:
+		return data
+	var values := all_characters()
+	if values.is_empty():
+		return null
+	return values[0]
+
+func all_characters() -> Array:
+	var result := _characters_by_id.values()
+	result.sort_custom(func(a, b): return str(a.id) < str(b.id))
+	return result
 
 func get_random_upgrades(count: int, filter: Callable = Callable()) -> Array:
 	var pool := all_upgrades()

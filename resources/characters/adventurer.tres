@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="CharacterData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_data.gd" id="1_character"]
+[ext_resource type="Texture2D" path="res://assets/art/characters/sliced/char_00.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_character")
+id = &"adventurer"
+display_name = "冒险者"
+description = "均衡的初始角色，适合熟悉基础节奏。"
+icon = ExtResource("2_icon")
+portrait = ExtResource("2_icon")
+max_hp = 100
+move_speed = 170.0
+pickup_radius_bonus = 0.0
+exp_gain_multiplier = 1.0
+incoming_damage_multiplier = 1.0
+damage_multiplier = 1.0
+cooldown_multiplier = 1.0
+area_multiplier = 1.0
+projectile_cooldown_multiplier = 1.0
+field_lifetime_multiplier = 1.0
+starting_weapon_ids = Array[StringName]([&"melee_basic"])
+passive_id = &"balanced"
+passive_description = "没有明显短板，保留标准数值体验。"

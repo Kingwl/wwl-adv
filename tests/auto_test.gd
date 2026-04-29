@@ -47,9 +47,10 @@ func _run_phase() -> void:
 		22: await _phase_weapon_orbit()
 		23: await _phase_passive_regen_thorns()
 		24: await _phase_save_system()
-		25: _finish()
+		25: await _phase_character_system()
+		26: _finish()
 	_phase += 1
-	if _phase <= 25:
+	if _phase <= 26:
 		await _wait(0.1)
 		_run_phase()
 
@@ -67,6 +68,8 @@ func _phase_load() -> void:
 		_assert(camera != null, "Player Camera2D exists")
 		if camera is Camera2D:
 			_assert(camera.enabled, "Player Camera2D is enabled")
+		_assert(str(GameState.run.get("character_id", "")) == "adventurer", "Default run uses adventurer")
+		_assert(abs(player.move_speed - 170.0) < 0.01, "Default character speed applied")
 
 	# Verify HUD has icon elements
 	var hud: Node = _game.get_node_or_null("HUD")
@@ -87,6 +90,7 @@ func _phase_load() -> void:
 	var main_menu: Node = load("res://scenes/ui/main_menu.tscn").instantiate()
 	add_child(main_menu)
 	await _wait(0.1)
+	_assert(DataManager.all_characters().size() >= 4, "Character data resources loaded")
 	var menu_bg: Node = main_menu.get_node_or_null("Background")
 	_assert(menu_bg is ColorRect, "Main menu background exists")
 	var ground_tile: Node = menu_bg.get_node_or_null("GroundTileBackground") if menu_bg else null
@@ -97,6 +101,14 @@ func _phase_load() -> void:
 		_assert(tile_rect.anchor_left == 0.0 and tile_rect.anchor_top == 0.0 and tile_rect.anchor_right == 1.0 and tile_rect.anchor_bottom == 1.0, "Main menu background fills viewport anchors")
 	var continue_button: Button = main_menu.get_node_or_null("CenterContainer/VBoxContainer/ContinueButton")
 	_assert(continue_button != null and not continue_button.visible, "Main menu hides battle continue button")
+	var gold_summary: Label = main_menu.get_node_or_null("CenterContainer/VBoxContainer/GoldSummary/GoldSummaryLabel")
+	_assert(gold_summary != null and gold_summary.text == "全局金币: 0", "Main menu shows global gold")
+	var character_panel: Node = main_menu.get_node_or_null("CenterContainer/VBoxContainer/CharacterPanel")
+	_assert(character_panel != null, "Main menu has character selector")
+	var character_cards: GridContainer = main_menu.get_node_or_null("CenterContainer/VBoxContainer/CharacterPanel/CharacterContent/CharacterCards")
+	_assert(character_cards != null and character_cards.get_child_count() >= 4, "Character selector shows available characters")
+	var character_info: Label = main_menu.get_node_or_null("CenterContainer/VBoxContainer/CharacterPanel/CharacterContent/CharacterInfo")
+	_assert(character_info != null and not character_info.text.is_empty(), "Character selector shows character details")
 	main_menu.queue_free()
 	await _wait(0.3)
 
@@ -1822,6 +1834,19 @@ func _phase_hud_sync() -> void:
 		await _wait(0.05)
 		_assert(gold_label.text == "金币: 42", "Gold label syncs")
 
+	var speed_button: Button = hud.get_node_or_null("TopBar/SpeedButton")
+	_assert(speed_button != null, "HUD speed button exists")
+	if speed_button:
+		_assert(speed_button.text == "1x", "Speed button defaults to 1x")
+		speed_button.pressed.emit()
+		_assert(is_equal_approx(GameState.game_speed_multiplier, 2.0), "Speed toggle switches to 2x")
+		_assert(is_equal_approx(Engine.time_scale, 2.0), "Engine time scale applies 2x")
+		_assert(speed_button.text == "2x", "Speed button displays 2x")
+		speed_button.pressed.emit()
+		_assert(is_equal_approx(GameState.game_speed_multiplier, 1.0), "Speed toggle switches back to 1x")
+		_assert(is_equal_approx(Engine.time_scale, 1.0), "Engine time scale resets to 1x")
+		_assert(speed_button.text == "1x", "Speed button displays 1x")
+
 	# Test time label updates via _process
 	var time_label: Label = hud.get_node_or_null("TopBar/TimeLabel")
 	if time_label:
@@ -1861,8 +1886,10 @@ func _phase_stats_panel() -> void:
 	_assert(not stats_panel.visible, "StatsPanel hidden by default")
 
 	# Toggle visible
+	get_tree().paused = false
 	stats_panel.toggle()
 	_assert(stats_panel.visible, "StatsPanel toggles visible")
+	_assert(get_tree().paused, "StatsPanel pauses game when opened")
 
 	# Verify title
 	var title: Label = stats_panel.get_node_or_null("Panel/ScrollContainer/VBoxContainer/Title")
@@ -1883,13 +1910,26 @@ func _phase_stats_panel() -> void:
 	if enhancements_list:
 		_assert(enhancements_list.get_child_count() > 0, "Enhancements list populated")
 
+	var close_button: Button = stats_panel.get_node_or_null("Panel/ScrollContainer/VBoxContainer/CloseButton")
+	_assert(close_button != null, "StatsPanel close button exists")
+	if close_button:
+		close_button.pressed.emit()
+		await _wait(0.05)
+		_assert(not stats_panel.visible, "StatsPanel close button hides panel")
+		_assert(not get_tree().paused, "StatsPanel close button resumes game")
+
 	# Toggle hidden again
 	stats_panel.toggle()
+	_assert(stats_panel.visible, "StatsPanel visible before toggle close")
+	stats_panel.toggle()
 	_assert(not stats_panel.visible, "StatsPanel toggles hidden")
+	_assert(not get_tree().paused, "StatsPanel toggle close resumes game")
 
 	# Test refresh with open panel
 	stats_panel.toggle()
 	_assert(stats_panel.visible, "StatsPanel visible after second toggle")
+	stats_panel.toggle()
+	_assert(not stats_panel.visible, "StatsPanel hidden after final toggle")
 
 	await _wait(0.1)
 
@@ -2234,16 +2274,75 @@ func _phase_save_system() -> void:
 	_assert(int(SaveManager.get_profile_value("total_gold", 0)) == total_gold_before + 11, "Profile total gold updated")
 	_assert(int(SaveManager.get_profile_value("best_level", 1)) >= 5, "Profile best level updated")
 	_assert(int(SaveManager.get_profile_value("best_kills", 0)) >= 2, "Profile best kills updated")
+	var saved_total_gold := int(SaveManager.get_profile_value("total_gold", 0))
+	GameState.set_game_speed(2.0)
+	GameState.start_new_run(54321)
+	await _wait(0.05)
+	_assert(GameState.run.gold == 0, "New run resets run gold")
+	_assert(is_equal_approx(GameState.game_speed_multiplier, 1.0) and is_equal_approx(Engine.time_scale, 1.0), "New run resets game speed")
+	_assert(int(SaveManager.get_profile_value("total_gold", 0)) == saved_total_gold, "New run keeps saved total gold")
+	var hud: Node = _game.get_node_or_null("HUD")
+	if hud:
+		var gold_label: Label = hud.get_node_or_null("TopBar/GoldLabel")
+		_assert(gold_label != null and gold_label.text == "金币: 0", "HUD shows run gold on new run")
+		var speed_label: Button = hud.get_node_or_null("TopBar/SpeedButton")
+		_assert(speed_label != null and speed_label.text == "1x", "HUD speed button resets on new run")
+	var main_menu: Node = load("res://scenes/ui/main_menu.tscn").instantiate()
+	add_child(main_menu)
+	await _wait(0.1)
+	var global_gold_label: Label = main_menu.get_node_or_null("CenterContainer/VBoxContainer/GoldSummary/GoldSummaryLabel")
+	_assert(global_gold_label != null and global_gold_label.text == "全局金币: %d" % saved_total_gold, "Main menu shows saved global gold")
+	main_menu.queue_free()
 	var profile := SaveManager.get_profile()
 	var last_run: Dictionary = profile.get("last_run", {})
 	_assert(int(last_run.get("gold", 0)) == 11 and int(last_run.get("kills", 0)) == 2, "Last run stores numeric summary")
+	_assert(str(profile.get("selected_character_id", "")) == "adventurer", "Profile stores selected character")
+	_assert(str(last_run.get("character_id", "")) == "adventurer", "Last run stores character id")
 	var profile_json := JSON.stringify(profile)
 	_assert(profile_json.find("Texture2D") == -1 and profile_json.find("Node") == -1, "Profile does not serialize engine objects")
 	_assert(profile_json.find("position") == -1 and profile_json.find("weapons") == -1, "Profile does not store battle state")
+
+func _phase_character_system() -> void:
+	print("[PHASE 25] Character System")
+	get_tree().paused = false
+	var previous_character := SaveManager.get_selected_character_id()
+
+	if is_instance_valid(_game):
+		_game.queue_free()
+		await _wait(0.2)
+
+	SaveManager.set_selected_character_id(&"ranger")
+	_game = load("res://scenes/game/game.tscn").instantiate()
+	add_child(_game)
+	await _wait(0.4)
+
+	var player: Node = get_tree().get_first_node_in_group("player")
+	_assert(player != null, "Character test player exists")
+	_assert(str(GameState.run.get("character_id", "")) == "ranger", "Selected character starts new run")
+	_assert(GameState.run.max_hp == 85 and GameState.run.hp == 85, "Ranger HP applied")
+	if player:
+		_assert(abs(player.move_speed - 190.0) < 0.01, "Ranger move speed applied")
+	var projectile := _find_weapon(&"projectile_basic")
+	_assert(projectile != null, "Ranger starts with projectile weapon")
+	if projectile:
+		var expected_cd := projectile.weapon_data.cooldown * 0.92
+		_assert(abs(projectile.get_cooldown() - expected_cd) < 0.01, "Ranger projectile cooldown passive applied")
+
+	GameState.start_new_run(777, &"guardian")
+	var hp_before: int = GameState.run.hp
+	GameState.take_damage(10)
+	_assert(GameState.run.hp == hp_before - 9, "Guardian damage reduction passive applied")
+
+	GameState.start_new_run(888, &"alchemist")
+	_assert(abs(GameState.get_character_area_multiplier() - 1.08) < 0.001, "Alchemist area passive applied")
+	_assert(abs(GameState.get_character_field_lifetime_multiplier() - 1.15) < 0.001, "Alchemist field lifetime passive applied")
+
+	SaveManager.set_selected_character_id(previous_character)
 
 func _finish() -> void:
 	print("========================================")
 	print("RESULTS: %d passed, %d failed" % [_passed, _failed])
 	print("========================================")
+	GameState.reset_game_speed()
 	SaveManager.delete_save_files_for_tests()
 	get_tree().quit(_failed)

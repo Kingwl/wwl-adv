@@ -2,12 +2,21 @@ extends CharacterBody2D
 
 @export var move_speed: float = 170.0
 
+const STARTING_WEAPON_SCENES: Dictionary = {
+	&"melee_basic": "res://scenes/weapons/weapon_melee.tscn",
+	&"projectile_basic": "res://scenes/weapons/weapon_projectile.tscn",
+	&"thorns": "res://scenes/weapons/weapon_thorns.tscn",
+	&"fire_bottle": "res://scenes/weapons/weapon_fire_bottle.tscn",
+	&"poison_vial": "res://scenes/weapons/weapon_poison_vial.tscn",
+}
+
 var _invincible: bool = false
 var _dying: bool = false
 @onready var _sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var _health_bar: ProgressBar = $HealthBar
 
 func _ready() -> void:
+	move_speed = float(GameState.run.get("move_speed", move_speed))
 	_setup_animations()
 	GameState.level_up.connect(_on_level_up)
 	GameState.hp_changed.connect(_on_hp_changed)
@@ -18,8 +27,8 @@ func _ready() -> void:
 	weapons.name = "Weapons"
 	add_child(weapons)
 
-	var melee := preload("res://scenes/weapons/weapon_melee.tscn").instantiate()
-	weapons.add_child(melee)
+	for weapon_id in GameState.run.get("starting_weapon_ids", [&"melee_basic"]):
+		_add_starting_weapon(weapons, StringName(weapon_id))
 
 func _setup_animations() -> void:
 	var frames := SpriteFrames.new()
@@ -70,6 +79,13 @@ func _setup_animations() -> void:
 
 	_sprite.sprite_frames = frames
 	_sprite.play("idle")
+
+func _add_starting_weapon(weapons: Node, weapon_id: StringName) -> void:
+	var scene_path: String = STARTING_WEAPON_SCENES.get(weapon_id, "")
+	if scene_path.is_empty():
+		scene_path = STARTING_WEAPON_SCENES[&"melee_basic"]
+	var weapon: Node = load(scene_path).instantiate()
+	weapons.add_child(weapon)
 
 func _physics_process(_delta: float) -> void:
 	var input_dir := _get_move_input()

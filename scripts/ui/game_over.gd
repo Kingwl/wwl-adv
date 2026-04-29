@@ -52,7 +52,7 @@ func show_stats() -> void:
 	_time_label.text = GameState.get_time_string()
 	_kills_label.text = str(GameState.run.kills)
 	_level_label.text = "Lv." + str(GameState.run.level)
-	_gold_label.text = str(GameState.run.gold)
+	_gold_label.text = "%d（累计 %d）" % [GameState.run.gold, GameState.get_total_gold()]
 	_populate_weapons()
 	_populate_enhancements()
 

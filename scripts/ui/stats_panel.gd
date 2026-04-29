@@ -7,6 +7,8 @@ const BASE_PICKUP_RADIUS := 120.0
 @onready var _enhancements_list: VBoxContainer = $Panel/ScrollContainer/VBoxContainer/EnhancementsSection/EnhancementsList
 @onready var _weapons_list: VBoxContainer = $Panel/ScrollContainer/VBoxContainer/WeaponsSection/WeaponsList
 
+var _pause_before_open := false
+
 func _ready() -> void:
 	process_mode = PROCESS_MODE_ALWAYS
 	visible = false
@@ -41,12 +43,20 @@ func _setup_button_style() -> void:
 	btn.add_theme_stylebox_override("pressed", pressed)
 
 func toggle() -> void:
-	visible = not visible
 	if visible:
-		get_tree().paused = true
-		_refresh()
+		_close_panel()
 	else:
-		get_tree().paused = false
+		_open_panel()
+
+func _open_panel() -> void:
+	_pause_before_open = get_tree().paused
+	visible = true
+	get_tree().paused = true
+	_refresh()
+
+func _close_panel() -> void:
+	visible = false
+	get_tree().paused = _pause_before_open
 
 func _refresh() -> void:
 	_refresh_basic_stats()
@@ -59,12 +69,14 @@ func _refresh_basic_stats() -> void:
 	var pickup_radius: float = BASE_PICKUP_RADIUS + GameState.run.get("pickup_radius_bonus", 0.0)
 
 	var rows := [
+		["角色", str(GameState.run.get("character_name", "冒险者"))],
 		["生命值", "%d / %d" % [GameState.run.hp, GameState.run.max_hp]],
 		["移速", "%.0f" % move_speed],
 		["吸附范围", "%.0f" % pickup_radius],
 		["等级", "Lv.%d" % GameState.run.level],
 		["经验值", "%d / %d" % [GameState.run.exp, GameState.run.exp_to_next_level]],
-		["金币", "%d" % GameState.run.gold],
+		["本局金币", "%d" % GameState.run.gold],
+		["累计金币", "%d" % GameState.get_total_gold()],
 		["击杀", "%d" % GameState.run.kills],
 		["存活时间", GameState.get_time_string()],
 	]
@@ -208,4 +220,4 @@ func _get_player_weapons() -> Array[WeaponBase]:
 	return result
 
 func _on_close_pressed() -> void:
-	visible = false
+	_close_panel()

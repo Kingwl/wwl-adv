@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="CharacterData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/character_data.gd" id="1_character"]
+[ext_resource type="Texture2D" path="res://assets/art/characters/sliced/char_16.png" id="2_icon"]
+
+[resource]
+script = ExtResource("1_character")
+id = &"guardian"
+display_name = "守卫"
+description = "高生命的稳健角色，移动较慢，适合防御反伤构筑。"
+icon = ExtResource("2_icon")
+portrait = ExtResource("2_icon")
+max_hp = 140
+move_speed = 145.0
+pickup_radius_bonus = 0.0
+exp_gain_multiplier = 1.0
+incoming_damage_multiplier = 0.9
+damage_multiplier = 1.0
+cooldown_multiplier = 1.0
+area_multiplier = 1.0
+projectile_cooldown_multiplier = 1.0
+field_lifetime_multiplier = 1.0
+starting_weapon_ids = Array[StringName]([&"thorns"])
+passive_id = &"guard"
+passive_description = "受到的伤害降低 10%。"

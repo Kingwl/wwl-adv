@@ -61,8 +61,8 @@ Game (Node2D)
 
 | 单例 | 职责 | 关键信号 |
 |------|------|---------|
-| `GameState` | 单局状态管理 | `run_started`, `run_ended`, `hp_changed`, `exp_changed`, `level_up`, `gold_changed` |
-| `DataManager` | 扫描 `resources/weapons`、`resources/enemies`、`resources/upgrades` | 无 |
+| `GameState` | 单局状态管理 | `run_started`, `run_ended`, `hp_changed`, `exp_changed`, `level_up`, `gold_changed`, `game_speed_changed` |
+| `DataManager` | 扫描 `resources/characters`、`resources/weapons`、`resources/enemies`、`resources/upgrades` | 无 |
 
 ## 主信号流
 
@@ -117,14 +117,15 @@ Enemy._physics_process()
 | 类名 | 基类 | 用途 |
 |------|------|------|
 | `WeaponData` | Resource | 武器属性、分类、图标、等级上限、流派列表 |
+| `CharacterData` | Resource | 角色基础属性、初始武器、战斗修正和被动描述 |
 | `WeaponPath` | Resource | 武器流派名称、描述、图标、每级效果 |
 | `WeaponPathLevel` | Resource | 某一级的伤害 / 冷却 / 范围 bonus 和 `special_tag` |
 | `EnemyData` | Resource | 敌人 HP、速度、伤害、掉落、生成权重 |
 | `UpgradeData` | Resource | 升级选项类型、关联武器、bonus 数值 |
-| `PlayerData` | Resource | 角色基础属性预留 |
 
 当前状态：
 
+- `resources/characters/` 已有 4 个默认可选角色数据资源
 - `resources/weapons/` 已有 16 个武器数据资源
 - `resources/enemies/` 和 `resources/upgrades/` 目录存在，但当前核心敌人和大多数升级选项仍由代码提供
 - `DataManager` 启动时会扫描上述目录，`UpgradeSystem` 会把外部升级资源加入候选池

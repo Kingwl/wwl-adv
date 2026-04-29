@@ -9,6 +9,7 @@ extends CanvasLayer
 @onready var _level_label: Label = $EXPPanel/LevelLabel
 @onready var _weapon_bar: HBoxContainer = $WeaponBar
 @onready var _enhancement_bar: HBoxContainer = $EnhancementBar
+@onready var _speed_button: Button = $TopBar/SpeedButton
 @onready var _stats_button: Button = $TopBar/StatsButton
 
 var _slot_style_normal: StyleBoxFlat
@@ -21,12 +22,15 @@ func _ready() -> void:
 	_add_heart_icon()
 	_init_weapon_slots()
 	_init_enhancement_slots()
+	_speed_button.pressed.connect(_on_speed_pressed)
 	_stats_button.pressed.connect(_on_stats_pressed)
 	GameState.hp_changed.connect(_on_hp_changed)
 	GameState.exp_changed.connect(_on_exp_changed)
 	GameState.gold_changed.connect(_on_gold_changed)
+	GameState.game_speed_changed.connect(_on_game_speed_changed)
 	GameState.run_started.connect(_on_run_started)
 	_on_run_started()
+	_on_game_speed_changed(GameState.game_speed_multiplier)
 
 func _process(_delta: float) -> void:
 	_time_label.text = GameState.get_time_string()
@@ -227,6 +231,12 @@ func _on_exp_changed(current: int, required: int) -> void:
 
 func _on_gold_changed(amount: int) -> void:
 	_gold_label.text = "金币: %d" % amount
+
+func _on_game_speed_changed(multiplier: float) -> void:
+	_speed_button.text = "%dx" % int(round(multiplier))
+
+func _on_speed_pressed() -> void:
+	GameState.toggle_game_speed()
 
 func _on_stats_pressed() -> void:
 	var stats_panel := get_tree().current_scene.get_node_or_null("StatsPanel")

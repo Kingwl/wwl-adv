@@ -68,9 +68,11 @@ func get_profile() -> Dictionary
     "best_time": 0.0,
     "best_level": 1,
     "best_kills": 0,
+    "selected_character_id": "adventurer",
     "unlocked_weapon_ids": ["melee_basic"],
     "last_run": {
       "ended_at": 1234567890,
+      "character_id": "adventurer",
       "time": 99.0,
       "level": 5,
       "kills": 12,
@@ -91,6 +93,7 @@ func get_profile() -> Dictionary
 稳定保存点：
 
 - 游戏启动：`SaveManager.load_or_create()`。
+- 主菜单切换角色：写入 `profile.selected_character_id`。当前版本所有角色默认可选，不做角色解锁。
 - 获得金币：`GameState.add_gold()` 同步调用 `SaveManager.add_total_gold(amount)` 更新内存 profile，并标记待写盘。
 - 击杀敌人：`GameState.add_kill()` 同步调用 `SaveManager.add_lifetime_kills(1)` 更新内存 profile，并标记待写盘。
 - 运行中：如果 profile 有变更，`SaveManager` 每 5 秒节流写盘一次，避免后期击杀过多造成频繁 IO。
@@ -104,6 +107,7 @@ func get_profile() -> Dictionary
 
 - 只保留 `开始游戏` 入口。
 - `ContinueButton` 保留在场景中但隐藏，避免当前版本暗示可以继续当前战斗。
+- 展示 `profile.total_gold` 作为全局累计金币；战斗 HUD 只展示本局金币。
 
 暂停菜单：
 
@@ -120,8 +124,8 @@ func get_profile() -> Dictionary
 2. 在 `project.godot` 注册 `SaveManager` autoload。
 3. `GameState.add_gold()` 和 `GameState.add_kill()` 即时同步局外累计数值，并由 `SaveManager` 节流落盘。
 4. `scripts/game/game.gd` 在游戏结束时更新总局数、最佳成绩和最近一局摘要。
-5. 主菜单隐藏继续按钮，不提供战斗恢复入口。
-6. `tests/auto_test.gd` 覆盖数值持久化、不保存战斗状态和主菜单隐藏继续按钮。
+5. 主菜单隐藏继续按钮，不提供战斗恢复入口，并展示全局累计金币。
+6. `tests/auto_test.gd` 覆盖数值持久化、不保存战斗状态、主菜单隐藏继续按钮和全局金币展示。
 
 ## 测试计划
 
@@ -146,6 +150,6 @@ func get_profile() -> Dictionary
 ## 后续扩展
 
 - 多存档位：把 `save_v1.json` 拆为 `slot_0.json / slot_1.json / slot_2.json`。
-- 局外成长：扩展 `profile`，增加角色、武器解锁和永久升级。
+- 局外成长：扩展 `profile`，增加角色解锁、武器解锁和永久升级。
 - 设置页：把音量、语言、虚拟摇杆模式写入 `profile.settings`。
 - 云同步：把 `SaveManager` 底层拆成 `LocalSaveBackend` 和 `CloudSaveBackend`，上层 API 不变。

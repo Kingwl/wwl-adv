@@ -15,13 +15,14 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 已实现内容：
 
 - 玩家移动、受击、死亡结算、相机跟随
+- 4 个默认可选角色，支持不同初始属性、初始武器和轻量被动
 - 基础追踪敌人和随时间增强的生成器
 - 经验 / 金币掉落与拾取
 - 升级三选一，支持角色强化、武器解锁、武器强化和武器流派
 - 16 种武器，均有 `.tscn` 场景和 `resources/weapons/*.tres` 数据资源
 - 角色强化与武器槽分离，生命源泉作为被动恢复强化
 - 本地数值存档（累计金币、累计击杀、最佳成绩）
-- HUD、暂停菜单、属性面板、升级选择、游戏结束界面、虚拟摇杆
+- HUD、暂停菜单、属性面板、升级选择、游戏结束界面、虚拟摇杆、1x / 2x 倍速切换
 - 角色、敌人、武器特效、掉落物、UI 图标等美术资源接入
 - Headless Godot 自动化集成测试
 
@@ -47,7 +48,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 ./tests/run_tests.sh
 ```
 
-当前最近一次验证结果：`476 passed, 0 failed`。
+当前最近一次验证结果：`515 passed, 0 failed`。
 
 ## 目录结构
 
@@ -72,6 +73,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 │   └── data/                  # WeaponData / EnemyData / UpgradeData 等资源类
 ├── autoload/                  # GameState、DataManager 等全局单例
 ├── resources/
+│   ├── characters/            # 4 个角色 .tres 数据资源
 │   ├── weapons/               # 16 个武器 .tres 数据资源
 │   ├── enemies/               # 预留：敌人资源
 │   └── upgrades/              # 预留：外部升级资源
@@ -83,12 +85,13 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 ## 核心数据类型
 
 - `WeaponData` — 武器基础数值、分类、图标、流派列表
+- `CharacterData` — 角色基础属性、初始武器和被动修正
 - `WeaponPath` / `WeaponPathLevel` — 武器流派和每级效果
 - `EnemyData` — 敌人 HP、速度、伤害、掉落、生成权重
 - `UpgradeData` — 升级选项类型和 bonus 数值
 - `PlayerData` — 玩家基础属性预留
 
-`DataManager` 会扫描 `resources/weapons/`、`resources/enemies/`、`resources/upgrades/` 下的 `.tres` 资源。当前武器已经资源化；敌人与大部分升级选项仍主要由代码提供。
+`DataManager` 会扫描 `resources/characters/`、`resources/weapons/`、`resources/enemies/`、`resources/upgrades/` 下的 `.tres` 资源。当前角色和武器已经资源化；敌人与大部分升级选项仍主要由代码提供。
 
 ## 常用文档
 

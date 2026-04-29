@@ -44,11 +44,12 @@ func _get_poison_damage() -> int:
 	return dmg
 
 func _get_poison_lifetime() -> float:
+	var base_lifetime := 4.0
 	if has_special_tag(&"eternal_poison"):
-		return 8.0
-	if has_special_tag(&"longer_poison"):
-		return 6.0
-	return 4.0
+		base_lifetime = 8.0
+	elif has_special_tag(&"longer_poison"):
+		base_lifetime = 6.0
+	return base_lifetime * GameState.get_character_field_lifetime_multiplier()
 
 func _get_poison_radius() -> float:
 	var r := _get_field_radius(90.0)

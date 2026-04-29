@@ -5,6 +5,7 @@ const SAVE_PATH := "user://save_v1.json"
 const BACKUP_PATH := "user://save_v1.bak"
 const TMP_PATH := "user://save_v1.tmp"
 const PROFILE_SAVE_INTERVAL := 5.0
+const DEFAULT_CHARACTER_ID := "adventurer"
 
 var _save_path := SAVE_PATH
 var _backup_path := BACKUP_PATH
@@ -80,6 +81,7 @@ func record_run_finished() -> bool:
 	profile["best_kills"] = maxi(int(profile.get("best_kills", 0)), int(GameState.run.get("kills", 0)))
 	profile["last_run"] = {
 		"ended_at": now,
+		"character_id": str(GameState.run.get("character_id", DEFAULT_CHARACTER_ID)),
 		"time": float(GameState.run.get("run_time", 0.0)),
 		"level": int(GameState.run.get("level", 1)),
 		"kills": int(GameState.run.get("kills", 0)),
@@ -112,6 +114,14 @@ func set_profile_value(key: String, value) -> bool:
 func get_profile() -> Dictionary:
 	_ensure_loaded()
 	return (_save_data.get("profile", {}) as Dictionary).duplicate(true)
+
+func get_selected_character_id() -> StringName:
+	return StringName(str(get_profile_value("selected_character_id", DEFAULT_CHARACTER_ID)))
+
+func set_selected_character_id(character_id: StringName) -> bool:
+	if character_id.is_empty():
+		return false
+	return set_profile_value("selected_character_id", str(character_id))
 
 func configure_paths_for_tests(save_path: String) -> void:
 	_save_path = save_path
@@ -147,6 +157,7 @@ func _default_save_data() -> Dictionary:
 			"best_time": 0.0,
 			"best_level": 1,
 			"best_kills": 0,
+			"selected_character_id": DEFAULT_CHARACTER_ID,
 			"unlocked_weapon_ids": ["melee_basic"],
 			"settings": {
 				"music_volume": 1.0,
@@ -163,6 +174,10 @@ func _normalize_save_data(raw_data: Dictionary) -> Dictionary:
 		normalized.merge(raw_data, true)
 	if typeof(normalized.get("profile")) != TYPE_DICTIONARY:
 		normalized["profile"] = _default_save_data()["profile"]
+	var profile: Dictionary = normalized.get("profile", {})
+	if str(profile.get("selected_character_id", "")).is_empty():
+		profile["selected_character_id"] = DEFAULT_CHARACTER_ID
+	normalized["profile"] = profile
 	normalized.erase("resume_run")
 	return normalized
 

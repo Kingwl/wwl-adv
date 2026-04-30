@@ -40,6 +40,11 @@ func _activate() -> void:
 		mine.damage = get_damage()
 		mine.explosion_radius = _get_blast_radius()
 		mine.cluster_count = _get_cluster_count()
+		mine.source = self
+		mine.damage_owner = player
+		mine.weapon_id = weapon_data.id if weapon_data else &""
+		mine.damage_type = DamageEvent.DAMAGE_TYPE_PHYSICAL
+		mine.delivery_type = DamageEvent.DELIVERY_AREA
 		var __proj := get_tree().current_scene.get_node_or_null("Projectiles")
 		if __proj == null:
 			__proj = get_tree().current_scene.find_child("Projectiles", true, false)

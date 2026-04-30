@@ -10,6 +10,11 @@ var damage: int = 5
 var max_range: float = 250.0
 var lifetime: float = 0.5
 var beam_width: float = 8.0
+var source: Node = null
+var damage_owner: Node = null
+var weapon_id: StringName = &""
+var damage_type: StringName = DamageEvent.DAMAGE_TYPE_LIGHTNING
+var delivery_type: StringName = DamageEvent.DELIVERY_BEAM
 
 func _ready() -> void:
 	z_index = 15
@@ -81,9 +86,17 @@ func _build_beam_visual() -> void:
 
 func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("enemies"):
-		body.take_damage(damage)
+		DamageCalculator.deal_damage(body, _make_damage_event(body))
 
 func _deal_damage() -> void:
 	for body in get_overlapping_bodies():
 		if body.is_in_group("enemies"):
-			body.take_damage(damage)
+			DamageCalculator.deal_damage(body, _make_damage_event(body))
+
+func _make_damage_event(target: Node) -> DamageEvent:
+	var event := DamageEvent.from_amount(damage, source if source else self, damage_type, delivery_type)
+	event.owner = damage_owner
+	event.target = target
+	event.weapon_id = weapon_id
+	event.position = global_position
+	return event

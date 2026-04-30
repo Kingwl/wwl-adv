@@ -24,6 +24,11 @@ func _activate() -> void:
 		beam.max_range = _get_beam_range()
 		beam.beam_width = _get_beam_width()
 		beam.lifetime = 0.5
+		beam.source = self
+		beam.damage_owner = player
+		beam.weapon_id = weapon_data.id if weapon_data else &""
+		beam.damage_type = DamageEvent.DAMAGE_TYPE_LIGHTNING
+		beam.delivery_type = DamageEvent.DELIVERY_BEAM
 		var __proj := get_tree().current_scene.get_node_or_null("Projectiles")
 		if __proj == null:
 			__proj = get_tree().current_scene.find_child("Projectiles", true, false)

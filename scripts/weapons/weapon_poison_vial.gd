@@ -22,6 +22,11 @@ func _activate() -> void:
 		field.damage = _get_poison_damage()
 		field.lifetime = _get_poison_lifetime()
 		field.radius = _get_poison_radius()
+		field.source = self
+		field.damage_owner = player
+		field.weapon_id = weapon_data.id if weapon_data else &""
+		field.damage_type = DamageEvent.DAMAGE_TYPE_POISON
+		field.delivery_type = DamageEvent.DELIVERY_DOT
 		var __proj := get_tree().current_scene.get_node_or_null("Projectiles")
 		if __proj == null:
 			__proj = get_tree().current_scene.find_child("Projectiles", true, false)

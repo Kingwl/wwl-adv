@@ -60,7 +60,7 @@
 | 金币掉落 | 1 |
 
 - 行为：持续追踪玩家，碰撞后造成伤害
-- 状态：支持 `slow` 和 `stun`
+- 状态：通过 `StatusEffect` 支持 `slow` 和 `stun`，并预留刷新策略、堆叠和 tick 伤害
 - 生成：从玩家周围可视区外的视口半对角线 + 80~300 像素环形区域随机生成
 - 难度曲线：生成间隔随时间缩短；HP / 伤害按 120 秒翻倍，速度按 300 秒成长并封顶到 1.75 倍
 - 资源化：`EnemyData` 已定义，生成器已支持读取 `resources/enemies/`，当前尚未配置敌人 `.tres`
@@ -116,6 +116,18 @@
 - 20 种武器均支持 3 条流派路径，每条路径通过 `WeaponPathLevel` 提供数值 bonus 或 `special_tag`
 - 当前 `special_tag` 均已接到对应武器脚本，自动化测试覆盖主要路径效果
 - 路径数值避免纯 `damage_bonus` 堆叠；伤害路线也需要混入冷却、范围或机制 tag
+
+### 伤害系统
+
+当前伤害已经统一为 `DamageEvent → DamageCalculator → target.apply_damage() → DamageResult`。
+
+- `DamageEvent` 记录伤害来源、目标、武器 ID、伤害类型和命中方式。
+- `StatusEffect` 记录状态剩余时间、刷新策略、堆叠、数值和周期伤害载荷；简单状态仍可通过 `DamageEvent.status_id/status_duration/status_value` 传递。
+- 已使用的伤害类型包括 `physical`、`fire`、`poison`、`frost`、`lightning`、`holy`、`pure`。
+- 已使用的命中方式包括 `melee`、`projectile`、`area`、`dot`、`beam`、`contact`、`reflect`。
+- 旧的 `take_damage(int)` 保持兼容，便于测试和后续逐步迁移。
+- 敌人死亡后不再重复吃伤害或重复结算击杀。
+- 玩家受伤减免、守卫折光甲胄和死亡结算仍由 `GameState` 统一处理。
 
 ### 升级系统
 

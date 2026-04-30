@@ -17,7 +17,7 @@ func _activate() -> void:
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if enemy.global_position.distance_to(player.global_position) <= radius:
 			for i in range(_get_pulse_count()):
-				enemy.take_damage(_get_final_damage())
+				_deal_damage_to(enemy, _get_final_damage(), DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_AREA)
 			if enemy.has_method("apply_status"):
 				enemy.apply_status(&"stun", _get_stun_duration(), 0.0)
 				if _should_slow():

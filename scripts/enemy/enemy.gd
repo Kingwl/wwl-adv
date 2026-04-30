@@ -12,8 +12,9 @@ var _exp_reward: int = 2
 var _gold_reward: int = 1
 var _can_damage: bool = true
 var _damage_cooldown: float = 1.0
+var _dead: bool = false
 
-# 状态系统: status_name -> {timer, value}
+# 状态系统: status_name -> StatusEffect
 var _statuses: Dictionary = {}
 
 @onready var _player: Node2D
@@ -71,26 +72,27 @@ func _setup_animations() -> void:
 	_sprite.play("walk")
 
 func _process(delta: float) -> void:
-	# 更新状态计时器
-	var expired: Array[StringName] = []
-	for status in _statuses.keys():
-		_statuses[status].timer -= delta
-		if _statuses[status].timer <= 0:
-			expired.append(status)
-	for status in expired:
-		_statuses.erase(status)
-		_on_status_removed(status)
+	var expired: Array[String] = []
+	for status_key in _statuses.keys():
+		var effect := _statuses[status_key] as StatusEffect
+		if not effect or effect.tick(delta, self):
+			expired.append(str(status_key))
+	for status_key in expired:
+		var effect := _statuses.get(status_key) as StatusEffect
+		_statuses.erase(status_key)
+		_on_status_removed(effect.id if effect else StringName(status_key))
 
 func _physics_process(_delta: float) -> void:
 	if _player:
-		if "stun" in _statuses:
+		if _has_status(&"stun"):
 			velocity = Vector2.ZERO
 			move_and_slide()
 			return
 
 		var current_speed := _base_speed
-		if "slow" in _statuses:
-			current_speed *= _statuses["slow"].value
+		var slow_effect := _get_status(&"slow")
+		if slow_effect:
+			current_speed *= slow_effect.effective_value()
 
 		var dir := (_player.global_position - global_position).normalized()
 		velocity = dir * current_speed
@@ -103,9 +105,36 @@ func _physics_process(_delta: float) -> void:
 		elif velocity.x > 0:
 			_sprite.flip_h = false
 
-func apply_status(status: StringName, duration: float, value: float = 0.0) -> void:
-	_statuses[status] = {timer = duration, value = value}
-	_on_status_applied(status, value)
+func apply_status(status: StringName, duration: float, value: float = 0.0) -> StatusEffect:
+	return apply_status_effect(StatusEffect.from_values(status, duration, value))
+
+func apply_status_effect(effect: StatusEffect) -> StatusEffect:
+	if not effect or effect.id.is_empty():
+		return null
+
+	var status_key := str(effect.id)
+	var applied := _statuses.get(status_key) as StatusEffect
+	if applied:
+		applied.refresh_from(effect)
+	else:
+		if effect.tick_interval > 0.0 and effect.tick_timer <= 0.0:
+			effect.tick_timer = effect.tick_interval
+		applied = effect
+		_statuses[status_key] = applied
+
+	_on_status_applied(applied.id, applied.value)
+	return applied
+
+func clear_status(status: StringName) -> void:
+	var status_key := str(status)
+	if _statuses.erase(status_key):
+		_on_status_removed(status)
+
+func _get_status(status: StringName) -> StatusEffect:
+	return _statuses.get(str(status)) as StatusEffect
+
+func _has_status(status: StringName) -> bool:
+	return _get_status(status) != null
 
 func _try_damage_player() -> void:
 	if not _can_damage or not is_instance_valid(_player):
@@ -113,7 +142,10 @@ func _try_damage_player() -> void:
 	if not _is_touching_player():
 		return
 	if _player.has_method("take_damage"):
-		_player.take_damage(_damage)
+		var event := DamageEvent.from_amount(_damage, self, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_CONTACT)
+		event.owner = self
+		event.target = _player
+		DamageCalculator.deal_damage(_player, event)
 		_start_damage_cooldown()
 
 func _is_touching_player() -> bool:
@@ -136,46 +168,64 @@ func _collision_radius(body: Node2D) -> float:
 		return maxf(capsule.radius, capsule.height * 0.5) * scale_factor
 	return DEFAULT_CONTACT_RADIUS * scale_factor
 
-func _on_status_applied(status: StringName, _value: float) -> void:
-	match status:
-		"slow":
-			_sprite.modulate = Color(0.6, 0.8, 1.0, 1.0)
-		"stun":
-			_sprite.modulate = Color(1.0, 0.9, 0.3, 1.0)
+func _on_status_applied(_status: StringName, _value: float) -> void:
+	_refresh_status_visual()
 
-func _on_status_removed(status: StringName) -> void:
-	match status:
-		"slow":
-			_sprite.modulate = Color.WHITE
-		"stun":
-			_sprite.modulate = Color.WHITE
+func _on_status_removed(_status: StringName) -> void:
+	_refresh_status_visual()
+
+func _refresh_status_visual() -> void:
+	if not _sprite:
+		return
+	if _has_status(&"stun"):
+		_sprite.modulate = Color(1.0, 0.9, 0.3, 1.0)
+	elif _has_status(&"slow"):
+		_sprite.modulate = Color(0.6, 0.8, 1.0, 1.0)
+	else:
+		_sprite.modulate = Color.WHITE
 
 func _setup_health_bar() -> void:
 	if _health_bar:
 		_health_bar.max_value = _hp
 		_health_bar.value = _hp
 
-func take_damage(amount: int) -> void:
-	_hp -= amount
+func take_damage(amount: int) -> DamageResult:
+	var event := DamageEvent.from_amount(amount, null, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_DIRECT)
+	event.target = self
+	return apply_damage(event)
+
+func apply_damage(event: DamageEvent) -> DamageResult:
+	if _dead:
+		return DamageResult.blocked(event)
+	var result := DamageCalculator.calculate(event)
+	if result.final_amount <= 0:
+		result.was_blocked = true
+		return result
+	_hp -= result.final_amount
 	if _health_bar:
 		_health_bar.update_health(_hp, _health_bar.max_value)
+	if not event.status_id.is_empty() and _hp > 0:
+		var applied_status := apply_status(event.status_id, event.status_duration, event.status_value)
+		if applied_status:
+			result.applied_status = applied_status.id
 	_flash_white()
 	if _hp <= 0:
+		result.killed = true
 		_die()
+	return result
 
 func _flash_white() -> void:
 	_sprite.modulate = Color(2, 2, 2, 1)
 	_sprite.play("hit")
 	await get_tree().create_timer(0.08).timeout
-	# 恢复时检查是否有状态颜色
-	if "slow" in _statuses:
-		_sprite.modulate = Color(0.6, 0.8, 1.0, 1.0)
-	else:
-		_sprite.modulate = Color.WHITE
+	_refresh_status_visual()
 	if _hp > 0 and _sprite.animation == "hit":
 		_sprite.play("walk")
 
 func _die() -> void:
+	if _dead:
+		return
+	_dead = true
 	GameState.add_kill()
 	call_deferred("_spawn_drop")
 	_sprite.play("death")

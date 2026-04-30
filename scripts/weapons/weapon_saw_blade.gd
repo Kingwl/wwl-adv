@@ -67,7 +67,7 @@ func _spawn_saw(index: int) -> void:
 
 func _on_saw_hit(body: Node2D, saw: Area2D) -> void:
 	if body.is_in_group("enemies"):
-		body.take_damage(get_damage())
+		_deal_damage_to(body, get_damage(), DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_AREA)
 
 func _get_saw_count() -> int:
 	var count := 1

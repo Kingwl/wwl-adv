@@ -24,6 +24,11 @@ func _activate() -> void:
 		projectile.damage = dmg
 		projectile.max_range = get_range()
 		projectile.pierce = pierce
+		projectile.source = self
+		projectile.damage_owner = player
+		projectile.weapon_id = weapon_data.id if weapon_data else &""
+		projectile.damage_type = DamageEvent.DAMAGE_TYPE_PHYSICAL
+		projectile.delivery_type = DamageEvent.DELIVERY_PROJECTILE
 		var __proj := get_tree().current_scene.get_node_or_null("Projectiles")
 		if __proj == null:
 			__proj = get_tree().current_scene.find_child("Projectiles", true, false)

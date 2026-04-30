@@ -208,26 +208,37 @@ func _compose_move_input(keyboard_dir: Vector2, joystick_dir: Vector2) -> Vector
 		return keyboard_dir.normalized()
 	return Vector2.ZERO
 
-func take_damage(amount: int) -> void:
+func take_damage(amount: int) -> DamageResult:
+	var event := DamageEvent.from_amount(amount, self, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_CONTACT)
+	event.target = self
+	return apply_damage(event)
+
+func apply_damage(event: DamageEvent) -> DamageResult:
 	if _invincible:
 		if _is_invincibility_active():
-			return
+			return DamageResult.blocked(event)
 		_end_invincibility()
 	if _dying:
-		return
+		return DamageResult.blocked(event)
 	# Intercept fatal damage to play death animation first
-	var final_amount := GameState.preview_take_damage(amount)
-	if GameState.run.hp <= final_amount:
+	var preview := GameState.preview_apply_damage(event)
+	if GameState.run.hp <= preview.final_amount:
 		_dying = true
 		set_physics_process(false)
 		if _sprite:
 			_sprite.process_mode = PROCESS_MODE_ALWAYS
 			_sprite.play("death")
-			await _sprite.animation_finished
-		GameState.take_damage(amount)
-		return
-	GameState.take_damage(amount)
-	_flash()
+			_finish_fatal_damage_after_animation(event)
+			return preview
+		return GameState.apply_damage(event)
+	var result := GameState.apply_damage(event)
+	if result.final_amount > 0:
+		_flash()
+	return result
+
+func _finish_fatal_damage_after_animation(event: DamageEvent) -> void:
+	await _sprite.animation_finished
+	GameState.apply_damage(event)
 
 func _flash() -> void:
 	_invincible = true

@@ -20,7 +20,7 @@ func _activate() -> void:
 	var jump_range := get_range()
 
 	# 伤害第一个目标
-	current.take_damage(dmg)
+	_deal_damage_to(current, dmg, DamageEvent.DAMAGE_TYPE_LIGHTNING, DamageEvent.DELIVERY_DIRECT)
 	_show_chain(player.global_position, current.global_position)
 
 	for i in range(chain_count - 1):
@@ -29,7 +29,7 @@ func _activate() -> void:
 			break
 		if current.global_position.distance_to(next.global_position) > jump_range:
 			break
-		next.take_damage(dmg)
+		_deal_damage_to(next, dmg, DamageEvent.DAMAGE_TYPE_LIGHTNING, DamageEvent.DELIVERY_DIRECT)
 		_show_chain(current.global_position, next.global_position)
 		hit_targets.append(next)
 		current = next

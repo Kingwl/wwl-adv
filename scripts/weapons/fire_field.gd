@@ -14,11 +14,17 @@ const FIRE_TILE_SHEET := preload("res://assets/art/effects/generated_missing/dyn
 var damage: int = 3
 var lifetime: float = 3.0
 var radius: float = 40.0
+var source: Node = null
+var damage_owner: Node = null
+var weapon_id: StringName = &""
+var damage_type: StringName = DamageEvent.DAMAGE_TYPE_FIRE
+var delivery_type: StringName = DamageEvent.DELIVERY_DOT
 var _tick_interval: float = 0.5
 var _tick_timer: float = 0.0
 
 func _ready() -> void:
 	z_index = FIELD_Z_INDEX
+	_tick_timer = _tick_interval
 	var shape := CircleShape2D.new()
 	shape.radius = radius
 	var cs := CollisionShape2D.new()
@@ -30,6 +36,7 @@ func _ready() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "modulate", Color(1, 1, 1, 0), lifetime)
 	tween.tween_callback(queue_free)
+	call_deferred("_apply_tick")
 
 func _build_tiled_visual(sheet: Texture2D) -> void:
 	if not sheet:
@@ -97,6 +104,38 @@ func _process(delta: float) -> void:
 	_tick_timer -= delta
 	if _tick_timer <= 0:
 		_tick_timer = _tick_interval
-		for body in get_overlapping_bodies():
-			if body.is_in_group("enemies"):
-				body.take_damage(damage)
+		_apply_tick()
+
+func _apply_tick() -> void:
+	if not is_inside_tree():
+		return
+	var damaged: Dictionary = {}
+	for body in get_overlapping_bodies():
+		_damage_enemy_once(body, damaged)
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if _is_enemy_in_radius(enemy):
+			_damage_enemy_once(enemy, damaged)
+
+func _damage_enemy_once(enemy: Node, damaged: Dictionary) -> void:
+	if not is_instance_valid(enemy) or not enemy.is_in_group("enemies"):
+		return
+	var enemy_id := enemy.get_instance_id()
+	if damaged.has(enemy_id):
+		return
+	damaged[enemy_id] = true
+	DamageCalculator.deal_damage(enemy, _make_damage_event(enemy))
+
+func _is_enemy_in_radius(enemy: Node) -> bool:
+	if not is_instance_valid(enemy) or enemy.is_queued_for_deletion() or not (enemy is Node2D):
+		return false
+	if "_dead" in enemy and bool(enemy._dead):
+		return false
+	return global_position.distance_squared_to((enemy as Node2D).global_position) <= radius * radius
+
+func _make_damage_event(target: Node) -> DamageEvent:
+	var event := DamageEvent.from_amount(damage, source if source else self, damage_type, delivery_type)
+	event.owner = damage_owner
+	event.target = target
+	event.weapon_id = weapon_id
+	event.position = global_position
+	return event

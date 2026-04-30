@@ -60,7 +60,7 @@ func _spawn_orbs() -> void:
 
 func _on_orb_hit(body: Node2D) -> void:
 	if body.is_in_group("enemies"):
-		body.take_damage(get_damage())
+		_deal_damage_to(body, get_damage(), DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_AREA)
 
 func get_cooldown_progress() -> float:
 	return 0.0

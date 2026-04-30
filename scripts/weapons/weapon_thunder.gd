@@ -22,7 +22,7 @@ func _strike_at(pos: Vector2) -> void:
 	var strike_radius := get_range()
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if enemy.global_position.distance_to(pos) <= strike_radius:
-			enemy.take_damage(dmg)
+			_deal_damage_to(enemy, dmg, DamageEvent.DAMAGE_TYPE_LIGHTNING, DamageEvent.DELIVERY_AREA)
 			if has_special_tag(&"thunder_slow"):
 				enemy.apply_status(&"slow", 1.0, 0.5)
 			if has_special_tag(&"thunder_paralyze"):

@@ -45,6 +45,11 @@ func _spawn_fire_behind(player: Node2D) -> void:
 	field.damage = _get_rocket_damage()
 	field.lifetime = _get_trail_lifetime()
 	field.radius = _get_fire_radius()
+	field.source = self
+	field.damage_owner = player
+	field.weapon_id = weapon_data.id if weapon_data else &""
+	field.damage_type = DamageEvent.DAMAGE_TYPE_FIRE
+	field.delivery_type = DamageEvent.DELIVERY_DOT
 
 	_show_flame_segments(
 		player.global_position + back_dir * FLAME_VISUAL_START_DISTANCE,

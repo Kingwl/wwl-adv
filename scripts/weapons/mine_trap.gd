@@ -3,6 +3,11 @@ extends Area2D
 var damage: int = 20
 var explosion_radius: float = 60.0
 var cluster_count: int = 0
+var source: Node = null
+var damage_owner: Node = null
+var weapon_id: StringName = &""
+var damage_type: StringName = DamageEvent.DAMAGE_TYPE_PHYSICAL
+var delivery_type: StringName = DamageEvent.DELIVERY_AREA
 var _triggered: bool = false
 
 func _ready() -> void:
@@ -40,7 +45,12 @@ func _explode() -> void:
 func _deal_area_damage(center: Vector2, radius: float, amount: int) -> void:
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if enemy.global_position.distance_to(center) <= radius:
-			enemy.take_damage(amount)
+			var event := DamageEvent.from_amount(amount, source if source else self, damage_type, delivery_type)
+			event.owner = damage_owner
+			event.target = enemy
+			event.weapon_id = weapon_id
+			event.position = center
+			DamageCalculator.deal_damage(enemy, event)
 
 func _show_explosion(pos: Vector2, radius: float) -> void:
 	var scale_factor := maxf(1.0, radius * 2.0 / 64.0)

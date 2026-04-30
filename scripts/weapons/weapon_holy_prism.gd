@@ -24,7 +24,7 @@ func _strike_at(pos: Vector2) -> void:
 	var strike_radius := _get_holy_range()
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if enemy.global_position.distance_to(pos) <= strike_radius:
-			enemy.take_damage(dmg)
+			_deal_damage_to(enemy, dmg, DamageEvent.DAMAGE_TYPE_HOLY, DamageEvent.DELIVERY_AREA)
 	GameState.heal(_get_heal_amount())
 
 func _get_heal_amount() -> int:

@@ -48,7 +48,7 @@ Godot 4.x 开发的 2D 俯视角实时生存 Roguelike，玩法方向参考 Vamp
 ./tests/run_tests.sh
 ```
 
-当前最近一次验证结果：`653 passed, 0 failed`。
+当前最近一次验证结果：`667 passed, 0 failed`。
 
 ## 目录结构
 

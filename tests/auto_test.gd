@@ -638,6 +638,39 @@ func _node_tree_contains_label_text(node: Node, text: String) -> bool:
 func _wait(seconds: float):
 	return get_tree().create_timer(seconds, true).timeout
 
+func _assert_field_weapon_activation_damage(weapon: WeaponBase, field_type: String, expected_damage: int) -> void:
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	var enemies_parent := _game.get_node_or_null("Enemies")
+	if not player or not enemies_parent:
+		_assert(false, "%s field damage test setup exists" % field_type.capitalize())
+		return
+
+	for child in enemies_parent.get_children():
+		child.queue_free()
+	await _wait(0.05)
+
+	var enemy_scene := preload("res://scenes/enemy/enemy.tscn")
+	var enemy := enemy_scene.instantiate()
+	enemy.global_position = player.global_position + Vector2.RIGHT * 60.0
+	enemies_parent.add_child(enemy)
+	await _wait(0.05)
+
+	enemy.set_physics_process(false)
+	enemy.global_position = player.global_position + Vector2.RIGHT * 60.0
+	enemy._hp = 999
+	if "_dead" in enemy:
+		enemy._dead = false
+	if enemy.has_method("_setup_health_bar"):
+		enemy._setup_health_bar()
+
+	var hp_before: int = enemy._hp
+	weapon._activate()
+	await _wait(0.1)
+	_assert(enemy._hp <= hp_before - expected_damage, "%s field deals damage when spawned on target" % field_type.capitalize())
+
+	enemy.queue_free()
+	await _wait(0.05)
+
 func _phase_path_system() -> void:
 	print("[PHASE 7] Weapon Path System")
 	var melee := _find_weapon(&"melee_basic")
@@ -771,13 +804,37 @@ func _phase_enemy_damage() -> void:
 	var initial_kills: int = GameState.run.kills
 	var initial_drop_count: int = drops_parent.get_child_count()
 
+	# Deal typed damage through the shared combat entry point
+	var event_hp_before: int = enemy._hp
+	var fire_event := DamageEvent.from_amount(4, player, DamageEvent.DAMAGE_TYPE_FIRE, DamageEvent.DELIVERY_AREA)
+	fire_event.weapon_id = &"test_fire"
+	var fire_result := DamageCalculator.deal_damage(enemy, fire_event)
+	_assert(fire_result is DamageResult, "DamageCalculator returns DamageResult")
+	_assert(fire_result.raw_amount == 4 and fire_result.final_amount == 4, "DamageResult preserves raw and final damage")
+	_assert(fire_result.event.damage_type == DamageEvent.DAMAGE_TYPE_FIRE, "DamageEvent carries damage type")
+	_assert(enemy._hp == event_hp_before - 4, "DamageCalculator reduces enemy HP")
+
+	var status_event := DamageEvent.from_amount(1, player, DamageEvent.DAMAGE_TYPE_FROST, DamageEvent.DELIVERY_AREA)
+	status_event.status_id = &"slow"
+	status_event.status_duration = 0.2
+	status_event.status_value = 0.5
+	DamageCalculator.deal_damage(enemy, status_event)
+	_assert(enemy._statuses.has("slow"), "DamageEvent applies status through target")
+	var applied_status := enemy._statuses["slow"] as StatusEffect
+	_assert(applied_status != null and is_equal_approx(applied_status.value, 0.5), "DamageEvent status stores StatusEffect data")
+	enemy.clear_status(&"slow")
+
 	# Deal damage
+	initial_hp = enemy._hp
 	enemy.take_damage(10)
 	_assert(enemy._hp == initial_hp - 10, "Enemy HP reduced by damage")
 
 	# Kill enemy
 	enemy.take_damage(999)
 	_assert(enemy._hp <= 0, "Enemy HP <= 0 after lethal damage")
+	var kills_after_lethal: int = GameState.run.kills
+	enemy.take_damage(999)
+	_assert(GameState.run.kills == kills_after_lethal, "Dead enemy ignores repeated damage")
 	await _wait(0.05)
 	_assert(drops_parent.get_child_count() > initial_drop_count, "Drops spawned after enemy death")
 
@@ -861,6 +918,20 @@ func _phase_special_tags() -> void:
 		_enemies_parent.add_child(side_enemy)
 		await _wait(0.1)
 
+		front_enemy.set_physics_process(false)
+		back_enemy.set_physics_process(false)
+		side_enemy.set_physics_process(false)
+		front_enemy.global_position = player.global_position + Vector2.RIGHT * 30.0
+		back_enemy.global_position = player.global_position + Vector2.LEFT * 30.0
+		side_enemy.global_position = player.global_position + Vector2.UP * 30.0
+		for test_enemy in [front_enemy, back_enemy, side_enemy]:
+			test_enemy._hp = 999
+			if "_dead" in test_enemy:
+				test_enemy._dead = false
+			if test_enemy.has_method("_setup_health_bar"):
+				test_enemy._setup_health_bar()
+		melee._active_attack_windows.clear()
+
 		var front_hp_before: int = front_enemy._hp
 		var back_hp_before: int = back_enemy._hp
 		var side_hp_before: int = side_enemy._hp
@@ -907,6 +978,14 @@ func _phase_special_tags() -> void:
 		late_enemy.global_position = player.global_position + Vector2.LEFT * 30.0
 		_enemies_parent.add_child(late_enemy)
 		await _wait(0.1)
+		late_enemy.set_physics_process(false)
+		late_enemy.global_position = player.global_position + Vector2.LEFT * 30.0
+		late_enemy._hp = 999
+		if "_dead" in late_enemy:
+			late_enemy._dead = false
+		if late_enemy.has_method("_setup_health_bar"):
+			late_enemy._setup_health_bar()
+		melee._active_attack_windows.clear()
 		var late_hp_before: int = late_enemy._hp
 		melee._start_attack_window(player, Vector2.RIGHT)
 		_assert(late_enemy._hp == late_hp_before, "Melee active window does not hit target outside visual sector")
@@ -947,10 +1026,9 @@ func _phase_special_tags() -> void:
 		enemies_parent.add_child(enemy)
 		await _wait(0.1)
 
-		# Ensure HP is below max for heal to work
-		if GameState.run.hp >= GameState.run.max_hp:
-			GameState.take_damage(20)
-			await _wait(0.1)
+		# Ensure HP has enough room for exact heal assertions.
+		GameState.run.hp = maxi(1, GameState.run.max_hp - 20)
+		GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
 
 		# Reset path so guardian can be selected
 		melee.current_path_id = &""
@@ -959,6 +1037,12 @@ func _phase_special_tags() -> void:
 		melee.level = 6
 		melee._recalc_stats()
 		melee._apply_path_effects()
+		melee._active_attack_windows.clear()
+		enemy._hp = 999
+		if "_dead" in enemy:
+			enemy._dead = false
+		if enemy.has_method("_setup_health_bar"):
+			enemy._setup_health_bar()
 
 		var prev_hp: int = GameState.run.hp
 		melee._deal_sector_damage(player, Vector2.RIGHT)
@@ -969,10 +1053,17 @@ func _phase_special_tags() -> void:
 		melee.level = 8
 		melee._recalc_stats()
 		melee._apply_path_effects()
+		GameState.run.hp = maxi(1, GameState.run.max_hp - 20)
+		GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
+		enemy._hp = 999
+		if "_dead" in enemy:
+			enemy._dead = false
+		if enemy.has_method("_setup_health_bar"):
+			enemy._setup_health_bar()
 
-		prev_hp = GameState.run.hp
+		var boost_prev_hp: int = GameState.run.hp
 		melee._deal_sector_damage(player, Vector2.RIGHT)
-		_assert(GameState.run.hp == prev_hp + 5, "heal_on_hit_boost restores exactly 5 HP")
+		_assert(GameState.run.hp == boost_prev_hp + 5, "heal_on_hit_boost restores exactly 5 HP")
 
 		enemy.queue_free()
 
@@ -1113,6 +1204,7 @@ func _phase_weapon_path_tags() -> void:
 		fire._recalc_stats()
 		_assert(fire._get_lifetime() == 3.0, "Fire bottle base lifetime is 3.0")
 		_assert(fire._get_fire_radius() == 80.0, "Fire bottle base field radius is 80.0")
+		await _assert_field_weapon_activation_damage(fire, "fire", fire._get_burn_damage())
 
 		fire.set_path(&"spread")
 		fire.level = 3
@@ -1332,6 +1424,7 @@ func _phase_weapon_path_tags() -> void:
 		poison._recalc_stats()
 		_assert(poison._get_poison_lifetime() == 4.0, "Poison vial base lifetime is 4.0")
 		_assert(poison._get_poison_radius() == 90.0, "Poison vial base field radius is 90.0")
+		await _assert_field_weapon_activation_damage(poison, "poison", poison._get_poison_damage())
 
 		poison.set_path(&"plague")
 		poison.level = 3
@@ -1687,6 +1780,11 @@ func _phase_melee_kill() -> void:
 
 	# _ready() overwrites _hp from enemy_data, so set it after adding to tree
 	enemy._hp = 10
+	if "_dead" in enemy:
+		enemy._dead = false
+	if enemy.has_method("_setup_health_bar"):
+		enemy._setup_health_bar()
+	melee._active_attack_windows.clear()
 	var initial_hp: int = enemy._hp
 	_assert(initial_hp == 10, "Enemy HP set to 10 for one-hit kill")
 
@@ -1729,11 +1827,18 @@ func _phase_player_combat() -> void:
 	GameState.take_damage(10)
 	_assert(GameState.run.hp == prev_hp - 10, "Player takes damage from take_damage")
 
+	var saved_incoming_multiplier: float = float(GameState.run.get("incoming_damage_multiplier", 1.0))
+	GameState.run.incoming_damage_multiplier = 0.5
+	var preview_result := GameState.preview_apply_damage(DamageEvent.from_amount(20, player, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_CONTACT))
+	_assert(preview_result.final_amount == 10 and preview_result.prevented_amount == 10, "DamageEvent preview applies incoming mitigation")
+	GameState.run.incoming_damage_multiplier = saved_incoming_multiplier
+
 	# Test invincibility: rapid damage should not all apply
 	var hp_before_inv: int = GameState.run.hp
-	player.take_damage(10)
+	var player_damage_result: DamageResult = player.take_damage(10)
 	await _wait(0.05)
 	var hp_after_one_hit: int = GameState.run.hp
+	_assert(player_damage_result.final_amount == 10, "Player take_damage returns DamageResult")
 	player.take_damage(10)
 	await _wait(0.05)
 	_assert(GameState.run.hp == hp_after_one_hit, "Invincibility frames prevent rapid damage")
@@ -1803,7 +1908,11 @@ func _phase_enemy_behavior() -> void:
 
 	# Test slow status
 	var orig_speed: float = enemy._base_speed
+	var slow_effect: StatusEffect = enemy.apply_status(&"slow", 0.2, 0.6)
+	_assert(slow_effect is StatusEffect and enemy._statuses["slow"] == slow_effect, "Enemy stores status as StatusEffect")
 	enemy.apply_status(&"slow", 1.0, 0.5)
+	slow_effect = enemy._statuses["slow"] as StatusEffect
+	_assert(slow_effect.remaining > 0.9 and is_equal_approx(slow_effect.value, 0.5), "Status refresh replaces remaining duration and value")
 	_assert(enemy._base_speed * 0.5 == enemy._base_speed * enemy._statuses["slow"].value, "Slow reduces speed")
 	await _wait(1.2)
 	_assert(is_instance_valid(enemy) and not enemy._statuses.has("slow"), "Slow status expires")
@@ -1816,6 +1925,18 @@ func _phase_enemy_behavior() -> void:
 		_assert(is_instance_valid(enemy) and enemy.global_position.distance_to(stun_pos) < 5.0, "Stun prevents movement")
 		await _wait(0.5)
 		_assert(is_instance_valid(enemy) and not enemy._statuses.has("stun"), "Stun status expires")
+
+	# Test tick damage status payload
+	if is_instance_valid(enemy):
+		var burn := StatusEffect.from_values(&"burn", 0.3, 0.0)
+		burn.tick_interval = 0.1
+		burn.tick_timer = 0.1
+		burn.tick_damage_event = DamageEvent.from_amount(2, player, DamageEvent.DAMAGE_TYPE_FIRE, DamageEvent.DELIVERY_DOT)
+		enemy.apply_status_effect(burn)
+		var tick_hp_before: int = enemy._hp
+		burn.tick(0.11, enemy)
+		_assert(enemy._hp == tick_hp_before - 2, "StatusEffect tick damage uses DamageCalculator")
+		enemy.clear_status(&"burn")
 
 	# Test enemy health bar shows on damage
 	if is_instance_valid(enemy):
@@ -2566,6 +2687,10 @@ func _phase_projectile_system() -> void:
 	bomb.max_range = 200.0
 	bomb.damage = 7
 	bomb.explosion_radius = 12.0
+	bomb.damage_type = DamageEvent.DAMAGE_TYPE_LIGHTNING
+	bomb.explosion_status = &"slow"
+	bomb.explosion_status_duration = 0.5
+	bomb.explosion_status_value = 0.5
 	projectiles_parent.add_child(bomb)
 	await _wait(0.05)
 	var enemy1_hp_before_bomb: int = enemy1._hp
@@ -2573,6 +2698,7 @@ func _phase_projectile_system() -> void:
 	bomb._on_body_entered(enemy1)
 	_assert(enemy1._hp == enemy1_hp_before_bomb - 7, "Explosive projectile damages primary enemy")
 	_assert(enemy2._hp == enemy2_hp_before_bomb - 7, "Explosive projectile damages nearby enemy")
+	_assert(enemy1._statuses.has("slow") and enemy2._statuses.has("slow"), "Explosive projectile applies DamageEvent status")
 	await _wait(0.05)
 	_assert(not is_instance_valid(bomb), "Explosive projectile frees after detonation")
 

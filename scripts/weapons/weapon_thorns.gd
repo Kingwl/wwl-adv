@@ -46,7 +46,7 @@ func _reflect_damage(dmg: int) -> void:
 	var radius := _get_thorns_range()
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if enemy.global_position.distance_to(player.global_position) <= radius:
-			enemy.take_damage(dmg)
+			_deal_damage_to(enemy, dmg, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_REFLECT)
 			VFXHelper.spawn_animated_one_shot(
 				player.get_tree().current_scene,
 				"res://assets/art/effects/by_type/fx_thorns",

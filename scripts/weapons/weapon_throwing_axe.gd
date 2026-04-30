@@ -19,17 +19,22 @@ func _activate() -> void:
 		var dir := base_dir
 		if count > 1:
 			dir = base_dir.rotated(SPREAD_STEP * (i - (count - 1) / 2.0))
-		_spawn_axe(player.global_position, dir)
+		_spawn_axe(player, dir)
 
-func _spawn_axe(pos: Vector2, dir: Vector2) -> void:
+func _spawn_axe(player: Node2D, dir: Vector2) -> void:
 	var projectile := preload("res://scenes/weapons/projectile.tscn").instantiate()
-	projectile.global_position = pos
+	projectile.global_position = player.global_position
 	projectile.direction = dir
 	projectile.speed = _get_axe_speed()
 	projectile.damage = _get_final_damage()
 	projectile.max_range = get_range()
 	projectile.pierce = _get_pierce_count()
 	projectile.is_boomerang = _should_return()
+	projectile.source = self
+	projectile.damage_owner = player
+	projectile.weapon_id = weapon_data.id if weapon_data else &""
+	projectile.damage_type = DamageEvent.DAMAGE_TYPE_PHYSICAL
+	projectile.delivery_type = DamageEvent.DELIVERY_PROJECTILE
 	projectile.visual_texture = AXE_TEXTURE
 	projectile.visual_rotation_offset = 0.0
 	projectile.visual_spin_speed = AXE_SPIN_SPEED

@@ -57,7 +57,7 @@ func _apply_attack_window(window: Dictionary) -> void:
 	var strikes := int(window["strikes"])
 
 	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if enemy is CharacterBody2D:
+		if _is_valid_enemy_target(enemy):
 			var e := enemy as Node2D
 			var enemy_id := e.get_instance_id()
 			if enemy_id in hit_ids:
@@ -73,14 +73,14 @@ func _deal_sector_damage(player: Node2D, attack_dir: Vector2) -> void:
 	var strikes := _get_strike_count()
 
 	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if enemy is CharacterBody2D:
+		if _is_valid_enemy_target(enemy):
 			var e := enemy as Node2D
 			if _is_point_in_attack_shape(e.global_position, attack_shape):
 				_apply_hit_to_enemy(e, dmg, strikes, attack_shape["origin"])
 
 func _apply_hit_to_enemy(enemy: Node2D, dmg: int, strikes: int, from_pos: Vector2) -> void:
 	for i in range(strikes):
-		enemy.take_damage(dmg)
+		_deal_damage_to(enemy, dmg, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_MELEE)
 	if has_special_tag(&"heal_on_hit_boost"):
 		GameState.heal(5)
 	elif has_special_tag(&"heal_on_hit"):
@@ -234,8 +234,19 @@ func _find_closest_enemy(player: Node2D) -> Node2D:
 	var closest: Node2D = null
 	var best := INF
 	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not _is_valid_enemy_target(enemy):
+			continue
 		var d := player.global_position.distance_squared_to(enemy.global_position)
 		if d < best:
 			best = d
 			closest = enemy
 	return closest
+
+func _is_valid_enemy_target(enemy: Node) -> bool:
+	if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+		return false
+	if not (enemy is CharacterBody2D):
+		return false
+	if "_dead" in enemy and bool(enemy._dead):
+		return false
+	return true

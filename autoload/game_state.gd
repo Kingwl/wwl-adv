@@ -119,23 +119,47 @@ func start_new_run(rng_seed: int = 0, character_id: StringName = &"") -> void:
 	}
 	run_started.emit()
 
-func take_damage(amount: int) -> void:
-	if amount <= 0:
-		return
-	var damage_info := _calculate_incoming_damage(amount)
+func take_damage(amount: int) -> DamageResult:
+	var event := DamageEvent.from_amount(amount, self, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_DIRECT)
+	return apply_damage(event)
+
+func apply_damage(event: DamageEvent) -> DamageResult:
+	if not event or event.amount <= 0:
+		return DamageResult.blocked(event)
+	var base_result := DamageCalculator.calculate(event)
+	if base_result.final_amount <= 0:
+		return base_result
+	var damage_info := _calculate_incoming_damage(base_result.final_amount, event)
 	var final_amount := int(damage_info["final_amount"])
 	var guard_prevented := int(damage_info["guard_refraction_prevented"])
+	base_result.prevented_amount += maxi(0, base_result.final_amount - final_amount)
+	base_result.final_amount = final_amount
+	base_result.was_blocked = final_amount <= 0
 	run.hp = max(0, run.hp - final_amount)
 	if guard_prevented > 0:
 		_reflect_guard_refraction_damage(guard_prevented)
 	hp_changed.emit(run.hp, run.max_hp)
 	if run.hp <= 0:
+		base_result.killed = true
 		run_ended.emit(false)
+	return base_result
 
 func preview_take_damage(amount: int) -> int:
 	if amount <= 0:
 		return 0
-	return int(_calculate_incoming_damage(amount)["final_amount"])
+	return preview_apply_damage(DamageEvent.from_amount(amount, self, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_DIRECT)).final_amount
+
+func preview_apply_damage(event: DamageEvent) -> DamageResult:
+	if not event or event.amount <= 0:
+		return DamageResult.blocked(event)
+	var base_result := DamageCalculator.calculate(event)
+	var damage_info := _calculate_incoming_damage(base_result.final_amount, event)
+	var final_amount := int(damage_info["final_amount"])
+	base_result.prevented_amount += maxi(0, base_result.final_amount - final_amount)
+	base_result.final_amount = final_amount
+	base_result.was_blocked = final_amount <= 0
+	base_result.killed = run.hp <= final_amount
+	return base_result
 
 func heal(amount: int) -> void:
 	run.hp = min(run.max_hp, run.hp + amount)
@@ -301,8 +325,8 @@ func _apply_incoming_damage_multiplier(amount: int) -> int:
 	var multiplier := maxf(0.0, float(run.get("incoming_damage_multiplier", 1.0)))
 	return maxi(1, int(ceil(amount * multiplier)))
 
-func _calculate_incoming_damage(amount: int) -> Dictionary:
-	var scaled_amount := _apply_incoming_damage_multiplier(amount)
+func _calculate_incoming_damage(amount: int, event: DamageEvent = null) -> Dictionary:
+	var scaled_amount := amount if event and event.damage_type == DamageEvent.DAMAGE_TYPE_PURE else _apply_incoming_damage_multiplier(amount)
 	var guard_prevented := _get_guard_refraction_prevented_damage(scaled_amount)
 	return {
 		"final_amount": maxi(0, scaled_amount - guard_prevented),
@@ -334,7 +358,9 @@ func _reflect_guard_refraction_damage(prevented_damage: int) -> void:
 		var t := clampf(distance / GUARD_REFRACTION_RADIUS, 0.0, 1.0)
 		var multiplier := GUARD_REFRACTION_NEAR_MULTIPLIER + (GUARD_REFRACTION_FAR_MULTIPLIER - GUARD_REFRACTION_NEAR_MULTIPLIER) * t
 		var reflected_damage := maxi(1, int(round(float(prevented_damage) * multiplier)))
-		enemy.take_damage(reflected_damage)
+		var event := DamageEvent.from_amount(reflected_damage, self, DamageEvent.DAMAGE_TYPE_PURE, DamageEvent.DELIVERY_REFLECT)
+		event.tags.append(&"guardian_refraction")
+		DamageCalculator.deal_damage(enemy, event)
 		if parent:
 			VFXHelper.spawn_animated_one_shot(
 				parent,

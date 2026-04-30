@@ -16,6 +16,11 @@ var explosion_damage: int = -1
 var explosion_status: StringName = &""
 var explosion_status_duration: float = 0.0
 var explosion_status_value: float = 0.0
+var source: Node = null
+var damage_owner: Node = null
+var weapon_id: StringName = &""
+var damage_type: StringName = DamageEvent.DAMAGE_TYPE_PHYSICAL
+var delivery_type: StringName = DamageEvent.DELIVERY_PROJECTILE
 
 var _start_pos: Vector2
 var _pierced: int = 0
@@ -94,7 +99,7 @@ func _on_body_entered(body: Node2D) -> void:
 			if not is_boomerang:
 				queue_free()
 			return
-		body.take_damage(damage)
+		DamageCalculator.deal_damage(body, _make_damage_event(body, damage, global_position, delivery_type))
 		_pierced += 1
 		if _pierced > pierce and not is_boomerang:
 			queue_free()
@@ -106,9 +111,11 @@ func _explode() -> void:
 	var dmg := explosion_damage if explosion_damage >= 0 else damage
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if enemy.global_position.distance_to(global_position) <= explosion_radius:
-			enemy.take_damage(dmg)
-			if not explosion_status.is_empty() and enemy.has_method("apply_status"):
-				enemy.apply_status(explosion_status, explosion_status_duration, explosion_status_value)
+			var event := _make_damage_event(enemy, dmg, global_position, DamageEvent.DELIVERY_AREA)
+			event.status_id = explosion_status
+			event.status_duration = explosion_status_duration
+			event.status_value = explosion_status_value
+			DamageCalculator.deal_damage(enemy, event)
 	var current := get_tree().current_scene
 	if current:
 		var scale_factor := maxf(explosion_radius * 2.0 / 64.0, 0.5)
@@ -121,3 +128,11 @@ func _explode() -> void:
 			16.0,
 			Vector2.ONE * scale_factor
 		)
+
+func _make_damage_event(target: Node, amount: int, hit_position: Vector2, delivery: StringName) -> DamageEvent:
+	var event := DamageEvent.from_amount(amount, source if source else self, damage_type, delivery)
+	event.owner = damage_owner
+	event.target = target
+	event.weapon_id = weapon_id
+	event.position = hit_position
+	return event

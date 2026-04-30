@@ -32,6 +32,11 @@ func _activate() -> void:
 		projectile.damage = _get_final_damage()
 		projectile.max_range = get_range()
 		projectile.pierce = 0
+		projectile.source = self
+		projectile.damage_owner = player
+		projectile.weapon_id = weapon_data.id if weapon_data else &""
+		projectile.damage_type = DamageEvent.DAMAGE_TYPE_LIGHTNING
+		projectile.delivery_type = DamageEvent.DELIVERY_PROJECTILE
 		projectile.visual_sprite_frames = VFXHelper.build_sprite_frames(SPARK_FX_PATH, SPARK_FX_PREFIX, SPARK_FRAME_COUNT, 12.0, true)
 		projectile.visual_rotation_offset = 0.0
 		projectile.visual_spin_speed = SPARK_SPIN_SPEED

@@ -67,8 +67,10 @@ Game (Node2D)
 ## 主信号流
 
 ```text
-Enemy.take_damage()
-  └── HP <= 0 → Enemy._die()
+Weapon / Projectile / Field / Enemy contact
+  └── DamageEvent → DamageCalculator.deal_damage()
+        └── target.apply_damage() → DamageResult
+              └── Enemy HP <= 0 → Enemy._die()
         ├── GameState.add_kill()
         ├── 生成 ExpOrb + GoldPickup 到 Drops
         └── 播放死亡动画后 queue_free()
@@ -87,7 +89,7 @@ GameState.add_exp()
 
 Enemy._physics_process()
   └── 碰撞 Player → Player.take_damage()
-        └── GameState.take_damage()
+        └── GameState.apply_damage(DamageEvent)
               └── HP = 0 → GameState.run_ended
                     └── Game._on_run_ended()
                           ├── get_tree().paused = true
@@ -122,6 +124,25 @@ Enemy._physics_process()
 | `WeaponPathLevel` | Resource | 某一级的伤害 / 冷却 / 范围 bonus 和 `special_tag` |
 | `EnemyData` | Resource | 敌人 HP、速度、伤害、掉落、生成权重 |
 | `UpgradeData` | Resource | 升级选项类型、关联武器、bonus 数值 |
+
+## 伤害系统
+
+伤害入口已经统一到 `scripts/combat/` 下的轻量 Combat 层：
+
+| 类名 | 用途 |
+|------|------|
+| `DamageEvent` | 描述一次伤害尝试：基础数值、来源、目标、武器 ID、伤害类型、命中方式、状态效果等 |
+| `DamageCalculator` | 统一执行基础伤害计算，并分发给目标的 `apply_damage(event)` |
+| `DamageResult` | 返回结算结果：原始伤害、最终伤害、减免量、是否暴击、是否击杀、是否应用状态 |
+| `StatusEffect` | 描述目标身上的持续状态：剩余时间、刷新策略、堆叠、数值和 tick 伤害载荷 |
+
+兼容策略：
+
+- `Enemy.take_damage(int)`、`Player.take_damage(int)`、`GameState.take_damage(int)` 保留，内部包装成 `DamageEvent`。
+- 弹体、火场 / 毒雾、激光、地雷、近战、范围和连锁武器已改为通过 `DamageCalculator.deal_damage()` 结算。
+- 玩家入伤的 `incoming_damage_multiplier` 和守卫折光甲胄仍由 `GameState.apply_damage(event)` 处理。
+- 敌人有 `_dead` 防重复击杀，近战目标选择会跳过死亡或待删除敌人。
+- 敌人状态统一保存为 `status_id -> StatusEffect`；旧的 `apply_status(id, duration, value)` 入口仍保留，内部转换为 `StatusEffect`。
 
 当前状态：
 

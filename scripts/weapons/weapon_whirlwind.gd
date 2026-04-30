@@ -17,7 +17,7 @@ func _activate() -> void:
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if enemy.global_position.distance_to(player.global_position) <= radius:
 			for i in range(_get_hit_count()):
-				enemy.take_damage(_get_final_damage())
+				_deal_damage_to(enemy, _get_final_damage(), DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_AREA)
 			if _should_slow():
 				enemy.apply_status(&"slow", 1.0, 0.65)
 			if _should_knockback():

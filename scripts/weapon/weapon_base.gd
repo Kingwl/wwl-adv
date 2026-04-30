@@ -96,3 +96,26 @@ func get_cooldown_progress() -> float:
 	if _current_cooldown <= 0.001:
 		return 0.0
 	return clampf(_cooldown_timer / _current_cooldown, 0.0, 1.0)
+
+func _make_damage_event(
+	amount: int,
+	target: Node = null,
+	damage_type: StringName = DamageEvent.DAMAGE_TYPE_PHYSICAL,
+	delivery_type: StringName = DamageEvent.DELIVERY_DIRECT
+) -> DamageEvent:
+	return DamageEvent.weapon_hit(amount, self, damage_type, delivery_type, target)
+
+func _deal_damage_to(
+	target: Node,
+	amount: int,
+	damage_type: StringName = DamageEvent.DAMAGE_TYPE_PHYSICAL,
+	delivery_type: StringName = DamageEvent.DELIVERY_DIRECT,
+	status_id: StringName = &"",
+	status_duration: float = 0.0,
+	status_value: float = 0.0
+) -> DamageResult:
+	var event := _make_damage_event(amount, target, damage_type, delivery_type)
+	event.status_id = status_id
+	event.status_duration = status_duration
+	event.status_value = status_value
+	return DamageCalculator.deal_damage(target, event)

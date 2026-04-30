@@ -27,6 +27,11 @@ GameState="*res://autoload/game_state.gd"
 DataManager="*res://autoload/data_manager.gd"
 UITheme="*res://autoload/ui_theme.gd"
 SaveManager="*res://autoload/save_manager.gd"
+CrashReporter="*res://autoload/crash_reporter.gd"
+
+[debug]
+
+settings/gdscript/always_track_call_stacks=true
 
 [display]
 
@@ -83,3 +88,7 @@ toggle_stats={
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
+
+[sentry]
+
+options/auto_init=false

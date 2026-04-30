@@ -73,6 +73,9 @@ func _phase_load() -> void:
 			_assert(camera.enabled, "Player Camera2D is enabled")
 		_assert(str(GameState.run.get("character_id", "")) == "adventurer", "Default run uses adventurer")
 		_assert(abs(player.move_speed - 170.0) < 0.01, "Default character speed applied")
+	_assert(CrashReporter != null, "CrashReporter autoload exists")
+	_assert(ProjectSettings.get_setting("sentry/options/auto_init", true) == false, "Sentry auto-init is disabled for wrapper-controlled startup")
+	_assert(not CrashReporter._get_release().is_empty(), "CrashReporter builds a release name")
 
 	# Verify HUD has icon elements
 	var hud: Node = _game.get_node_or_null("HUD")

@@ -18,6 +18,7 @@
 | 碰撞层级 | `project.godot` `[layer_names]` 段 |
 | 全局数值（初始HP、经验公式等） | `autoload/game_state.gd` |
 | 本地数值存档 | `autoload/save_manager.gd` + `autoload/game_state.gd` + `scripts/game/game.gd` |
+| 崩溃 / 异常监控 | `autoload/crash_reporter.gd` + `docs/monitoring.md` |
 | 新数据资源（角色/武器/敌人/升级） | `scripts/data/character_data.gd` / `weapon_data.gd` / `enemy_data.gd` / `upgrade_data.gd` |
 | UI 字体子集缺字 | `tools/subset_ui_font.py` + `.github/workflows/deploy-web.yml` |
 

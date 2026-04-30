@@ -10,6 +10,9 @@
 data_*/
 mono_crash.*.json
 
+# Optional third-party SDKs installed locally or in CI
+addons/sentry/
+
 # Export presets contain keystore passwords / signing identities
 # Each developer should configure their own; share via export_presets.cfg.template if needed
 export_presets.cfg
@@ -21,6 +24,9 @@ exports/
 
 # Local scratch files
 tmp/
+
+# Python tooling caches
+__pycache__/
 
 # IDE / editor
 .vscode/

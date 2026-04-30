@@ -118,6 +118,7 @@
 - [x] 统一状态效果回归测试（StatusEffect、刷新、过期、tick 伤害和 DamageEvent 状态应用）
 - [x] 场地武器伤害回归测试（火焰瓶 / 毒液罐生成在目标脚下时立即造成伤害）
 - [x] 敌人资源回归测试（8 种敌人 / Boss 动画条带加载、尺寸元数据、Boss 弹体帧与运行时取帧）
+- [x] 可选 Sentry 崩溃 / 异常监控接入（CI Secret 启用，不配置 DSN 时保持关闭）
 
 ---
 
@@ -163,7 +164,7 @@
 | 角色数量 | 4（全部默认可选） |
 | 敌人类型 | 8（含远程 / 精英 / Boss） |
 | UI 场景 | 8 |
-| 自动化测试 | 749 passed, 0 failed |
+| 自动化测试 | 751 passed, 0 failed |
 | HUD 冷却遮罩 | 高度连续变化 |
 | 引擎版本 | Godot 4.x（最近测试 4.6.2，GL Compatibility） |
 | 目标平台 | Web / Android / iOS |

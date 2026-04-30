@@ -20,6 +20,8 @@ env:
   EXPORT_PRESET: Web
   EXPORT_DIR: build/web
   UI_FONT_SOURCE_URL: https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf
+  SENTRY_GODOT_VERSION: 1.6.0
+  SENTRY_GODOT_BUILD: 4e3e3e5
 
 jobs:
   build:
@@ -73,6 +75,39 @@ jobs:
 
       - name: Prepare export preset
         run: cp ci/export_presets.web.cfg export_presets.cfg
+
+      - name: Cache Sentry Godot SDK
+        uses: actions/cache@v4
+        with:
+          path: tmp/sentry-godot
+          key: sentry-godot-${{ env.SENTRY_GODOT_VERSION }}-${{ env.SENTRY_GODOT_BUILD }}
+
+      - name: Install Sentry Godot SDK
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SENTRY_DSN:-}" ]; then
+            echo "SENTRY_DSN secret is not configured; skipping Sentry addon install."
+            exit 0
+          fi
+          python3 tools/install_sentry_godot.py
+
+      - name: Configure Sentry
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ENVIRONMENT: production
+          SENTRY_RELEASE: wwl-adventure@${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SENTRY_DSN:-}" ]; then
+            echo "SENTRY_DSN secret is not configured; Sentry remains disabled."
+            exit 0
+          fi
+          python3 tools/configure_sentry_project.py \
+            --dsn "$SENTRY_DSN" \
+            --environment "$SENTRY_ENVIRONMENT" \
+            --release "$SENTRY_RELEASE"
 
       - name: Rebuild UI font subset
         run: |

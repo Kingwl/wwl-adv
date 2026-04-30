@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inject Sentry runtime settings into project.godot for export builds."""
+"""Inject Sentry Godot SDK runtime settings into project.godot."""
 
 from __future__ import annotations
 
@@ -10,13 +10,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT_FILE = ROOT / "project.godot"
-EXPORT_PRESETS_FILE = ROOT / "export_presets.cfg"
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project", type=Path, default=PROJECT_FILE)
-    parser.add_argument("--export-presets", type=Path, default=EXPORT_PRESETS_FILE)
     parser.add_argument("--dsn", required=True)
     parser.add_argument("--release", default="")
     parser.add_argument("--environment", default="production")
@@ -79,14 +77,6 @@ def main() -> int:
     text = args.project.read_text(encoding="utf-8")
     args.project.write_text(update_section(text, "sentry", updates), encoding="utf-8")
     print(f"Configured Sentry settings in {args.project}")
-
-    if args.export_presets.is_file():
-        preset_text = args.export_presets.read_text(encoding="utf-8")
-        args.export_presets.write_text(
-            update_section(preset_text, "preset.0.options", {"variant/extensions_support": "true"}),
-            encoding="utf-8",
-        )
-        print(f"Enabled GDExtension support in {args.export_presets}")
     return 0
 
 

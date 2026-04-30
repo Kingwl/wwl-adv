@@ -1,13 +1,13 @@
 # 崩溃与异常监控
 
-项目预留了 Sentry Godot SDK 接入，用于收集导出包中的崩溃、GDScript / 引擎错误、平台与版本标签。
+项目预留了 Sentry 接入，用于收集导出包中的崩溃、GDScript / 引擎错误、平台与版本标签。
 
 ## 当前策略
 
-- `autoload/crash_reporter.gd` 是轻量封装。没有安装官方 `addons/sentry` 或没有配置 DSN 时不会初始化，也不会影响本地开发和测试。
-- 官方 Sentry Godot addon 体积较大，不提交到仓库；本地或 CI 通过 `tools/install_sentry_godot.py` 安装。
-- Web 部署 CI 只有在仓库 Secret `SENTRY_DSN` 存在时才安装 SDK 并注入 DSN。
-- 默认不发送 PII，不附带截图，不采集局部变量；会附带日志、场景 tag、平台、Godot 版本和游戏版本。
+- `autoload/crash_reporter.gd` 是 Native / 本地 Godot SDK 的轻量封装。没有安装官方 `addons/sentry` 或没有配置 DSN 时不会初始化，也不会影响本地开发和测试。
+- Web / GitHub Pages 不使用 Sentry Godot GDExtension。Web 侧通过 `tools/configure_sentry_web.py` 在导出后的 `index.html` 注入 Sentry Browser SDK，并挂接 Godot `onPrintError`。
+- 官方 Sentry Godot addon 体积较大，不提交到仓库；需要验证 Native SDK 时可通过 `tools/install_sentry_godot.py` 本地安装。
+- 默认不发送 PII，不附带截图，不采集局部变量；Web 侧会发送 JS 异常、unhandled rejection 和 Godot `printErr` 文本。
 
 ## 本地启用
 
@@ -34,23 +34,25 @@ SENTRY_DSN="https://..." /Applications/Godot.app/Contents/MacOS/Godot --path .
 |--------|------|
 | `SENTRY_DSN` | Web 导出包运行时使用的 Sentry DSN |
 
-CI 会在导出前执行：
+CI 会在 Web 导出后执行：
 
 ```bash
-python3 tools/install_sentry_godot.py
-python3 tools/configure_sentry_project.py \
+python3 tools/configure_sentry_web.py \
+  --html build/web/index.html \
   --dsn "$SENTRY_DSN" \
   --environment production \
   --release "wwl-adventure@$GITHUB_SHA"
 ```
 
-`configure_sentry_project.py` 会同时把临时 `export_presets.cfg` 的 `variant/extensions_support` 打开，因为 Sentry Godot 依赖 GDExtension。仓库内的基础 Web preset 仍保持关闭，未配置 `SENTRY_DSN` 时不会引入 Sentry addon，也不会额外开启 GDExtension。
+Web 导出保持 `variant/extensions_support=false`。不要在 GitHub Pages 上启用 Sentry Godot GDExtension；它会让 Godot Web 进入动态链接模式，生成 `index.side.wasm` 并在 Pages 上卡在 `loadDylibs`。
+
+如果本机残留了未提交的 `addons/sentry/`，Godot 可能仍会在本地 Web HTML 中写入 `gdextensionLibs` 和 `libsentry.web*.wasm`。`configure_sentry_web.py` 会清掉这些 Sentry Godot addon 残留，CI 也会检查最终产物里没有 `.side.wasm` / `libsentry.web*.wasm`。
 
 如果 `SENTRY_DSN` 未配置，Sentry 会保持关闭，构建继续通过。
 
 ## 运行时接口
 
-`CrashReporter` 提供少量游戏侧接口：
+Native / 本地 Godot SDK 可使用 `CrashReporter` 提供的少量游戏侧接口：
 
 ```gdscript
 CrashReporter.add_breadcrumb("boss_spawned", "game", {"enemy": "boss_warlord"})
@@ -59,4 +61,4 @@ CrashReporter.capture_error("failed to load profile")
 CrashReporter.set_tag("run_state", "battle")
 ```
 
-自动采集的错误仍由 Sentry Godot addon 负责；这些接口只用于补充业务上下文。
+自动采集的错误由对应平台的 Sentry SDK 负责；这些接口只用于补充业务上下文。Web 侧当前只能从 JS 与 Godot console error 进入 Sentry，GDScript 内主动调用 `CrashReporter.capture_*` 在 Web 上会保持 no-op。

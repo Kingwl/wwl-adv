@@ -105,7 +105,7 @@ func _configure_sentry_options(options: Object) -> void:
 	options.release = _get_release()
 	options.environment = _get_environment_name()
 	options.send_default_pii = false
-	options.attach_log = true
+	options.attach_log = not OS.has_feature("web")
 	options.attach_scene_tree = false
 	options.attach_screenshot = false
 	options.enable_logs = true

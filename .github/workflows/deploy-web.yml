@@ -20,8 +20,6 @@ env:
   EXPORT_PRESET: Web
   EXPORT_DIR: build/web
   UI_FONT_SOURCE_URL: https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf
-  SENTRY_GODOT_VERSION: 1.6.0
-  SENTRY_GODOT_BUILD: 4e3e3e5
 
 jobs:
   build:
@@ -76,39 +74,6 @@ jobs:
       - name: Prepare export preset
         run: cp ci/export_presets.web.cfg export_presets.cfg
 
-      - name: Cache Sentry Godot SDK
-        uses: actions/cache@v4
-        with:
-          path: tmp/sentry-godot
-          key: sentry-godot-${{ env.SENTRY_GODOT_VERSION }}-${{ env.SENTRY_GODOT_BUILD }}
-
-      - name: Install Sentry Godot SDK
-        env:
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-        run: |
-          set -euo pipefail
-          if [ -z "${SENTRY_DSN:-}" ]; then
-            echo "SENTRY_DSN secret is not configured; skipping Sentry addon install."
-            exit 0
-          fi
-          python3 tools/install_sentry_godot.py
-
-      - name: Configure Sentry
-        env:
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          SENTRY_ENVIRONMENT: production
-          SENTRY_RELEASE: wwl-adventure@${{ github.sha }}
-        run: |
-          set -euo pipefail
-          if [ -z "${SENTRY_DSN:-}" ]; then
-            echo "SENTRY_DSN secret is not configured; Sentry remains disabled."
-            exit 0
-          fi
-          python3 tools/configure_sentry_project.py \
-            --dsn "$SENTRY_DSN" \
-            --environment "$SENTRY_ENVIRONMENT" \
-            --release "$SENTRY_RELEASE"
-
       - name: Rebuild UI font subset
         run: |
           set -euo pipefail
@@ -139,6 +104,35 @@ jobs:
           test -f "$EXPORT_DIR/index.wasm"
           test -f "$EXPORT_DIR/index.pck"
           du -sh "$EXPORT_DIR"
+
+      - name: Configure Sentry browser monitoring
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ENVIRONMENT: production
+          SENTRY_RELEASE: wwl-adventure@${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SENTRY_DSN:-}" ]; then
+            echo "SENTRY_DSN secret is not configured; Sentry browser monitoring remains disabled."
+            exit 0
+          fi
+          python3 tools/configure_sentry_web.py \
+            --html "$EXPORT_DIR/index.html" \
+            --dsn "$SENTRY_DSN" \
+            --environment "$SENTRY_ENVIRONMENT" \
+            --release "$SENTRY_RELEASE"
+          if find "$EXPORT_DIR" -maxdepth 1 \( -name '*.side.wasm' -o -name 'libsentry.web*.wasm' \) | grep -q .; then
+            echo "Unexpected Web GDExtension module in export output." >&2
+            exit 1
+          fi
+          if grep -q '"gdextensionLibs":\[[^]]\+\]' "$EXPORT_DIR/index.html"; then
+            echo "Unexpected Web GDExtension library config in index.html." >&2
+            exit 1
+          fi
+          if grep -q 'loadDylibs' "$EXPORT_DIR/index.js"; then
+            echo "Unexpected Web dynamic-link template in index.js." >&2
+            exit 1
+          fi
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

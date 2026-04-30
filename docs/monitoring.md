@@ -8,6 +8,7 @@
 - Web / GitHub Pages 不使用 Sentry Godot GDExtension。Web 侧通过 `tools/configure_sentry_web.py` 在导出后的 `index.html` 注入 Sentry Browser SDK，并挂接 Godot `onPrintError`。
 - 官方 Sentry Godot addon 体积较大，不提交到仓库；需要验证 Native SDK 时可通过 `tools/install_sentry_godot.py` 本地安装。
 - 默认不发送 PII，不附带截图，不采集局部变量；Web 侧会发送 JS 异常、unhandled rejection 和 Godot `printErr` 文本。
+- Web 侧会过滤 Godot 退出阶段的资源释放噪声，例如 `leaked at exit`、`resources still in use at exit`、`ObjectDB instances leaked at exit` 和 `PagedAllocator` 退出日志；这些日志保留在浏览器 console，不进入 Sentry issue。
 
 ## 本地启用
 

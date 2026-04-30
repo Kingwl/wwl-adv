@@ -196,6 +196,7 @@ test('main menu boots and Start enters gameplay without fatal errors', async ({ 
       const browserWindow = window as typeof window & {
         Sentry?: unknown;
         WWL_SENTRY_CONFIG?: { dsn?: string; environment?: string; release?: string };
+        WWL_SHOULD_CAPTURE_GODOT_ERROR?: (message: string) => boolean;
         WWL_REPORT_GODOT_ERROR?: unknown;
         WWL_REPORT_GODOT_LOG?: unknown;
       };
@@ -203,6 +204,20 @@ test('main menu boots and Start enters gameplay without fatal errors', async ({ 
         hasSentry: typeof browserWindow.Sentry !== 'undefined',
         hasDsn: Boolean(browserWindow.WWL_SENTRY_CONFIG?.dsn),
         environment: browserWindow.WWL_SENTRY_CONFIG?.environment || '',
+        filtersShutdownNoise:
+          browserWindow.WWL_SHOULD_CAPTURE_GODOT_ERROR?.(
+            'ERROR: 1 resources still in use at exit (run with --verbose for details).'
+          ) === false &&
+          browserWindow.WWL_SHOULD_CAPTURE_GODOT_ERROR?.(
+            "ERROR: Pages in use exist at exit in PagedAllocator: N16WorkerThreadPool5GroupE"
+          ) === false &&
+          browserWindow.WWL_SHOULD_CAPTURE_GODOT_ERROR?.(
+            "ERROR: Texture with GL ID of 78366: leaked 131072 bytes."
+          ) === false,
+        capturesRuntimeErrors:
+          browserWindow.WWL_SHOULD_CAPTURE_GODOT_ERROR?.(
+            'ERROR: Condition "!is_inside_tree()" is true. Returning: false'
+          ) === true,
         hasErrorBridge: typeof browserWindow.WWL_REPORT_GODOT_ERROR === 'function',
         hasLogBridge: typeof browserWindow.WWL_REPORT_GODOT_LOG === 'function'
       };
@@ -210,6 +225,8 @@ test('main menu boots and Start enters gameplay without fatal errors', async ({ 
     expect(sentryState.hasSentry, 'Sentry Browser SDK exists').toBe(true);
     expect(sentryState.hasDsn, 'Sentry DSN exists').toBe(true);
     expect(sentryState.environment, 'Sentry environment').toBe('production');
+    expect(sentryState.filtersShutdownNoise, 'Sentry filters Godot shutdown noise').toBe(true);
+    expect(sentryState.capturesRuntimeErrors, 'Sentry keeps runtime Godot errors').toBe(true);
     expect(sentryState.hasErrorBridge, 'Godot error bridge exists').toBe(true);
     expect(sentryState.hasLogBridge, 'Godot log bridge exists').toBe(true);
   }

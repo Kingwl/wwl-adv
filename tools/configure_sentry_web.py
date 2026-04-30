@@ -52,6 +52,15 @@ window.WWL_SENTRY_CONFIG = {config_json};
 \t\tbuild_target: 'web',
 \t}});
 \tconst reportedGodotErrors = new Map();
+\tfunction isKnownGodotShutdownNoise(text) {{
+\t\treturn (
+\t\t\t/leaked \\d+ bytes\\.?$/.test(text) ||
+\t\t\t/RID allocations .* were leaked at exit\\.?$/.test(text) ||
+\t\t\ttext.indexOf('resources still in use at exit') !== -1 ||
+\t\t\ttext.indexOf('ObjectDB instances leaked at exit') !== -1 ||
+\t\t\ttext.indexOf('Pages in use exist at exit in PagedAllocator') !== -1
+\t\t);
+\t}}
 \tfunction shouldCaptureGodotError(text) {{
 \t\tif (
 \t\t\ttext.indexOf('still waiting on run dependencies') === 0 ||
@@ -63,8 +72,12 @@ window.WWL_SENTRY_CONFIG = {config_json};
 \t\t) {{
 \t\t\treturn false;
 \t\t}}
+\t\tif (isKnownGodotShutdownNoise(text)) {{
+\t\t\treturn false;
+\t\t}}
 \t\treturn text.indexOf('ERROR:') === 0 || text.indexOf('SCRIPT ERROR:') === 0;
 \t}}
+\twindow.WWL_SHOULD_CAPTURE_GODOT_ERROR = shouldCaptureGodotError;
 \twindow.WWL_REPORT_GODOT_LOG = function (message) {{
 \t\tSentry.addBreadcrumb({{
 \t\t\tcategory: 'godot',

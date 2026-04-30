@@ -2,12 +2,18 @@ extends Node
 
 @export var spawn_view_margin_min: float = 80.0
 @export var spawn_view_margin_max: float = 300.0
-@export var base_spawn_interval: float = 2.0
-@export var stat_scale_period: float = 120.0
-@export var speed_scale_period: float = 300.0
-@export var max_speed_scale: float = 1.75
-@export var max_alive_enemies: int = 180
+@export var base_spawn_interval: float = 2.4
+@export var min_spawn_interval: float = 0.55
+@export var spawn_acceleration_per_minute: float = 0.32
+@export var stat_scale_period: float = 210.0
+@export var speed_scale_period: float = 360.0
+@export var max_speed_scale: float = 1.55
+@export var max_alive_enemies: int = 150
 @export var pack_spawn_spread: float = 48.0
+@export var exp_reward_scale_strength: float = 0.5
+@export var max_exp_reward_scale: float = 3.0
+@export var gold_reward_scale_strength: float = 0.25
+@export var max_gold_reward_scale: float = 2.0
 
 var _player: Node2D
 var _elapsed_time: float = 0.0
@@ -66,6 +72,7 @@ func _spawn_single_enemy(data: EnemyData, spawn_pos: Vector2) -> CharacterBody2D
 		enemy._hp = int(enemy._hp * stat_factor)
 		enemy._base_speed *= speed_factor
 		enemy._damage = int(enemy._damage * stat_factor)
+		_scale_enemy_rewards(enemy, stat_factor)
 		enemy._setup_health_bar()
 		return enemy
 	enemy.queue_free()
@@ -120,8 +127,8 @@ func _get_enemies_parent() -> Node:
 	return null
 
 func _get_spawn_interval() -> float:
-	var difficulty_multiplier := 1.0 + (_elapsed_time / 60.0) * 0.5
-	return max(0.3, base_spawn_interval / difficulty_multiplier)
+	var difficulty_multiplier := 1.0 + (_elapsed_time / 60.0) * spawn_acceleration_per_minute
+	return max(min_spawn_interval, base_spawn_interval / difficulty_multiplier)
 
 func _get_stat_scale() -> float:
 	return 1.0 + _elapsed_time / maxf(stat_scale_period, 1.0)
@@ -129,6 +136,16 @@ func _get_stat_scale() -> float:
 func _get_speed_scale() -> float:
 	var uncapped_scale := 1.0 + _elapsed_time / maxf(speed_scale_period, 1.0)
 	return minf(uncapped_scale, max_speed_scale)
+
+func _scale_enemy_rewards(enemy: CharacterBody2D, stat_factor: float) -> void:
+	if not enemy:
+		return
+	enemy._exp_reward = maxi(1, int(round(float(enemy._exp_reward) * _get_reward_scale(stat_factor, exp_reward_scale_strength, max_exp_reward_scale))))
+	if enemy._gold_reward > 0:
+		enemy._gold_reward = maxi(1, int(round(float(enemy._gold_reward) * _get_reward_scale(stat_factor, gold_reward_scale_strength, max_gold_reward_scale))))
+
+func _get_reward_scale(stat_factor: float, strength: float, max_scale: float) -> float:
+	return clampf(1.0 + maxf(0.0, stat_factor - 1.0) * strength, 1.0, max_scale)
 
 func _get_spawn_radius_bounds() -> Vector2:
 	var view_radius := _get_view_radius()

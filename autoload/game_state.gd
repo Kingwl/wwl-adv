@@ -15,6 +15,15 @@ const STARTING_GOLD := 0
 const STARTING_EXP_TO_LEVEL := 15
 const MAX_WEAPON_SLOTS := 6
 const MAX_ENHANCEMENT_SLOTS := 6
+const MAX_ENHANCEMENT_LEVEL := 5
+const MAX_PLAYER_MOVE_SPEED := 270.0
+const MAX_PICKUP_RADIUS_BONUS := 180.0
+const MAX_DAMAGE_MULTIPLIER := 1.6
+const MIN_COOLDOWN_MULTIPLIER := 0.6
+const MAX_AREA_MULTIPLIER := 1.6
+const MAX_FIELD_LIFETIME_MULTIPLIER := 1.8
+const MIN_INCOMING_DAMAGE_MULTIPLIER := 0.6
+const MAX_EXP_GAIN_MULTIPLIER := 1.75
 const GAME_SPEED_OPTIONS := [1.0, 2.0]
 const STAT_UPGRADE_ICON := preload("res://assets/art/ui/icon_stat_upgrade.png")
 const REGEN_ENHANCEMENT_ID := &"regen"
@@ -206,9 +215,13 @@ func get_enhancement_level(enhancement_id: StringName) -> int:
 	return int(enhancements[key].get("level", 0))
 
 func can_add_enhancement(enhancement_id: StringName) -> bool:
-	if get_enhancement_level(enhancement_id) > 0:
-		return true
+	var level := get_enhancement_level(enhancement_id)
+	if level > 0:
+		return level < get_max_enhancement_level(enhancement_id)
 	return get_enhancement_count() < MAX_ENHANCEMENT_SLOTS
+
+func get_max_enhancement_level(_enhancement_id: StringName) -> int:
+	return MAX_ENHANCEMENT_LEVEL
 
 func add_enhancement(upgrade: UpgradeData) -> bool:
 	if not upgrade or upgrade.id.is_empty():
@@ -229,6 +242,8 @@ func add_enhancement(upgrade: UpgradeData) -> bool:
 		order.append(key)
 	else:
 		var data: Dictionary = enhancements[key]
+		if int(data.get("level", 1)) >= get_max_enhancement_level(upgrade.id):
+			return false
 		data["level"] = int(data.get("level", 1)) + 1
 		data["display_name"] = upgrade.display_name
 		data["description"] = upgrade.description

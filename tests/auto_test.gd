@@ -734,12 +734,28 @@ func _phase_path_system() -> void:
 	var expected_dmg := int(round(melee.weapon_data.damage * 1.1 * GameState.get_character_damage_multiplier())) + 5
 	_assert(melee._current_damage == expected_dmg, "Berserker Lv.2 damage bonus applied")
 
-	# Level to 3 (wider_arc)
-	melee.level_up()
+	# Level through generated path cards to verify path bonuses are cumulative and not double-applied.
+	var lvl3_effect := berserker_path.get_level_effect(3)
+	_assert(lvl3_effect != null, "Berserker Lv.3 effect exists")
+	var lvl3_option: UpgradeData = upgrade_system._make_level_from_path(melee, berserker_path, lvl3_effect)
+	_assert(lvl3_option.path_id == &"berserker", "Path level card carries path id")
+	upgrade_system._apply_upgrade(lvl3_option)
+	var expected_lv3_dmg := int(round(melee.weapon_data.damage * 1.2 * GameState.get_character_damage_multiplier())) + 10
+	_assert(melee._current_damage == expected_lv3_dmg, "Berserker Lv.3 cumulative damage applies once")
 	_assert(melee.has_special_tag(&"wider_arc"), "Lv.3 berserker has wider_arc tag")
 
+	var lvl4_option: UpgradeData = upgrade_system._make_level_from_path(melee, berserker_path, berserker_path.get_level_effect(4))
+	upgrade_system._apply_upgrade(lvl4_option)
+	var damage_after_lv4 := melee._current_damage
+	var lvl5_option: UpgradeData = upgrade_system._make_level_from_path(melee, berserker_path, berserker_path.get_level_effect(5))
+	upgrade_system._apply_upgrade(lvl5_option)
+	var expected_lv5_dmg := int(round(melee.weapon_data.damage * 1.4 * GameState.get_character_damage_multiplier())) + 18
+	var expected_lv5_range := (melee.weapon_data.range + 4.0 * 10.0) * GameState.get_character_area_multiplier() + 10.0
+	_assert(melee._current_damage == expected_lv5_dmg and melee._current_damage >= damage_after_lv4, "Berserker Lv.5 range upgrade keeps prior damage bonuses")
+	_assert(abs(melee._current_range - expected_lv5_range) < 0.01, "Berserker Lv.5 range bonus is applied once")
+
 	# Level to 7 (widest_arc)
-	for i in range(4):
+	for i in range(2):
 		melee.level_up()
 	_assert(melee.level == 7, "Melee reaches level 7")
 	_assert(melee.has_special_tag(&"widest_arc"), "Lv.7 berserker has widest_arc tag")
@@ -1442,7 +1458,16 @@ func _phase_weapon_path_tags() -> void:
 		var poison_base_cooldown := poison.get_cooldown()
 		poison.set_path(&"venom")
 		poison._apply_path_effects()
-		_assert(abs(poison.get_cooldown() - maxf(0.1, poison_base_cooldown - 0.2)) < 0.001, "venom Lv.5 faster throw is applied as cooldown bonus")
+		var venom_path: WeaponPath = null
+		for path in poison.weapon_data.paths:
+			if path.path_id == &"venom":
+				venom_path = path
+				break
+		var expected_venom_cooldown := poison_base_cooldown
+		if venom_path:
+			for effect in venom_path.get_level_effects_up_to(poison.level):
+				expected_venom_cooldown = maxf(0.1, expected_venom_cooldown + effect.cooldown_bonus)
+		_assert(abs(poison.get_cooldown() - expected_venom_cooldown) < 0.001, "venom Lv.5 cumulative cooldown bonuses are applied")
 		await _assert_field_visual("poison")
 		var poison_trail_frames := VFXHelper.build_sprite_frames(
 			"res://assets/art/effects/by_type/fx_poison_trail",
@@ -1991,6 +2016,14 @@ func _phase_upgrade_edges() -> void:
 	_assert(player.move_speed == prev_speed + 25.0, "Repeated stat upgrade applies")
 	_assert(GameState.get_enhancement_count() == 1, "Repeated stat upgrade reuses enhancement slot")
 	_assert(GameState.get_enhancement_level(&"test_speed") == 2, "Repeated stat upgrade increases enhancement level")
+	while GameState.get_enhancement_level(&"test_speed") < GameState.MAX_ENHANCEMENT_LEVEL:
+		upgrade_system._on_option_selected(speed_up)
+	_assert(GameState.get_enhancement_level(&"test_speed") == GameState.MAX_ENHANCEMENT_LEVEL, "Stat enhancement reaches level cap")
+	_assert(not GameState.can_add_enhancement(&"test_speed"), "Maxed enhancement is filtered out")
+	var speed_at_cap: float = player.move_speed
+	upgrade_system._on_option_selected(speed_up)
+	_assert(GameState.get_enhancement_level(&"test_speed") == GameState.MAX_ENHANCEMENT_LEVEL, "Maxed enhancement cannot exceed level cap")
+	_assert(player.move_speed == speed_at_cap, "Maxed enhancement does not apply extra stat effect")
 
 	# Test PLAYER_STAT max_hp bonus
 	var prev_max_hp: int = GameState.run.max_hp
@@ -2103,7 +2136,8 @@ func _phase_upgrade_edges() -> void:
 		upgrade_system._on_option_selected(filler)
 		fill_idx += 1
 	_assert(GameState.get_enhancement_count() == GameState.MAX_ENHANCEMENT_SLOTS, "Enhancement slots cap at 6")
-	_assert(GameState.can_add_enhancement(&"test_speed"), "Existing enhancement can still level when slots are full")
+	_assert(not GameState.can_add_enhancement(&"test_speed"), "Maxed existing enhancement cannot level when slots are full")
+	_assert(GameState.can_add_enhancement(&"test_hp"), "Non-max existing enhancement can still level when slots are full")
 	_assert(not GameState.can_add_enhancement(&"blocked_new_enhancement"), "New enhancement is blocked when slots are full")
 	var blocked_speed_before: float = player.move_speed
 	var blocked := UpgradeData.new()
@@ -2578,7 +2612,7 @@ func _phase_enemy_spawner() -> void:
 	var interval_at_120: float = spawner._get_spawn_interval()
 	_assert(interval_at_60 < interval_at_0, "Spawn interval decreases at 60s")
 	_assert(interval_at_120 < interval_at_60, "Spawn interval decreases further at 120s")
-	_assert(interval_at_120 >= 0.3, "Spawn interval has minimum floor")
+	_assert(interval_at_120 >= spawner.min_spawn_interval, "Spawn interval respects minimum floor")
 
 	# Test difficulty scaling formula directly
 	var enemy_scene := preload("res://scenes/enemy/enemy.tscn")
@@ -2594,10 +2628,12 @@ func _phase_enemy_spawner() -> void:
 	var expected_dmg: int = int(base_dmg * stat_factor_120)
 	var expected_speed: float = base_speed * speed_factor_120
 
-	_assert(expected_hp == base_hp * 2, "Difficulty scaling doubles HP at 120s")
-	_assert(expected_dmg == base_dmg * 2, "Difficulty scaling doubles damage at 120s")
+	_assert(abs(stat_factor_120 - (1.0 + 120.0 / spawner.stat_scale_period)) < 0.001, "Difficulty HP/damage scale follows configured period")
+	_assert(stat_factor_120 < 2.0, "Difficulty HP/damage no longer doubles by 120s")
+	_assert(expected_hp == int(base_hp * stat_factor_120), "Difficulty scaling applies HP factor")
+	_assert(expected_dmg == int(base_dmg * stat_factor_120), "Difficulty scaling applies damage factor")
 	_assert(speed_factor_120 < stat_factor_120, "Difficulty speed scaling grows slower than HP/damage")
-	_assert(abs(expected_speed - base_speed * 1.4) < 0.1, "Difficulty speed scaling is 1.4x at 120s")
+	_assert(speed_factor_120 <= 1.4 and abs(expected_speed - base_speed * speed_factor_120) < 0.1, "Difficulty speed scaling remains controlled at 120s")
 	spawner._elapsed_time = spawner.speed_scale_period * 2.0
 	_assert(abs(spawner._get_speed_scale() - spawner.max_speed_scale) < 0.01, "Difficulty speed scaling has cap")
 
@@ -2645,6 +2681,7 @@ func _phase_enemy_spawner() -> void:
 		if spawned:
 			_assert(spawned._hp == brute_data.max_hp and spawned._damage == brute_data.damage, "Spawned enemy uses data stats")
 			_assert(abs(spawned._base_speed - brute_data.speed) < 0.01, "Spawned enemy uses data speed")
+			_assert(spawned._exp_reward == brute_data.exp_reward and spawned._gold_reward == brute_data.gold_reward, "Base-time spawned enemy keeps base rewards")
 			var shape_node := spawned.get_node_or_null("CollisionShape2D") as CollisionShape2D
 			var circle: CircleShape2D = null
 			if shape_node:
@@ -2668,6 +2705,16 @@ func _phase_enemy_spawner() -> void:
 				"Spawned enemy builds expected animation frame sets"
 			)
 			spawned.queue_free()
+			await _wait(0.05)
+
+	if player and enemies_parent and imp_data:
+		spawner._elapsed_time = 420.0
+		var scaled_imp = spawner._spawn_single_enemy(imp_data, player.global_position + Vector2.RIGHT * 340.0)
+		_assert(scaled_imp != null, "Spawner can create a late scaled enemy")
+		if scaled_imp:
+			var expected_exp_reward := maxi(1, int(round(float(imp_data.exp_reward) * spawner._get_reward_scale(spawner._get_stat_scale(), spawner.exp_reward_scale_strength, spawner.max_exp_reward_scale))))
+			_assert(scaled_imp._exp_reward == expected_exp_reward and scaled_imp._exp_reward > imp_data.exp_reward, "Late enemy EXP reward scales with difficulty")
+			scaled_imp.queue_free()
 			await _wait(0.05)
 
 	if player and enemies_parent and dasher_data:

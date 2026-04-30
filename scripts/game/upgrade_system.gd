@@ -259,10 +259,22 @@ func _unlock_weapon(weapon_id: StringName, ignore_slot_limit: bool = false) -> v
 func _level_up_weapon(weapon_id: StringName, bonus: UpgradeData) -> void:
 	var w := _find_weapon(weapon_id)
 	if w:
+		var apply_bonus := not _is_path_managed_level_bonus(w, bonus)
 		w.level_up()
-		_apply_bonus(w, bonus)
+		if apply_bonus:
+			_apply_bonus(w, bonus)
 	else:
 		_unlock_weapon(weapon_id)
+
+func _is_path_managed_level_bonus(w: WeaponBase, bonus: UpgradeData) -> bool:
+	return (
+		bonus
+		and bonus.upgrade_type == UpgradeData.UpgradeType.WEAPON_LEVEL
+		and w
+		and w.weapon_data
+		and not w.current_path_id.is_empty()
+		and bonus.path_id == w.current_path_id
+	)
 
 func _apply_path_choice(upgrade: UpgradeData) -> void:
 	var w := _find_weapon(upgrade.weapon_id)
@@ -284,30 +296,54 @@ func _apply_bonus(w: WeaponBase, bonus: UpgradeData) -> void:
 
 func _apply_stat_upgrade(player: Node, upgrade: UpgradeData) -> void:
 	if upgrade.speed_bonus != 0.0:
-		player.move_speed += upgrade.speed_bonus
+		player.move_speed = minf(GameState.MAX_PLAYER_MOVE_SPEED, player.move_speed + upgrade.speed_bonus)
+		GameState.run.move_speed = player.move_speed
 	if upgrade.max_hp_bonus != 0:
 		GameState.run.max_hp += upgrade.max_hp_bonus
 		GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
 	if upgrade.hp_bonus != 0:
 		GameState.heal(upgrade.hp_bonus)
 	if upgrade.pickup_radius_bonus != 0.0:
-		GameState.run.pickup_radius_bonus += upgrade.pickup_radius_bonus
+		GameState.run.pickup_radius_bonus = minf(
+			GameState.MAX_PICKUP_RADIUS_BONUS,
+			float(GameState.run.get("pickup_radius_bonus", 0.0)) + upgrade.pickup_radius_bonus
+		)
 	if upgrade.damage_multiplier_bonus != 0.0:
 		var old_damage_multiplier := GameState.get_character_damage_multiplier()
-		GameState.run.damage_multiplier = maxf(0.05, float(GameState.run.get("damage_multiplier", 1.0)) + upgrade.damage_multiplier_bonus)
+		GameState.run.damage_multiplier = clampf(
+			float(GameState.run.get("damage_multiplier", 1.0)) + upgrade.damage_multiplier_bonus,
+			0.05,
+			GameState.MAX_DAMAGE_MULTIPLIER
+		)
 		_scale_weapon_damage(player, old_damage_multiplier, GameState.get_character_damage_multiplier())
 	if upgrade.cooldown_multiplier_bonus != 0.0:
 		_apply_cooldown_multiplier_bonus(player, upgrade.cooldown_multiplier_bonus)
 	if upgrade.area_multiplier_bonus != 0.0:
 		var old_area_multiplier := GameState.get_character_area_multiplier()
-		GameState.run.area_multiplier = maxf(0.05, float(GameState.run.get("area_multiplier", 1.0)) + upgrade.area_multiplier_bonus)
+		GameState.run.area_multiplier = clampf(
+			float(GameState.run.get("area_multiplier", 1.0)) + upgrade.area_multiplier_bonus,
+			0.05,
+			GameState.MAX_AREA_MULTIPLIER
+		)
 		_scale_weapon_range(player, old_area_multiplier, GameState.get_character_area_multiplier())
 	if upgrade.field_lifetime_multiplier_bonus != 0.0:
-		GameState.run.field_lifetime_multiplier = maxf(0.05, float(GameState.run.get("field_lifetime_multiplier", 1.0)) + upgrade.field_lifetime_multiplier_bonus)
+		GameState.run.field_lifetime_multiplier = clampf(
+			float(GameState.run.get("field_lifetime_multiplier", 1.0)) + upgrade.field_lifetime_multiplier_bonus,
+			0.05,
+			GameState.MAX_FIELD_LIFETIME_MULTIPLIER
+		)
 	if upgrade.incoming_damage_multiplier_bonus != 0.0:
-		GameState.run.incoming_damage_multiplier = maxf(0.05, float(GameState.run.get("incoming_damage_multiplier", 1.0)) + upgrade.incoming_damage_multiplier_bonus)
+		GameState.run.incoming_damage_multiplier = clampf(
+			float(GameState.run.get("incoming_damage_multiplier", 1.0)) + upgrade.incoming_damage_multiplier_bonus,
+			GameState.MIN_INCOMING_DAMAGE_MULTIPLIER,
+			5.0
+		)
 	if upgrade.exp_gain_multiplier_bonus != 0.0:
-		GameState.run.exp_gain_multiplier = maxf(0.05, float(GameState.run.get("exp_gain_multiplier", 1.0)) + upgrade.exp_gain_multiplier_bonus)
+		GameState.run.exp_gain_multiplier = clampf(
+			float(GameState.run.get("exp_gain_multiplier", 1.0)) + upgrade.exp_gain_multiplier_bonus,
+			0.05,
+			GameState.MAX_EXP_GAIN_MULTIPLIER
+		)
 	if (
 		upgrade.damage_multiplier_bonus != 0.0
 		or upgrade.cooldown_multiplier_bonus != 0.0
@@ -325,7 +361,11 @@ func _apply_cooldown_multiplier_bonus(player: Node, bonus: float) -> void:
 	var old_multipliers: Dictionary = {}
 	for w in _get_player_weapons(player):
 		old_multipliers[w] = GameState.get_character_cooldown_multiplier(w.weapon_data)
-	GameState.run.cooldown_multiplier = maxf(0.05, float(GameState.run.get("cooldown_multiplier", 1.0)) + bonus)
+	GameState.run.cooldown_multiplier = clampf(
+		float(GameState.run.get("cooldown_multiplier", 1.0)) + bonus,
+		GameState.MIN_COOLDOWN_MULTIPLIER,
+		5.0
+	)
 	for w in _get_player_weapons(player):
 		var old_multiplier := float(old_multipliers.get(w, 1.0))
 		if old_multiplier > 0.0:
@@ -502,6 +542,7 @@ func _make_level_from_path(weapon: WeaponBase, path: WeaponPath, effect: WeaponP
 	d.description = _describe_path_effect(weapon, effect)
 	d.upgrade_type = UpgradeData.UpgradeType.WEAPON_LEVEL
 	d.weapon_id = weapon.weapon_data.id
+	d.path_id = path.path_id if path else &""
 	d.damage_bonus = effect.damage_bonus
 	d.cooldown_bonus = effect.cooldown_bonus
 	d.range_bonus = effect.range_bonus

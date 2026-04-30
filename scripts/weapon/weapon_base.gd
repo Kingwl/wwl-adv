@@ -52,8 +52,7 @@ func _apply_path_effects() -> void:
 		return
 	for path in weapon_data.paths:
 		if path.path_id == current_path_id:
-			var effect := path.get_level_effect(level)
-			if effect:
+			for effect in path.get_level_effects_up_to(level):
 				if effect.damage_bonus != 0:
 					_current_damage += effect.damage_bonus
 				if effect.cooldown_bonus != 0:

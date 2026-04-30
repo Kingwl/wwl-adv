@@ -12,3 +12,10 @@ func get_level_effect(target_level: int) -> WeaponPathLevel:
 		if lvl.level == target_level:
 			return lvl
 	return null
+
+func get_level_effects_up_to(target_level: int) -> Array[WeaponPathLevel]:
+	var result: Array[WeaponPathLevel] = []
+	for lvl in levels:
+		if lvl and lvl.level <= target_level:
+			result.append(lvl)
+	return result

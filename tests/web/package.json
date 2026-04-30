@@ -1,0 +1,14 @@
+{
+  "name": "wwl-adventure-web-smoke",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^24.10.2",
+    "@types/pngjs": "^6.0.5",
+    "pngjs": "^7.0.0"
+  }
+}

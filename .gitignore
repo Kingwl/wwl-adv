@@ -28,6 +28,11 @@ tmp/
 # Python tooling caches
 __pycache__/
 
+# Node / browser test tooling
+node_modules/
+tests/web/playwright-report/
+tests/web/test-results/
+
 # IDE / editor
 .vscode/
 .idea/

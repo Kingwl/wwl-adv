@@ -31,7 +31,7 @@
 - **当前武器数**: 20
 - **当前角色数**: 4（全部默认可选，暂不做解锁）
 - **当前角色强化槽**: 6（生命源泉为被动恢复强化，不占武器槽）
-- **当前敌人数**: 7（小鬼 / 疾行者 / 蛮兵 / 突袭者 / 邪教射手 / 精英蛮兵 / 精英秘法师，均来自 `resources/enemies/*.tres`，并配置专属动画条带）
+- **当前敌人数**: 8（小鬼 / 疾行者 / 蛮兵 / 突袭者 / 邪教射手 / 精英蛮兵 / 精英秘法师 / 北境督军 Boss，均来自 `resources/enemies/*.tres`，并配置动画条带）
 - **输入**: 键盘 WASD/方向键 + 触屏虚拟摇杆
 - **Web CI**: `.github/workflows/deploy-web.yml` 使用 Godot 4.6.2 导出并部署 GitHub Pages；CI preset 来自 `ci/export_presets.web.cfg`
 - **字体子集**: CI 每次 Web 导出前都会下载完整 `NotoSansCJKsc-Regular.otf`，扫描 `project.godot` / `autoload` / `scripts` / `scenes` / `resources` 文本后重建 `assets/fonts/NotoSansCJKsc-WWL-Subset.otf`
@@ -102,7 +102,6 @@ CI 或自定义安装路径可通过 `GODOT_BIN=/path/to/godot ./tests/run_tests
 ## 已知限制
 
 - 武器和敌人已经 `.tres` 资源化；通用升级资源仍待内容化
-- 敌人仍缺少 Boss
 - 没有音效系统
 - 存档当前只保存局外数值，不保存或恢复战斗状态
 - 移动端安全区、发布包体和真机性能仍待验证

@@ -14,16 +14,22 @@ extends Node
 @export var max_exp_reward_scale: float = 3.0
 @export var gold_reward_scale_strength: float = 0.25
 @export var max_gold_reward_scale: float = 2.0
+@export var boss_spawn_time: float = 300.0
+@export var boss_enemy_id: StringName = &"boss_warlord"
 
 var _player: Node2D
 var _elapsed_time: float = 0.0
 var _spawn_timer: float = 0.0
+var _boss_spawned: bool = false
 
 func _ready() -> void:
 	_player = get_tree().get_first_node_in_group("player")
 
 func _process(delta: float) -> void:
 	_elapsed_time += delta
+	if _try_spawn_boss():
+		_spawn_timer = maxf(_spawn_timer, base_spawn_interval)
+		return
 	_spawn_timer -= delta
 	if _spawn_timer <= 0:
 		_spawn_enemy()
@@ -37,6 +43,20 @@ func _spawn_enemy() -> void:
 
 	var data := _pick_enemy_data()
 	_spawn_enemy_pack(data)
+
+func _try_spawn_boss() -> CharacterBody2D:
+	if _boss_spawned or boss_spawn_time < 0.0 or _elapsed_time < boss_spawn_time:
+		return null
+	if not _player:
+		return null
+	var boss_data := DataManager.get_enemy(str(boss_enemy_id)) as EnemyData
+	if not boss_data:
+		push_warning("EnemySpawner: boss enemy data not found: %s" % boss_enemy_id)
+		return null
+	var boss := _spawn_single_enemy(boss_data, _get_spawn_position())
+	if boss:
+		_boss_spawned = true
+	return boss
 
 func _spawn_enemy_pack(data: EnemyData = null) -> Array[CharacterBody2D]:
 	var spawned: Array[CharacterBody2D] = []

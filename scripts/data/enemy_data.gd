@@ -7,6 +7,7 @@ const BEHAVIOR_FAST_CHASE := &"fast_chase"
 const BEHAVIOR_BRUTE_CHASE := &"brute_chase"
 const BEHAVIOR_DASH := &"dash"
 const BEHAVIOR_RANGED := &"ranged"
+const BEHAVIOR_BOSS := &"boss"
 
 @export var id: StringName
 @export var display_name: String
@@ -41,6 +42,15 @@ const BEHAVIOR_RANGED := &"ranged"
 @export var projectile_range: float = 420.0
 @export var projectile_radius: float = 5.0
 @export var projectile_modulate: Color = Color.WHITE
+@export var projectile_animation_sheet: Texture2D
+@export var projectile_animation_frame_size: Vector2i = Vector2i(32, 32)
+@export var projectile_animation_columns: int = 4
+@export var projectile_animation_frame_count: int = 0
+@export var projectile_animation_speed: float = 10.0
+@export var projectile_visual_rotation_offset: float = PI
+
+@export_group("Boss")
+@export var boss_projectile_count: int = 8
 
 @export_group("生成")
 @export var spawn_weight: float = 1.0

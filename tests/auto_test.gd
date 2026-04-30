@@ -2265,10 +2265,30 @@ func _phase_enemy_collision() -> void:
 		_assert(false, "Enemies container exists")
 		await _wait(0.2)
 		return
+	var spawner: Node = _game.get_node_or_null("EnemySpawner")
+	var previous_spawner_process := false
+	if spawner:
+		previous_spawner_process = spawner.is_processing()
+		spawner.set_process(false)
+	var projectiles_parent := _game.get_node_or_null("Projectiles")
+	var weapons_node: Node = player.get_node_or_null("Weapons")
+	var weapon_process_states: Array[Dictionary] = []
+	if weapons_node:
+		for weapon in weapons_node.get_children():
+			weapon_process_states.append({
+				"node": weapon,
+				"process": weapon.is_processing(),
+				"physics": weapon.is_physics_processing(),
+			})
+			weapon.set_process(false)
+			weapon.set_physics_process(false)
 
 	# Clean up and reset player HP / invincibility
 	for child in enemies_parent.get_children():
 		child.queue_free()
+	if projectiles_parent:
+		for child in projectiles_parent.get_children():
+			child.queue_free()
 	await _wait(0.1)
 	GameState.run.hp = GameState.run.max_hp
 	GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
@@ -2314,6 +2334,13 @@ func _phase_enemy_collision() -> void:
 		enemy.queue_free()
 	for child in enemies_parent.get_children():
 		child.queue_free()
+	for state in weapon_process_states:
+		var weapon := state.get("node") as Node
+		if is_instance_valid(weapon):
+			weapon.set_process(bool(state.get("process", false)))
+			weapon.set_physics_process(bool(state.get("physics", false)))
+	if spawner:
+		spawner.set_process(previous_spawner_process)
 	await _wait(0.1)
 
 func _phase_player_movement() -> void:
@@ -2568,6 +2595,7 @@ func _phase_enemy_spawner() -> void:
 	var cultist_data := DataManager.get_enemy("cultist") as EnemyData
 	var elite_brute_data := DataManager.get_enemy("elite_brute") as EnemyData
 	var elite_arcanist_data := DataManager.get_enemy("elite_arcanist") as EnemyData
+	var boss_data := DataManager.get_enemy("boss_warlord") as EnemyData
 	_assert(
 		imp_data != null
 		and runner_data != null
@@ -2575,10 +2603,11 @@ func _phase_enemy_spawner() -> void:
 		and dasher_data != null
 		and cultist_data != null
 		and elite_brute_data != null
-		and elite_arcanist_data != null,
-		"Core enemy archetypes are registered"
+		and elite_arcanist_data != null
+		and boss_data != null,
+		"Core enemy archetypes and first boss are registered"
 	)
-	for data in [imp_data, runner_data, brute_data, dasher_data, cultist_data, elite_brute_data, elite_arcanist_data]:
+	for data in [imp_data, runner_data, brute_data, dasher_data, cultist_data, elite_brute_data, elite_arcanist_data, boss_data]:
 		var enemy_data := data as EnemyData
 		if enemy_data:
 			_assert(enemy_data.animation_sheet != null, "Enemy %s has dedicated animation sheet" % enemy_data.id)
@@ -2602,6 +2631,10 @@ func _phase_enemy_spawner() -> void:
 		_assert(elite_brute_data.tags.has(&"elite") and elite_brute_data.max_hp > brute_data.max_hp, "Elite brute is stronger tank archetype")
 	if elite_arcanist_data:
 		_assert(elite_arcanist_data.tags.has(&"elite") and elite_arcanist_data.behavior_id == EnemyData.BEHAVIOR_RANGED, "Elite arcanist is ranged elite archetype")
+	if boss_data:
+		_assert(boss_data.tags.has(&"boss") and boss_data.behavior_id == EnemyData.BEHAVIOR_BOSS, "Boss warlord uses boss archetype")
+		_assert(boss_data.spawn_weight <= 0.0 and boss_data.boss_projectile_count >= 6, "Boss is event-spawned and has volley config")
+		_assert(boss_data.projectile_animation_sheet != null and boss_data.projectile_animation_frame_count == 4, "Boss has dedicated animated projectile sheet")
 
 	# Test spawn interval scaling with elapsed time
 	spawner._elapsed_time = 0.0
@@ -2661,16 +2694,19 @@ func _phase_enemy_spawner() -> void:
 	_assert(imp_data == null or early_pool.has(imp_data), "Early enemy spawn pool includes imp")
 	_assert(cultist_data == null or not early_pool.has(cultist_data), "Early enemy spawn pool excludes ranged cultist")
 	_assert(dasher_data == null or not early_pool.has(dasher_data), "Early enemy spawn pool excludes late dasher")
+	_assert(boss_data == null or not early_pool.has(boss_data), "Early enemy spawn pool excludes boss")
 	spawner._elapsed_time = 240.0
 	var late_pool: Array = spawner._get_valid_enemy_data()
 	_assert(brute_data == null or late_pool.has(brute_data), "Late enemy spawn pool includes brute")
 	_assert(dasher_data == null or late_pool.has(dasher_data), "Late enemy spawn pool includes dasher")
 	_assert(cultist_data == null or late_pool.has(cultist_data), "Late enemy spawn pool includes ranged cultist")
 	_assert(elite_brute_data == null or not late_pool.has(elite_brute_data), "Mid game spawn pool excludes elite brute")
+	_assert(boss_data == null or not late_pool.has(boss_data), "Normal spawn pool excludes boss before event")
 	spawner._elapsed_time = 400.0
 	var elite_pool: Array = spawner._get_valid_enemy_data()
 	_assert(elite_brute_data == null or elite_pool.has(elite_brute_data), "Elite spawn pool includes elite brute")
 	_assert(elite_arcanist_data == null or elite_pool.has(elite_arcanist_data), "Elite spawn pool includes elite arcanist")
+	_assert(boss_data == null or not elite_pool.has(boss_data), "Normal spawn pool excludes boss after event time")
 	if imp_data:
 		_assert(spawner._get_pack_size(imp_data) == imp_data.pack_size, "Spawner uses enemy pack size")
 
@@ -2715,6 +2751,32 @@ func _phase_enemy_spawner() -> void:
 			var expected_exp_reward := maxi(1, int(round(float(imp_data.exp_reward) * spawner._get_reward_scale(spawner._get_stat_scale(), spawner.exp_reward_scale_strength, spawner.max_exp_reward_scale))))
 			_assert(scaled_imp._exp_reward == expected_exp_reward and scaled_imp._exp_reward > imp_data.exp_reward, "Late enemy EXP reward scales with difficulty")
 			scaled_imp.queue_free()
+			await _wait(0.05)
+
+	if player and enemies_parent and projectiles_parent and boss_data:
+		for child in projectiles_parent.get_children():
+			child.queue_free()
+		await _wait(0.05)
+		spawner._boss_spawned = false
+		spawner._elapsed_time = spawner.boss_spawn_time - 0.1
+		_assert(spawner._try_spawn_boss() == null, "Boss does not spawn before boss time")
+		spawner._elapsed_time = spawner.boss_spawn_time
+		var boss: CharacterBody2D = spawner._try_spawn_boss()
+		_assert(boss != null and boss.enemy_data == boss_data, "Boss spawns once at boss time")
+		if boss:
+			_assert(boss.is_in_group("bosses"), "Boss joins bosses group")
+			_assert(boss._hp == int(boss_data.max_hp * spawner._get_stat_scale()), "Boss HP scales with difficulty")
+			var volley: Array = boss._fire_boss_volley(Vector2.LEFT)
+			await _wait(0.05)
+			_assert(volley.size() == boss_data.boss_projectile_count, "Boss fires configured projectile volley")
+			if not volley.is_empty():
+				var first_projectile = volley[0]
+				_assert(first_projectile.target_group == &"player" and first_projectile.collision_mask == 1, "Boss projectiles target player")
+				_assert(first_projectile.visual_sprite_frames != null and first_projectile.visual_sprite_frames.get_frame_count("default") == 4, "Boss projectiles use animated orb frames")
+			for projectile in volley:
+				if is_instance_valid(projectile):
+					projectile.queue_free()
+			boss.queue_free()
 			await _wait(0.05)
 
 	if player and enemies_parent and dasher_data:
@@ -2767,6 +2829,7 @@ func _phase_enemy_spawner() -> void:
 
 	# Reset spawner state
 	spawner._elapsed_time = 0.0
+	spawner._boss_spawned = false
 	spawner._spawn_timer = spawner._get_spawn_interval()
 	spawner.set_process(previous_spawner_process)
 	e1.queue_free()
@@ -3102,16 +3165,19 @@ func _phase_save_system() -> void:
 	var total_gold_before := int(SaveManager.get_profile_value("total_gold", 0))
 	var lifetime_kills_before := int(SaveManager.get_profile_value("lifetime_kills", 0))
 	var total_runs_before := int(SaveManager.get_profile_value("total_runs", 0))
+	var total_victories_before := int(SaveManager.get_profile_value("total_victories", 0))
 	GameState.start_new_run(12345)
 	GameState.add_gold(11)
 	GameState.add_kill()
 	GameState.add_kill()
 	GameState.run.level = 5
 	GameState.run.run_time = 99.0
+	GameState.run.victory = true
 	_assert(int(SaveManager.get_profile_value("total_gold", 0)) == total_gold_before + 11, "Gold pickup updates profile immediately")
 	_assert(int(SaveManager.get_profile_value("lifetime_kills", 0)) == lifetime_kills_before + 2, "Kills update profile immediately")
 	_assert(SaveManager.record_run_finished(), "Completed run updates profile summary")
 	_assert(int(SaveManager.get_profile_value("total_runs", 0)) == total_runs_before + 1, "Profile total runs updated")
+	_assert(int(SaveManager.get_profile_value("total_victories", 0)) == total_victories_before + 1, "Profile total victories updated")
 	_assert(int(SaveManager.get_profile_value("total_gold", 0)) == total_gold_before + 11, "Profile total gold updated")
 	_assert(int(SaveManager.get_profile_value("best_level", 1)) >= 5, "Profile best level updated")
 	_assert(int(SaveManager.get_profile_value("best_kills", 0)) >= 2, "Profile best kills updated")
@@ -3137,6 +3203,7 @@ func _phase_save_system() -> void:
 	var profile := SaveManager.get_profile()
 	var last_run: Dictionary = profile.get("last_run", {})
 	_assert(int(last_run.get("gold", 0)) == 11 and int(last_run.get("kills", 0)) == 2, "Last run stores numeric summary")
+	_assert(bool(last_run.get("victory", false)), "Last run stores victory result")
 	_assert(str(profile.get("selected_character_id", "")) == "adventurer", "Profile stores selected character")
 	_assert(str(last_run.get("character_id", "")) == "adventurer", "Last run stores character id")
 	var profile_json := JSON.stringify(profile)

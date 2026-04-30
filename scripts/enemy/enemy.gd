@@ -33,11 +33,20 @@ var _projectile_speed: float = 280.0
 var _projectile_range: float = 420.0
 var _projectile_radius: float = 5.0
 var _projectile_modulate: Color = Color.WHITE
+var _projectile_animation_sheet: Texture2D = null
+var _projectile_animation_frame_size: Vector2i = Vector2i(32, 32)
+var _projectile_animation_columns: int = 4
+var _projectile_animation_frame_count: int = 0
+var _projectile_animation_speed: float = 10.0
+var _projectile_visual_rotation_offset: float = PI
+var _projectile_sprite_frames: SpriteFrames = null
+var _boss_projectile_count: int = 8
 var _dash_state: StringName = DASH_STATE_COOLDOWN
 var _dash_timer: float = 0.0
 var _dash_direction: Vector2 = Vector2.RIGHT
 var _ranged_attack_timer: float = 0.0
 var _strafe_sign: float = 1.0
+var _boss_volley_index: int = 0
 var _can_damage: bool = true
 var _damage_cooldown: float = 1.0
 var _dead: bool = false
@@ -75,8 +84,18 @@ func _ready() -> void:
 		_projectile_range = enemy_data.projectile_range
 		_projectile_radius = enemy_data.projectile_radius
 		_projectile_modulate = enemy_data.projectile_modulate
+		_projectile_animation_sheet = enemy_data.projectile_animation_sheet
+		_projectile_animation_frame_size = enemy_data.projectile_animation_frame_size
+		_projectile_animation_columns = enemy_data.projectile_animation_columns
+		_projectile_animation_frame_count = enemy_data.projectile_animation_frame_count
+		_projectile_animation_speed = enemy_data.projectile_animation_speed
+		_projectile_visual_rotation_offset = enemy_data.projectile_visual_rotation_offset
+		_boss_projectile_count = enemy_data.boss_projectile_count
 		if _sprite:
 			_sprite.scale = Vector2.ONE * enemy_data.visual_scale
+		if _is_boss():
+			add_to_group("bosses")
+	_projectile_sprite_frames = _build_projectile_sprite_frames()
 	_setup_collision_shape()
 	_setup_animations()
 	_setup_health_bar()
@@ -169,6 +188,7 @@ func _physics_process(delta: float) -> void:
 		var dir := (_player.global_position - global_position).normalized()
 		var distance := global_position.distance_to(_player.global_position)
 		_try_ranged_attack(delta, dir, distance)
+		_try_boss_attack(delta, dir, distance)
 		velocity = _get_behavior_velocity(delta, dir, current_speed)
 		move_and_slide()
 		_try_damage_player()
@@ -216,6 +236,8 @@ func _get_behavior_velocity(delta: float, dir: Vector2, current_speed: float) ->
 			return _get_dash_velocity(delta, dir, current_speed)
 		EnemyData.BEHAVIOR_RANGED:
 			return _get_ranged_velocity(dir, current_speed)
+		EnemyData.BEHAVIOR_BOSS:
+			return _get_boss_velocity(dir, current_speed)
 		_:
 			return dir * current_speed
 
@@ -255,7 +277,7 @@ func _reset_behavior_state() -> void:
 		_dash_state = DASH_STATE_COOLDOWN
 		_dash_timer = randf_range(_dash_cooldown * 0.35, _dash_cooldown)
 		_dash_direction = Vector2.RIGHT
-	elif _behavior_id == EnemyData.BEHAVIOR_RANGED:
+	elif _behavior_id == EnemyData.BEHAVIOR_RANGED or _behavior_id == EnemyData.BEHAVIOR_BOSS:
 		_dash_state = DASH_STATE_COOLDOWN
 		_dash_timer = 0.0
 		_ranged_attack_timer = randf_range(_ranged_attack_cooldown * 0.35, _ranged_attack_cooldown)
@@ -275,6 +297,16 @@ func _get_ranged_velocity(dir: Vector2, current_speed: float) -> Vector2:
 	var strafe := dir.orthogonal() * _strafe_sign
 	return strafe * current_speed * 0.25
 
+func _get_boss_velocity(dir: Vector2, current_speed: float) -> Vector2:
+	if not is_instance_valid(_player):
+		return Vector2.ZERO
+	var distance := global_position.distance_to(_player.global_position)
+	if distance < _retreat_range:
+		return -dir * current_speed * 0.45
+	if distance > _preferred_range:
+		return dir * current_speed
+	return dir.orthogonal() * _strafe_sign * current_speed * 0.35
+
 func _try_ranged_attack(delta: float, dir: Vector2, distance: float) -> void:
 	if _behavior_id != EnemyData.BEHAVIOR_RANGED:
 		return
@@ -286,7 +318,34 @@ func _try_ranged_attack(delta: float, dir: Vector2, distance: float) -> void:
 	_fire_ranged_projectile(dir)
 	_ranged_attack_timer = _ranged_attack_cooldown
 
+func _try_boss_attack(delta: float, dir: Vector2, distance: float) -> void:
+	if _behavior_id != EnemyData.BEHAVIOR_BOSS:
+		return
+	_ranged_attack_timer -= delta
+	if _ranged_attack_timer > 0.0:
+		return
+	if distance > _attack_range or dir == Vector2.ZERO:
+		return
+	_fire_boss_volley(dir)
+	_ranged_attack_timer = _ranged_attack_cooldown
+
+func _fire_boss_volley(dir: Vector2) -> Array[Node]:
+	var spawned: Array[Node] = []
+	var count := maxi(_boss_projectile_count, 1)
+	var step := TAU / float(count)
+	var base_angle := dir.angle() + (_boss_volley_index % 2) * step * 0.5
+	for i in range(count):
+		var shot_dir := Vector2.RIGHT.rotated(base_angle + step * i)
+		var projectile := _spawn_enemy_projectile(shot_dir)
+		if projectile:
+			spawned.append(projectile)
+	_boss_volley_index += 1
+	return spawned
+
 func _fire_ranged_projectile(dir: Vector2) -> Node:
+	return _spawn_enemy_projectile(dir)
+
+func _spawn_enemy_projectile(dir: Vector2) -> Node:
 	var projectiles_parent := _get_projectiles_parent()
 	if not projectiles_parent:
 		return null
@@ -305,6 +364,8 @@ func _fire_ranged_projectile(dir: Vector2) -> Node:
 	projectile.target_group = &"player"
 	projectile.collision_mask = 1
 	projectile.visual_modulate = _projectile_modulate
+	projectile.visual_sprite_frames = _projectile_sprite_frames
+	projectile.visual_rotation_offset = _projectile_visual_rotation_offset
 	var shape_node := projectile.get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if shape_node and shape_node.shape is CircleShape2D:
 		var circle := (shape_node.shape as CircleShape2D).duplicate() as CircleShape2D
@@ -312,6 +373,26 @@ func _fire_ranged_projectile(dir: Vector2) -> Node:
 		shape_node.shape = circle
 	projectiles_parent.add_child(projectile)
 	return projectile
+
+func _build_projectile_sprite_frames() -> SpriteFrames:
+	if not _projectile_animation_sheet or _projectile_animation_frame_count <= 0:
+		return null
+	var frames := SpriteFrames.new()
+	for i in range(_projectile_animation_frame_count):
+		var atlas := AtlasTexture.new()
+		atlas.atlas = _projectile_animation_sheet
+		var column := i % maxi(_projectile_animation_columns, 1)
+		var row := i / maxi(_projectile_animation_columns, 1)
+		atlas.region = Rect2(
+			column * _projectile_animation_frame_size.x,
+			row * _projectile_animation_frame_size.y,
+			_projectile_animation_frame_size.x,
+			_projectile_animation_frame_size.y
+		)
+		frames.add_frame("default", atlas)
+	frames.set_animation_loop("default", true)
+	frames.set_animation_speed("default", _projectile_animation_speed)
+	return frames
 
 func _get_projectiles_parent() -> Node:
 	var node := get_parent()
@@ -377,6 +458,9 @@ func _setup_health_bar() -> void:
 	if _health_bar:
 		_health_bar.max_value = _hp
 		_health_bar.value = _hp
+		if _is_boss():
+			_health_bar.auto_hide = false
+			_health_bar.visible = true
 
 func take_damage(amount: int) -> DamageResult:
 	var event := DamageEvent.from_amount(amount, null, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_DIRECT)
@@ -416,6 +500,9 @@ func _die() -> void:
 		return
 	_dead = true
 	GameState.add_kill()
+	if _is_boss():
+		GameState.run["victory"] = true
+		GameState.run_ended.emit(true)
 	call_deferred("_spawn_drop")
 	_sprite.play("death")
 	if _health_bar:
@@ -449,3 +536,6 @@ func _start_damage_cooldown() -> void:
 	_can_damage = false
 	await get_tree().create_timer(_damage_cooldown).timeout
 	_can_damage = true
+
+func _is_boss() -> bool:
+	return enemy_data != null and enemy_data.tags.has(&"boss")

@@ -4,6 +4,7 @@ signal restart_pressed
 signal quit_to_menu_pressed
 
 @onready var _time_label: Label = $Panel/VBoxContainer/Stats/TimeRow/TimeValue
+@onready var _title_label: Label = $Panel/VBoxContainer/Title
 @onready var _kills_label: Label = $Panel/VBoxContainer/Stats/KillsRow/KillsValue
 @onready var _level_label: Label = $Panel/VBoxContainer/Stats/LevelRow/LevelValue
 @onready var _gold_label: Label = $Panel/VBoxContainer/Stats/GoldRow/GoldValue
@@ -49,6 +50,7 @@ func _style_button(btn: Button) -> void:
 
 func show_stats() -> void:
 	visible = true
+	_title_label.text = "胜利" if bool(GameState.run.get("victory", false)) else "游戏结束"
 	_time_label.text = GameState.get_time_string()
 	_kills_label.text = str(GameState.run.kills)
 	_level_label.text = "Lv." + str(GameState.run.level)

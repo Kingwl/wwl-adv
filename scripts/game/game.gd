@@ -62,6 +62,7 @@ func _on_run_ended(_victory: bool) -> void:
 	if _run_finished:
 		return
 	_run_finished = true
+	GameState.run["victory"] = _victory
 	SaveManager.record_run_finished()
 	get_tree().paused = true
 	$GameOver.show_stats()

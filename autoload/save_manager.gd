@@ -75,7 +75,10 @@ func record_run_finished() -> bool:
 	var previous := _save_data.duplicate(true)
 	var profile: Dictionary = _save_data.get("profile", {})
 	var now := Time.get_unix_time_from_system()
+	var victory := bool(GameState.run.get("victory", false))
 	profile["total_runs"] = int(profile.get("total_runs", 0)) + 1
+	if victory:
+		profile["total_victories"] = int(profile.get("total_victories", 0)) + 1
 	profile["best_time"] = maxf(float(profile.get("best_time", 0.0)), float(GameState.run.get("run_time", 0.0)))
 	profile["best_level"] = maxi(int(profile.get("best_level", 1)), int(GameState.run.get("level", 1)))
 	profile["best_kills"] = maxi(int(profile.get("best_kills", 0)), int(GameState.run.get("kills", 0)))
@@ -86,6 +89,7 @@ func record_run_finished() -> bool:
 		"level": int(GameState.run.get("level", 1)),
 		"kills": int(GameState.run.get("kills", 0)),
 		"gold": int(GameState.run.get("gold", 0)),
+		"victory": victory,
 	}
 	_save_data["profile"] = profile
 	if not _write_save_file():
@@ -152,6 +156,7 @@ func _default_save_data() -> Dictionary:
 		"profile": {
 			"created_at": now,
 			"total_runs": 0,
+			"total_victories": 0,
 			"total_gold": 0,
 			"lifetime_kills": 0,
 			"best_time": 0.0,

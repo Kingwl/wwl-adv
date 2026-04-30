@@ -70,7 +70,7 @@ func get_weapon_sfx(weapon_id: StringName) -> AudioStream:
 		return null
 	if _streams.has(weapon_id):
 		return _streams[weapon_id] as AudioStream
-	var stream := _load_wav_stream(String(WEAPON_SFX_PATHS[weapon_id]))
+	var stream := _load_audio_stream(String(WEAPON_SFX_PATHS[weapon_id]))
 	if stream == null:
 		return null
 	_streams[weapon_id] = stream
@@ -130,6 +130,19 @@ func _can_play(weapon_id: StringName, min_interval: float) -> bool:
 
 func _now_seconds() -> float:
 	return float(Time.get_ticks_msec()) / 1000.0
+
+
+func _load_audio_stream(path: String) -> AudioStream:
+	if ResourceLoader.exists(path, "AudioStream"):
+		var imported_stream := ResourceLoader.load(path, "AudioStream")
+		if imported_stream is AudioStream:
+			return imported_stream as AudioStream
+
+	if OS.get_name() == "Web":
+		push_warning("AudioManager: exported SFX resource unavailable: %s" % path)
+		return null
+
+	return _load_wav_stream(path)
 
 
 func _load_wav_stream(path: String) -> AudioStreamWAV:

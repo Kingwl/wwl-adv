@@ -6,7 +6,7 @@
 - 武器音效按“实际出手 / 产生有效特效”触发，不在冷却 tick 统一播放，避免没目标也响。
 - 常驻型武器的 loop 素材先作为低音量生成 / 刷新提示使用，不做持续循环，避免吸血鬼 like 多武器场景下声场过满。
 - 音效由 `AudioManager` 统一管理，使用 12 路 `AudioStreamPlayer` 池、武器级最小播放间隔和轻微 pitch 浮动。
-- 武器 SFX 以 PCM WAV 入库，`AudioManager` 运行时解析并缓存为 `AudioStreamWAV`，避免测试 / CI / Web 导出依赖编辑器预生成 `.import`。
+- 武器 SFX 以 PCM WAV 入库，`AudioManager` 优先通过 `ResourceLoader` 读取 Godot 导入后的 `AudioStream`，并缓存播放；仅在本地原始文件场景下 fallback 解析 WAV。Web 导出不能依赖 `FileAccess` 读取原始音频文件。
 
 ## 武器映射
 

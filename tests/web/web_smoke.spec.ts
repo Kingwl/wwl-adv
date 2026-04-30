@@ -20,6 +20,7 @@ const fatalPatterns: RegExp[] = [
   /Parse Error/i,
   /Failed to load script/i,
   /No loader found/i,
+  /AudioManager: (cannot open SFX file|exported SFX resource unavailable)/i,
   /does not exist/i,
   /memory access out of bounds/i,
   /Uncaught RuntimeError/i,

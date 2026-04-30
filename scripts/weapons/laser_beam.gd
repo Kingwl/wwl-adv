@@ -37,9 +37,9 @@ func _ready() -> void:
 	tween.tween_callback(queue_free)
 
 func _build_beam_visual() -> void:
-	var start_tex := preload("res://assets/art/effects/generated_missing/dynamic/fx_laser_start.png")
-	var mid_tex := preload("res://assets/art/effects/generated_missing/dynamic/fx_laser_mid.png")
-	var end_tex := preload("res://assets/art/effects/generated_missing/dynamic/fx_laser_end.png")
+	var start_tex := preload("res://assets/art/effects/dynamic/fx_laser_start.png")
+	var mid_tex := preload("res://assets/art/effects/dynamic/fx_laser_mid.png")
+	var end_tex := preload("res://assets/art/effects/dynamic/fx_laser_end.png")
 
 	var start := Sprite2D.new()
 	start.name = "LaserStart"

@@ -10,7 +10,7 @@
 | 武器图标 | `assets/art/weapons/icons/` | 20 种武器图标已接入；新增低复杂度武器暂复用现有图标，生命源泉作为强化图标复用 |
 | 弹体素材 | `assets/art/weapons/projectiles/` | 箭矢、冰片、回旋镖等已接入 |
 | 攻击特效 | `assets/art/effects/by_type/fx_*/*.png` | 已按类型拆分为逐帧目录，供 `AnimatedSprite2D` 使用 |
-| 动态缩放特效 | `assets/art/effects/generated_missing/dynamic/` | 激光三段、闪电链节点、火/毒 tile、火箭火焰段已生成 |
+| 动态缩放特效 | `assets/art/effects/dynamic/` | 激光三段、闪电链节点、圣光射线、火/毒 tile、火箭火焰段已生成并作为运行时资源导出 |
 | 掉落物 | `assets/art/drops/` 和 `assets/art/effects/by_type/drop_*` | 经验球、金币和拾取光效已接入 |
 | UI 元素 | `assets/art/ui/` | 面板、按钮、HP/EXP 条、心、金币、属性升级图标、摇杆已接入 |
 | 生成源图 | `assets/art/sheets/` | 保留 atlas 源图和预览图，便于重切或迭代 |

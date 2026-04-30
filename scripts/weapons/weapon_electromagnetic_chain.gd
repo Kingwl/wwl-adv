@@ -69,7 +69,7 @@ func _show_chain(from_pos: Vector2, to_pos: Vector2) -> void:
 
 	var line := Line2D.new()
 	line.width = 4.0
-	line.texture = preload("res://assets/art/effects/generated_missing/dynamic/fx_chain_core.png")
+	line.texture = preload("res://assets/art/effects/dynamic/fx_chain_core.png")
 	line.texture_mode = Line2D.LINE_TEXTURE_TILE
 	var points: PackedVector2Array = PackedVector2Array()
 	points.append(from_pos)
@@ -83,7 +83,7 @@ func _show_chain(from_pos: Vector2, to_pos: Vector2) -> void:
 	container.add_child(line)
 
 	# Add node decorations at endpoints and turns
-	var node_tex := preload("res://assets/art/effects/generated_missing/dynamic/fx_chain_node.png")
+	var node_tex := preload("res://assets/art/effects/dynamic/fx_chain_node.png")
 	for i in range(points.size()):
 		var node := Sprite2D.new()
 		node.texture = node_tex

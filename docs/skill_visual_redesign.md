@@ -62,15 +62,15 @@
 
 | 效果 | 新资源 | 接入点 |
 |------|--------|--------|
-| 火焰场地 tile | `assets/art/effects/generated_missing/dynamic/fx_fire_tile_sheet.png` | `scripts/weapons/fire_field.gd` |
-| 毒雾场地 tile | `assets/art/effects/generated_missing/dynamic/fx_poison_tile_sheet.png` | `scripts/weapons/poison_field.gd` |
+| 火焰场地 tile | `assets/art/effects/dynamic/fx_fire_tile_sheet.png` | `scripts/weapons/fire_field.gd` |
+| 毒雾场地 tile | `assets/art/effects/dynamic/fx_poison_tile_sheet.png` | `scripts/weapons/poison_field.gd` |
 | 护盾球循环 | `assets/art/effects/by_type/fx_orb/orb_01.png` 到 `orb_04.png` | `scripts/weapons/weapon_orbit.gd` |
 | 荆棘反伤 | `assets/art/effects/by_type/fx_thorns/thorns_01.png` 到 `thorns_04.png` | `scripts/weapons/weapon_thorns.gd` |
 | 生命恢复 | `assets/art/effects/by_type/fx_regen/regen_01.png` 到 `regen_04.png` | `scripts/game/game.gd` / `scripts/weapons/weapon_holy_prism.gd` |
 | 地雷待机 | `assets/art/effects/by_type/fx_mine_blink/mine_blink_01.png` 到 `mine_blink_04.png` | `scripts/weapons/mine_trap.gd` |
 | 火瓶投掷轨迹 | `assets/art/effects/by_type/fx_fire_trail/fire_trail_01.png` 到 `fire_trail_04.png` | `scripts/weapons/weapon_fire_bottle.gd` |
 | 毒瓶投掷轨迹 | `assets/art/effects/by_type/fx_poison_trail/poison_trail_01.png` 到 `poison_trail_04.png` | `scripts/weapons/weapon_poison_vial.gd` |
-| 圣光棱镜射线 | `assets/art/effects/generated_missing/dynamic/fx_holy_ray_{start,mid,end}.png` | `scripts/weapons/weapon_holy_prism.gd` |
+| 圣光棱镜射线 | `assets/art/effects/dynamic/fx_holy_ray_{start,mid,end}.png` | `scripts/weapons/weapon_holy_prism.gd` |
 | 冰霜环 | `assets/art/effects/by_type/fx_frost_ring/frost_01.png` 到 `frost_04.png` | `scripts/weapons/weapon_frost_ring.gd` |
 | 冲击波 | `assets/art/effects/by_type/fx_shockwave/shockwave_01.png` 到 `shockwave_04.png` | `scripts/weapons/weapon_shockwave.gd` |
 | 火花弹弹体 | `assets/art/weapons/projectiles/spark_bomb_01.png` 到 `spark_bomb_04.png` | `scripts/weapons/weapon_spark_bomb.gd` |

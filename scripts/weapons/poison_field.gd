@@ -9,7 +9,7 @@ const CENTER_ALPHA := 0.72
 const EDGE_ALPHA := 0.22
 const CENTER_SCALE := 1.12
 const EDGE_SCALE := 0.76
-const POISON_TILE_SHEET := preload("res://assets/art/effects/generated_missing/dynamic/fx_poison_tile_sheet.png")
+const POISON_TILE_SHEET := preload("res://assets/art/effects/dynamic/fx_poison_tile_sheet.png")
 
 var damage: int = 2
 var lifetime: float = 4.0

@@ -9,7 +9,7 @@ const CENTER_ALPHA := 0.82
 const EDGE_ALPHA := 0.28
 const CENTER_SCALE := 1.05
 const EDGE_SCALE := 0.72
-const FIRE_TILE_SHEET := preload("res://assets/art/effects/generated_missing/dynamic/fx_fire_tile_sheet.png")
+const FIRE_TILE_SHEET := preload("res://assets/art/effects/dynamic/fx_fire_tile_sheet.png")
 
 var damage: int = 3
 var lifetime: float = 3.0

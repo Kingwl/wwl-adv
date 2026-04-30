@@ -99,6 +99,9 @@ func _phase_load() -> void:
 		_assert(character.icon != null, "Character %s has class icon" % character.id)
 		_assert("walk_sheet" in character and character.walk_sheet != null, "Character %s has walk sheet" % character.id)
 	_assert(DataManager._resource_path_from_dir_entry("res://resources/characters", "adventurer.tres.remap") == "res://resources/characters/adventurer.tres", "Resource scan supports exported remap entries")
+	var optional_resources := {}
+	DataManager._load_resources("res://resources/__optional_missing__", optional_resources, false)
+	_assert(optional_resources.is_empty(), "Optional missing resource directories are ignored")
 	var menu_bg: Node = main_menu.get_node_or_null("Background")
 	_assert(menu_bg is ColorRect, "Main menu background exists")
 	var ground_tile: Node = menu_bg.get_node_or_null("GroundTileBackground") if menu_bg else null
@@ -1211,9 +1214,9 @@ func _phase_weapon_path_tags() -> void:
 				var ray_mid := ray.get_node_or_null("HolyRayMid") as Sprite2D
 				var ray_end := ray.get_node_or_null("HolyRayEnd") as Sprite2D
 				_assert(ray_mid is Sprite2D, "Holy prism ray has a beam body")
-				_assert(ray_start and ray_start.texture and ray_start.texture.resource_path.ends_with("fx_holy_ray_start.png"), "Holy prism uses dedicated holy ray start asset")
-				_assert(ray_mid and ray_mid.texture and ray_mid.texture.resource_path.ends_with("fx_holy_ray_mid.png"), "Holy prism uses dedicated holy ray body asset")
-				_assert(ray_end and ray_end.texture and ray_end.texture.resource_path.ends_with("fx_holy_ray_end.png"), "Holy prism uses dedicated holy ray end asset")
+				_assert(ray_start and ray_start.texture and ray_start.texture.resource_path == "res://assets/art/effects/dynamic/fx_holy_ray_start.png", "Holy prism uses exported holy ray start asset")
+				_assert(ray_mid and ray_mid.texture and ray_mid.texture.resource_path == "res://assets/art/effects/dynamic/fx_holy_ray_mid.png", "Holy prism uses exported holy ray body asset")
+				_assert(ray_end and ray_end.texture and ray_end.texture.resource_path == "res://assets/art/effects/dynamic/fx_holy_ray_end.png", "Holy prism uses exported holy ray end asset")
 				ray.queue_free()
 
 	# === fire_bottle ===

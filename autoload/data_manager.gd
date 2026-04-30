@@ -24,10 +24,11 @@ func _ready() -> void:
 	_load_all_enemies()
 	_load_all_upgrades()
 
-func _load_resources(dir_path: String, target_dict: Dictionary) -> void:
+func _load_resources(dir_path: String, target_dict: Dictionary, warn_if_missing: bool = true) -> void:
 	var dir := DirAccess.open(dir_path)
 	if dir == null:
-		push_warning("DataManager: 资源目录尚未创建：%s" % dir_path)
+		if warn_if_missing:
+			push_warning("DataManager: 资源目录尚未创建：%s" % dir_path)
 		return
 	dir.list_dir_begin()
 	var entry := dir.get_next()
@@ -57,7 +58,7 @@ func _load_all_enemies() -> void:
 	_load_resources(ENEMIES_DIR, _enemies_by_id)
 
 func _load_all_upgrades() -> void:
-	_load_resources(UPGRADES_DIR, _upgrades_by_id)
+	_load_resources(UPGRADES_DIR, _upgrades_by_id, false)
 
 func _load_all_characters() -> void:
 	_load_resources(CHARACTERS_DIR, _characters_by_id)

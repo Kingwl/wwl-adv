@@ -81,7 +81,7 @@ func _show_throw_visual(from_pos: Vector2, to_pos: Vector2) -> void:
 		get_tree().current_scene,
 		"res://assets/art/effects/by_type/fx_poison_trail",
 		"poison_trail",
-		2,
+		4,
 		from_pos,
 		to_pos,
 		10.0,

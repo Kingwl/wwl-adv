@@ -9,11 +9,12 @@ var direction: Vector2 = Vector2.RIGHT
 var damage: int = 5
 var max_range: float = 250.0
 var lifetime: float = 0.5
+var beam_width: float = 8.0
 
 func _ready() -> void:
 	z_index = 15
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(max_range, 8.0)
+	shape.size = Vector2(max_range, beam_width)
 	var cs := CollisionShape2D.new()
 	cs.shape = shape
 	cs.position = Vector2(max_range / 2.0, 0)
@@ -40,6 +41,7 @@ func _build_beam_visual() -> void:
 	start.texture = start_tex
 	start.z_index = 2
 	start.position = Vector2(16, 0)
+	start.scale.y = maxf(beam_width / 8.0, 1.0)
 	add_child(start)
 
 	var end := Sprite2D.new()
@@ -47,13 +49,14 @@ func _build_beam_visual() -> void:
 	end.texture = end_tex
 	end.z_index = 2
 	end.position = Vector2(max_range - 16, 0)
+	end.scale.y = maxf(beam_width / 8.0, 1.0)
 	add_child(end)
 
 	var mid := Sprite2D.new()
 	mid.name = "LaserMid"
 	mid.texture = mid_tex
 	mid.position = Vector2(max_range / 2.0, 0)
-	mid.scale = Vector2(maxf(max_range - 32.0, 1.0) / maxf(float(mid_tex.get_width()), 1.0), 1.0)
+	mid.scale = Vector2(maxf(max_range - 32.0, 1.0) / maxf(float(mid_tex.get_width()), 1.0), maxf(beam_width / 8.0, 1.0))
 	add_child(mid)
 
 	var flicker := AnimatedSprite2D.new()
@@ -72,7 +75,7 @@ func _build_beam_visual() -> void:
 	if frame_count > 0:
 		var tex := flicker.sprite_frames.get_frame_texture("default", 0)
 		if tex:
-			flicker.scale = Vector2(maxf(max_range, 1.0) / maxf(float(tex.get_width()), 1.0), 1.0)
+			flicker.scale = Vector2(maxf(max_range, 1.0) / maxf(float(tex.get_width()), 1.0), maxf(beam_width / 8.0, 1.0))
 	add_child(flicker)
 	flicker.play("default")
 

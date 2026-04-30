@@ -1,0 +1,163 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=28 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_wave"]
+[ext_resource type="Texture2D" path="res://assets/art/weapons/icons_sliced/icon_19.png" id="2_icon"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path.gd" id="3_path"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path_level.gd" id="4_level"]
+
+[sub_resource type="Resource" id="Resource_shock_frac_l2"]
+script = ExtResource("4_level")
+level = 2
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_shock_frac_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 0
+special_tag = &"shock_fracture"
+description = "裂地伤害+3"
+[sub_resource type="Resource" id="Resource_shock_frac_l4"]
+script = ExtResource("4_level")
+level = 4
+damage_bonus = 4
+description = "伤害+4"
+[sub_resource type="Resource" id="Resource_shock_frac_l5"]
+script = ExtResource("4_level")
+level = 5
+range_bonus = 15
+description = "范围+15"
+[sub_resource type="Resource" id="Resource_shock_frac_l6"]
+script = ExtResource("4_level")
+level = 6
+damage_bonus = 4
+description = "伤害+4"
+[sub_resource type="Resource" id="Resource_shock_frac_l7"]
+script = ExtResource("4_level")
+level = 7
+range_bonus = 15
+description = "范围+15"
+[sub_resource type="Resource" id="Resource_shock_frac_l8"]
+script = ExtResource("4_level")
+level = 8
+damage_bonus = 6
+special_tag = &"shock_earthsplit"
+description = "伤害+6，范围额外扩大"
+[sub_resource type="Resource" id="Resource_shock_path_frac"]
+script = ExtResource("3_path")
+path_id = &"fracture"
+display_name = "裂地"
+description = "追求高伤害和大冲击"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_shock_frac_l2"), SubResource("Resource_shock_frac_l3"), SubResource("Resource_shock_frac_l4"), SubResource("Resource_shock_frac_l5"), SubResource("Resource_shock_frac_l6"), SubResource("Resource_shock_frac_l7"), SubResource("Resource_shock_frac_l8")])
+
+[sub_resource type="Resource" id="Resource_shock_pulse_l2"]
+script = ExtResource("4_level")
+level = 2
+cooldown_bonus = -0.25
+description = "冷却-0.25秒"
+[sub_resource type="Resource" id="Resource_shock_pulse_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 0
+special_tag = &"double_pulse"
+description = "冲击判定+1"
+[sub_resource type="Resource" id="Resource_shock_pulse_l4"]
+script = ExtResource("4_level")
+level = 4
+damage_bonus = 2
+description = "伤害+2"
+[sub_resource type="Resource" id="Resource_shock_pulse_l5"]
+script = ExtResource("4_level")
+level = 5
+cooldown_bonus = -0.25
+description = "冷却-0.25秒"
+[sub_resource type="Resource" id="Resource_shock_pulse_l6"]
+script = ExtResource("4_level")
+level = 6
+damage_bonus = 0
+special_tag = &"triple_pulse"
+description = "冲击判定+2"
+[sub_resource type="Resource" id="Resource_shock_pulse_l7"]
+script = ExtResource("4_level")
+level = 7
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_shock_pulse_l8"]
+script = ExtResource("4_level")
+level = 8
+damage_bonus = 3
+cooldown_bonus = -0.25
+description = "伤害+3，冷却-0.25秒"
+[sub_resource type="Resource" id="Resource_shock_path_pulse"]
+script = ExtResource("3_path")
+path_id = &"pulse"
+display_name = "脉冲"
+description = "追求多段判定和频率"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_shock_pulse_l2"), SubResource("Resource_shock_pulse_l3"), SubResource("Resource_shock_pulse_l4"), SubResource("Resource_shock_pulse_l5"), SubResource("Resource_shock_pulse_l6"), SubResource("Resource_shock_pulse_l7"), SubResource("Resource_shock_pulse_l8")])
+
+[sub_resource type="Resource" id="Resource_shock_lock_l2"]
+script = ExtResource("4_level")
+level = 2
+range_bonus = 15
+description = "范围+15"
+[sub_resource type="Resource" id="Resource_shock_lock_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 0
+special_tag = &"long_stun"
+description = "眩晕时间延长"
+[sub_resource type="Resource" id="Resource_shock_lock_l4"]
+script = ExtResource("4_level")
+level = 4
+damage_bonus = 2
+description = "伤害+2"
+[sub_resource type="Resource" id="Resource_shock_lock_l5"]
+script = ExtResource("4_level")
+level = 5
+damage_bonus = 0
+special_tag = &"shock_slow"
+description = "额外附带减速"
+[sub_resource type="Resource" id="Resource_shock_lock_l6"]
+script = ExtResource("4_level")
+level = 6
+range_bonus = 20
+description = "范围+20"
+[sub_resource type="Resource" id="Resource_shock_lock_l7"]
+script = ExtResource("4_level")
+level = 7
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_shock_lock_l8"]
+script = ExtResource("4_level")
+level = 8
+range_bonus = 20
+special_tag = &"shock_lockdown"
+description = "范围+20，强化眩晕并附带减速"
+[sub_resource type="Resource" id="Resource_shock_path_lock"]
+script = ExtResource("3_path")
+path_id = &"lockdown"
+display_name = "震慑"
+description = "追求控制和防线稳定"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_shock_lock_l2"), SubResource("Resource_shock_lock_l3"), SubResource("Resource_shock_lock_l4"), SubResource("Resource_shock_lock_l5"), SubResource("Resource_shock_lock_l6"), SubResource("Resource_shock_lock_l7"), SubResource("Resource_shock_lock_l8")])
+
+[resource]
+script = ExtResource("1_wave")
+id = &"shockwave"
+display_name = "冲击波"
+description = "释放震荡波，短暂眩晕附近敌人"
+weapon_type = 2
+category = 1
+damage = 6
+cooldown = 2.4
+range = 120.0
+projectile_speed = 0.0
+projectile_count = 0
+pierce = 0
+heal_amount = 0
+orbit_count = 0
+reflect_percent = 0.0
+field_radius = 0.0
+acquire_range = 0.0
+tags = Array[StringName]([&"控制", &"范围"])
+icon = ExtResource("2_icon")
+max_level = 8
+paths = Array[ExtResource("3_path")]([SubResource("Resource_shock_path_frac"), SubResource("Resource_shock_path_pulse"), SubResource("Resource_shock_path_lock")])

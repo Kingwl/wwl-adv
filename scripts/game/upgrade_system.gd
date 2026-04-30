@@ -17,7 +17,22 @@ const WEAPON_SCENES: Dictionary = {
 	&"electromagnetic_chain": "res://scenes/weapons/weapon_electromagnetic_chain.tscn",
 	&"saw_blade": "res://scenes/weapons/weapon_saw_blade.tscn",
 	&"rocket_pack": "res://scenes/weapons/weapon_rocket_pack.tscn",
+	&"whirlwind": "res://scenes/weapons/weapon_whirlwind.tscn",
+	&"throwing_axe": "res://scenes/weapons/weapon_throwing_axe.tscn",
+	&"shockwave": "res://scenes/weapons/weapon_shockwave.tscn",
+	&"spark_bomb": "res://scenes/weapons/weapon_spark_bomb.tscn",
 }
+
+const ICON_SPEED_UP := preload("res://assets/art/upgrades/icons/speed_up.png")
+const ICON_HP_UP := preload("res://assets/art/upgrades/icons/hp_up.png")
+const ICON_PICKUP_UP := preload("res://assets/art/upgrades/icons/pickup_up.png")
+const ICON_REGEN := preload("res://assets/art/upgrades/icons/regen.png")
+const ICON_MIGHT := preload("res://assets/art/upgrades/icons/might.png")
+const ICON_FOCUS := preload("res://assets/art/upgrades/icons/focus.png")
+const ICON_EXPANSION := preload("res://assets/art/upgrades/icons/expansion.png")
+const ICON_FIELD_DURATION := preload("res://assets/art/upgrades/icons/field_duration.png")
+const ICON_TENACITY := preload("res://assets/art/upgrades/icons/tenacity.png")
+const ICON_TRAINING := preload("res://assets/art/upgrades/icons/training.png")
 
 func _ready() -> void:
 	GameState.level_up.connect(_on_level_up)
@@ -69,7 +84,18 @@ func _generate_options() -> Array[UpgradeData]:
 	var pool: Array[UpgradeData] = []
 
 	# === 角色强化 ===
-	for stat_upgrade in [_make_speed_up(), _make_hp_up(), _make_pickup_up(), _make_regen_up()]:
+	for stat_upgrade in [
+		_make_speed_up(),
+		_make_hp_up(),
+		_make_pickup_up(),
+		_make_regen_up(),
+		_make_might_up(),
+		_make_focus_up(),
+		_make_expansion_up(),
+		_make_duration_up(),
+		_make_tenacity_up(),
+		_make_training_up(),
+	]:
 		if GameState.can_add_enhancement(stat_upgrade.id):
 			pool.append(stat_upgrade)
 
@@ -266,6 +292,63 @@ func _apply_stat_upgrade(player: Node, upgrade: UpgradeData) -> void:
 		GameState.heal(upgrade.hp_bonus)
 	if upgrade.pickup_radius_bonus != 0.0:
 		GameState.run.pickup_radius_bonus += upgrade.pickup_radius_bonus
+	if upgrade.damage_multiplier_bonus != 0.0:
+		var old_damage_multiplier := GameState.get_character_damage_multiplier()
+		GameState.run.damage_multiplier = maxf(0.05, float(GameState.run.get("damage_multiplier", 1.0)) + upgrade.damage_multiplier_bonus)
+		_scale_weapon_damage(player, old_damage_multiplier, GameState.get_character_damage_multiplier())
+	if upgrade.cooldown_multiplier_bonus != 0.0:
+		_apply_cooldown_multiplier_bonus(player, upgrade.cooldown_multiplier_bonus)
+	if upgrade.area_multiplier_bonus != 0.0:
+		var old_area_multiplier := GameState.get_character_area_multiplier()
+		GameState.run.area_multiplier = maxf(0.05, float(GameState.run.get("area_multiplier", 1.0)) + upgrade.area_multiplier_bonus)
+		_scale_weapon_range(player, old_area_multiplier, GameState.get_character_area_multiplier())
+	if upgrade.field_lifetime_multiplier_bonus != 0.0:
+		GameState.run.field_lifetime_multiplier = maxf(0.05, float(GameState.run.get("field_lifetime_multiplier", 1.0)) + upgrade.field_lifetime_multiplier_bonus)
+	if upgrade.incoming_damage_multiplier_bonus != 0.0:
+		GameState.run.incoming_damage_multiplier = maxf(0.05, float(GameState.run.get("incoming_damage_multiplier", 1.0)) + upgrade.incoming_damage_multiplier_bonus)
+	if upgrade.exp_gain_multiplier_bonus != 0.0:
+		GameState.run.exp_gain_multiplier = maxf(0.05, float(GameState.run.get("exp_gain_multiplier", 1.0)) + upgrade.exp_gain_multiplier_bonus)
+	if (
+		upgrade.damage_multiplier_bonus != 0.0
+		or upgrade.cooldown_multiplier_bonus != 0.0
+		or upgrade.area_multiplier_bonus != 0.0
+	):
+		GameState.notify_weapons_changed()
+
+func _scale_weapon_damage(player: Node, old_multiplier: float, new_multiplier: float) -> void:
+	if old_multiplier <= 0.0:
+		return
+	for w in _get_player_weapons(player):
+		w._current_damage = maxi(0, int(round(float(w._current_damage) * new_multiplier / old_multiplier)))
+
+func _apply_cooldown_multiplier_bonus(player: Node, bonus: float) -> void:
+	var old_multipliers: Dictionary = {}
+	for w in _get_player_weapons(player):
+		old_multipliers[w] = GameState.get_character_cooldown_multiplier(w.weapon_data)
+	GameState.run.cooldown_multiplier = maxf(0.05, float(GameState.run.get("cooldown_multiplier", 1.0)) + bonus)
+	for w in _get_player_weapons(player):
+		var old_multiplier := float(old_multipliers.get(w, 1.0))
+		if old_multiplier > 0.0:
+			var new_multiplier := GameState.get_character_cooldown_multiplier(w.weapon_data)
+			w._current_cooldown = maxf(0.1, w._current_cooldown * new_multiplier / old_multiplier)
+
+func _scale_weapon_range(player: Node, old_multiplier: float, new_multiplier: float) -> void:
+	if old_multiplier <= 0.0:
+		return
+	for w in _get_player_weapons(player):
+		w._current_range = maxf(0.0, w._current_range * new_multiplier / old_multiplier)
+
+func _get_player_weapons(player: Node) -> Array[WeaponBase]:
+	var result: Array[WeaponBase] = []
+	if not player:
+		return result
+	var weapons := player.get_node_or_null("Weapons")
+	if not weapons:
+		return result
+	for w in weapons.get_children():
+		if w is WeaponBase and w.weapon_data:
+			result.append(w)
+	return result
 
 # === Helper methods for option generation ===
 
@@ -276,6 +359,7 @@ func _make_speed_up() -> UpgradeData:
 	d.description = "移动速度 +25"
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.speed_bonus = 25.0
+	d.icon = ICON_SPEED_UP
 	return d
 
 func _make_hp_up() -> UpgradeData:
@@ -286,6 +370,7 @@ func _make_hp_up() -> UpgradeData:
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.max_hp_bonus = 30
 	d.hp_bonus = 30
+	d.icon = ICON_HP_UP
 	return d
 
 func _make_pickup_up() -> UpgradeData:
@@ -295,6 +380,7 @@ func _make_pickup_up() -> UpgradeData:
 	d.description = "拾取范围 +30"
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.pickup_radius_bonus = 30.0
+	d.icon = ICON_PICKUP_UP
 	return d
 
 func _make_regen_up() -> UpgradeData:
@@ -304,7 +390,67 @@ func _make_regen_up() -> UpgradeData:
 	d.description = "立即恢复 5 点生命；之后每 5 秒自动恢复生命，等级越高治疗量越高"
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.hp_bonus = GameState.REGEN_BASE_HEAL
-	d.icon = preload("res://assets/art/weapons/icons_sliced/icon_05.png")
+	d.icon = ICON_REGEN
+	return d
+
+func _make_might_up() -> UpgradeData:
+	var d := UpgradeData.new()
+	d.id = "might"
+	d.display_name = "强攻"
+	d.description = "所有武器伤害 +8%"
+	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	d.damage_multiplier_bonus = 0.08
+	d.icon = ICON_MIGHT
+	return d
+
+func _make_focus_up() -> UpgradeData:
+	var d := UpgradeData.new()
+	d.id = "focus"
+	d.display_name = "专注"
+	d.description = "所有武器冷却 -6%"
+	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	d.cooldown_multiplier_bonus = -0.06
+	d.icon = ICON_FOCUS
+	return d
+
+func _make_expansion_up() -> UpgradeData:
+	var d := UpgradeData.new()
+	d.id = "expansion"
+	d.display_name = "扩张"
+	d.description = "所有武器范围 +8%"
+	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	d.area_multiplier_bonus = 0.08
+	d.icon = ICON_EXPANSION
+	return d
+
+func _make_duration_up() -> UpgradeData:
+	var d := UpgradeData.new()
+	d.id = "field_duration"
+	d.display_name = "余烬延续"
+	d.description = "火焰 / 毒雾等持续场地持续时间 +12%"
+	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	d.field_lifetime_multiplier_bonus = 0.12
+	d.icon = ICON_FIELD_DURATION
+	return d
+
+func _make_tenacity_up() -> UpgradeData:
+	var d := UpgradeData.new()
+	d.id = "tenacity"
+	d.display_name = "坚韧"
+	d.description = "受到伤害 -8%"
+	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	d.incoming_damage_multiplier_bonus = -0.08
+	d.icon = ICON_TENACITY
+	return d
+
+func _make_training_up() -> UpgradeData:
+	var d := UpgradeData.new()
+	d.id = "training"
+	d.display_name = "历练"
+	d.description = "经验获取 +10%"
+	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	d.exp_gain_multiplier_bonus = 0.10
+	d.icon = ICON_TRAINING
 	return d
 
 func _make_unlock(weapon_id: StringName) -> UpgradeData:
@@ -334,6 +480,7 @@ func _make_path_option(weapon: WeaponBase, path: WeaponPath) -> UpgradeData:
 	d.weapon_id = weapon.weapon_data.id
 	d.path_id = path.path_id
 	d.icon = path.icon if path.icon else weapon.weapon_data.icon
+	d.build_tags = _infer_path_build_tags(path)
 	var first_effect := path.get_level_effect(2)
 	if first_effect:
 		var effect_desc := _describe_path_effect(weapon, first_effect)
@@ -359,6 +506,8 @@ func _make_level_from_path(weapon: WeaponBase, path: WeaponPath, effect: WeaponP
 	d.cooldown_bonus = effect.cooldown_bonus
 	d.range_bonus = effect.range_bonus
 	d.icon = weapon.weapon_data.icon
+	if path:
+		d.build_tags = _infer_path_build_tags(path)
 	return d
 
 func _describe_path_effect(weapon: WeaponBase, effect: WeaponPathLevel) -> String:
@@ -376,6 +525,73 @@ func _describe_path_effect(weapon: WeaponBase, effect: WeaponPathLevel) -> Strin
 	if parts.is_empty():
 		parts.append("%s强化" % weapon.weapon_data.display_name)
 	return "  |  ".join(parts)
+
+func _infer_path_build_tags(path: WeaponPath) -> Array[String]:
+	if not path:
+		return []
+	var scores: Dictionary = {
+		"输出": 0,
+		"范围": 0,
+		"控制": 0,
+		"频率": 0,
+		"生存": 0,
+		"穿透": 0,
+	}
+	var text := "%s %s" % [path.display_name, path.description]
+	for effect in path.levels:
+		if effect.damage_bonus != 0:
+			scores["输出"] += 2
+		if effect.cooldown_bonus != 0.0:
+			scores["频率"] += 2
+		if effect.range_bonus != 0:
+			scores["范围"] += 2
+		text += " %s %s" % [effect.description, str(effect.special_tag)]
+	_score_path_keywords(text.to_lower(), scores)
+
+	var priority := ["输出", "范围", "控制", "频率", "生存", "穿透"]
+	var tags: Array[String] = []
+	for tag in priority:
+		if int(scores.get(tag, 0)) > 0:
+			tags.append(tag)
+	tags.sort_custom(func(a: String, b: String) -> bool:
+		var score_a := int(scores.get(a, 0))
+		var score_b := int(scores.get(b, 0))
+		if score_a == score_b:
+			return priority.find(a) < priority.find(b)
+		return score_a > score_b
+	)
+	return tags.slice(0, 3)
+
+func _score_path_keywords(text: String, scores: Dictionary) -> void:
+	_add_keyword_score(text, scores, "输出", [
+		"伤害", "暴击", "燃烧", "毒素", "火焰", "高压",
+		"damage", "crit", "heavy", "slug", "burn", "poison", "inferno", "overload", "rend", "fracture", "cleaver",
+	])
+	_add_keyword_score(text, scores, "范围", [
+		"范围", "射程", "持续", "蔓延", "连锁", "弹丸", "数量", "轨道", "散射",
+		"range", "wide", "wider", "longer", "eternal", "extra", "more", "triple", "quad", "volley", "swarm", "deluge", "chain", "split", "storm", "wall",
+	])
+	_add_keyword_score(text, scores, "控制", [
+		"控制", "减速", "眩晕", "击退", "冰封", "震慑",
+		"slow", "stun", "freeze", "frozen", "knockback", "paralyze", "lockdown",
+	])
+	_add_keyword_score(text, scores, "频率", [
+		"冷却", "速度", "转速", "快速", "连发",
+		"cooldown", "rapid", "faster", "fast", "speed", "double", "dual",
+	])
+	_add_keyword_score(text, scores, "生存", [
+		"治疗", "恢复", "反伤", "防御", "守护", "复仇",
+		"heal", "reflect", "thorns", "guardian", "vengeance", "cure",
+	])
+	_add_keyword_score(text, scores, "穿透", [
+		"穿透", "穿甲",
+		"pierce", "sniper", "armor",
+	])
+
+func _add_keyword_score(text: String, scores: Dictionary, tag: String, keywords: Array[String]) -> void:
+	for keyword in keywords:
+		if text.contains(keyword):
+			scores[tag] += 1
 
 func _get_hardcoded_level_option(weapon_id: StringName) -> UpgradeData:
 	match weapon_id:
@@ -405,6 +621,14 @@ func _get_hardcoded_level_option(weapon_id: StringName) -> UpgradeData:
 			return _make_level_opt("saw_dmg", "锯齿打磨", "锯片陷阱伤害 +3", &"saw_blade", 3)
 		&"rocket_pack":
 			return _make_level_opt("rocket_dmg", "燃料升级", "火箭背包伤害 +2", &"rocket_pack", 2)
+		&"whirlwind":
+			return _make_level_opt("whirlwind_dmg", "旋风打磨", "旋风斩伤害 +3", &"whirlwind", 3)
+		&"throwing_axe":
+			return _make_level_opt("axe_dmg", "重斧打磨", "投掷斧伤害 +5", &"throwing_axe", 5)
+		&"shockwave":
+			return _make_level_opt("shockwave_dmg", "震荡强化", "冲击波伤害 +3", &"shockwave", 3)
+		&"spark_bomb":
+			return _make_level_opt("spark_bomb_dmg", "火花增幅", "火花弹伤害 +3", &"spark_bomb", 3)
 		&"melee_basic":
 			return _make_level_opt("melee_dmg", "利刃强化", "近战武器伤害 +5", &"melee_basic", 5)
 	return null

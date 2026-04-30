@@ -20,8 +20,9 @@ func _activate() -> void:
 		var beam := preload("res://scenes/weapons/laser_beam.tscn").instantiate()
 		beam.global_position = player.global_position
 		beam.direction = dir
-		beam.damage = get_damage()
-		beam.max_range = get_range()
+		beam.damage = _get_beam_damage()
+		beam.max_range = _get_beam_range()
+		beam.beam_width = _get_beam_width()
 		beam.lifetime = 0.5
 		var __proj := get_tree().current_scene.get_node_or_null("Projectiles")
 		if __proj == null:
@@ -35,6 +36,29 @@ func _get_beam_count() -> int:
 	if has_special_tag(&"dual_beam"):
 		return 2
 	return 1
+
+func _get_beam_damage() -> int:
+	var dmg := get_damage()
+	if has_special_tag(&"intense_beam"):
+		dmg = int(round(float(dmg) * 1.25))
+	return dmg
+
+func _get_beam_range() -> float:
+	var r := get_range()
+	if has_special_tag(&"extended_range"):
+		r += 80.0
+	if has_special_tag(&"pierce_beam"):
+		r += 20.0
+	return r
+
+func _get_beam_width() -> float:
+	if has_special_tag(&"intense_beam"):
+		return 16.0
+	if has_special_tag(&"wider_beam"):
+		return 12.0
+	if has_special_tag(&"pierce_beam"):
+		return 10.0
+	return 8.0
 
 func _find_nearest_enemy(from_pos: Vector2) -> Node2D:
 	var enemies := get_tree().get_nodes_in_group("enemies")

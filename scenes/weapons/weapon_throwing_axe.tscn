@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_throwing_axe.gd" id="1_axe"]
+[ext_resource type="Resource" path="res://resources/weapons/throwing_axe.tres" id="2_data"]
+
+[node name="WeaponThrowingAxe" type="Node"]
+script = ExtResource("1_axe")
+weapon_data = ExtResource("2_data")

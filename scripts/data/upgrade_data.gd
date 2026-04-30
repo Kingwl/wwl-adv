@@ -9,6 +9,8 @@ enum UpgradeType { WEAPON_UNLOCK, WEAPON_LEVEL, WEAPON_PATH, PLAYER_STAT }
 @export_multiline var description: String
 @export var upgrade_type: UpgradeType = UpgradeType.WEAPON_LEVEL
 @export var icon: Texture2D
+## 构筑方向标签。主要用于武器流派卡，例如：输出、范围、控制。
+@export var build_tags: Array[String] = []
 
 @export_group("效果")
 ## 关联的武器ID（武器解锁/升级时必填）
@@ -23,3 +25,9 @@ enum UpgradeType { WEAPON_UNLOCK, WEAPON_LEVEL, WEAPON_PATH, PLAYER_STAT }
 @export var hp_bonus: int = 0
 @export var max_hp_bonus: int = 0
 @export var pickup_radius_bonus: float = 0.0
+@export var damage_multiplier_bonus: float = 0.0
+@export var cooldown_multiplier_bonus: float = 0.0
+@export var area_multiplier_bonus: float = 0.0
+@export var field_lifetime_multiplier_bonus: float = 0.0
+@export var incoming_damage_multiplier_bonus: float = 0.0
+@export var exp_gain_multiplier_bonus: float = 0.0

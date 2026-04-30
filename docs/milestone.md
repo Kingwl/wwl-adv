@@ -20,8 +20,9 @@
 - [x] 主菜单 → 游戏流程
 - [x] 本地数值存档（累计金币、累计击杀、最佳成绩）
 - [x] 多角色系统（4 个默认可选角色，不含解锁）
+- [x] 守卫折光甲胄角色被动（受伤减免 + 距离衰减反射）
 
-### 武器系统（16 种）
+### 武器系统（20 种）
 - [x] 近战武器（weapon_melee）
 - [x] 远程弹体（weapon_projectile）
 - [x] 落雷（weapon_thunder）
@@ -38,9 +39,16 @@
 - [x] 电磁链（weapon_electromagnetic_chain）
 - [x] 锯刃（weapon_saw_blade）
 - [x] 火箭背包（weapon_rocket_pack）
+- [x] 旋风斩（weapon_whirlwind）
+- [x] 投掷斧（weapon_throwing_axe）
+- [x] 冲击波（weapon_shockwave）
+- [x] 火花弹（weapon_spark_bomb）
 - [x] 所有武器统一继承 WeaponBase
 - [x] 每种武器均有独立 `.tscn` 场景
 - [x] 升级解锁 / 强化 / 流派机制（UpgradeSystem）
+- [x] 20 种武器均补齐 3 条流派路径，资源 `special_tag` 均接入脚本效果
+- [x] 武器路径 P1 数值重排，避免单条路线纯 `damage_bonus` 堆叠
+- [x] 武器路径 P2 UI 表达，升级卡显示构筑方向标签
 - [x] 生命源泉改为角色被动恢复强化，不占武器槽
 
 ### 美术资源集成
@@ -50,9 +58,11 @@
 - [x] 多帧攻击特效使用 AnimatedSprite2D 播放帧动画（slash / thunder / holy / chain / thorns / saw / orb / fire_field / mine_blink / trail）
 - [x] 全部子弹 / 投射物替换为 Sprite2D
 - [x] 经验球、金币替换为 Sprite2D
-- [x] 武器图标替换为 sliced icons（16 种武器 + 角色强化图标）
+- [x] 武器图标替换为 sliced icons（20 种武器均有独立图标）
+- [x] 局内被动强化补齐专属图标（10 种）
 - [x] 虚拟摇杆替换为 TextureRect（joystick_base / joystick_knob）
 - [x] 背景替换为 TextureRect（ground_tile）
+- [x] ground_tile 重绘为暗色北境废墟风格 512×512 无缝地面平铺图
 - [x] 所有资源按最终显示尺寸绘制，无运行时 scale
 - [x] 缺失素材生成并落盘（回旋镖、补帧特效、动态缩放特效、UI 元素、属性升级图标）
 - [x] HUD 血条 / 经验条使用 StyleBoxTexture（hp_bar_fill / exp_bar_fill）
@@ -63,6 +73,10 @@
 - [x] 激光笔射线三段式动态拼接（start / mid / end）
 - [x] 电磁链程序化折线 + 节点装饰（Line2D + chain_core / chain_node）
 - [x] 火场 / 毒雾区域 tile 平铺（fx_fire_tile_sheet / fx_poison_tile_sheet）
+- [x] 掉落物重绘为 32px 五帧循环（经验球 / 金币）
+- [x] 冲击波、火花弹、投掷斧、旋风斩补齐专用视觉资源，避免复用冰环 / 落雷 / 回旋镖 / 普通斩击
+- [x] 冲击波、冰霜环、旋风斩、火花弹、火箭背包尾焰升级为 4 帧动画
+- [x] 修正护盾球、地雷待机、荆棘反伤、生命恢复、火瓶/毒瓶投掷轨迹、圣光棱镜射线与设定不符的资源
 - [x] 近战斩击方向 / 位置修正，并改为 fx_slash 5 帧动画
 - [x] 地雷爆炸、冰冻环、激光、火箭背包、圣棱镜特效对齐现有帧动画 / 分段素材
 - [x] UI 面板背景贴图化（panel_bg.png）
@@ -75,6 +89,7 @@
 - [x] 武器分类标签在 UI 中显示（攻击 / 防御 / 增益）
 - [x] 升级选择支持刷新全部卡片和跳过本次选择
 - [x] 武器槽与角色强化槽拆分为 6 + 6
+- [x] 低复杂度局内被动强化（全局伤害 / 冷却 / 范围 / 持续场地持续时间 / 受伤 / 经验倍率）
 - [x] Web UI 中文字体打包、CI 自动子集化与运行时 fallback 主题注入
 - [x] GitHub Actions Web 导出与 GitHub Pages 自动部署 workflow
 
@@ -82,11 +97,14 @@
 - [x] 自动化集成测试框架（headless Godot）
 - [x] 场景加载验证（Player / HUD / UI）
 - [x] 升级系统测试（选项生成、点击、效果生效）
-- [x] 每种武器增加 + 使用测试（16 种全覆盖），生命源泉覆盖为被动强化测试
+- [x] 每种武器增加 + 使用测试（20 种全覆盖），生命源泉覆盖为被动强化测试
 - [x] 暂停菜单测试（显示 / 恢复 / 武器和强化槽位）
 - [x] 游戏结束测试（结算数据）
 - [x] 相机跟随验证
-- [x] 武器动效视觉结构测试（斩击、场地 tile、爆炸帧、冰环、激光、火箭背包、圣棱镜、弹体朝向）
+- [x] 武器动效视觉结构测试（斩击、场地 tile、爆炸帧、冰环、激光、火箭背包、旋风斩、冲击波、圣棱镜、弹体朝向）
+- [x] 武器路径 special_tag 回归测试（20 种武器路径关键效果覆盖）
+- [x] 武器路径数值结构测试（防止纯伤害堆叠回归）
+- [x] 武器路径构筑标签 UI 回归测试
 - [x] 武器栏回归测试（电磁链、火箭背包解锁后进入 HUD 装备栏）
 - [x] 玩家受伤回归测试（无敌帧结束后恢复受伤，敌人重叠接触会持续扣血）
 
@@ -126,11 +144,11 @@
 
 | 指标 | 数值 |
 |------|------|
-| 武器种类 | 16 |
+| 武器种类 | 20 |
 | 角色数量 | 4（全部默认可选） |
 | 敌人类型 | 1（基础追踪型，未资源化） |
 | UI 场景 | 8 |
-| 自动化测试 | 529 passed, 0 failed |
+| 自动化测试 | 653 passed, 0 failed |
 | HUD 冷却遮罩 | 高度连续变化 |
 | 引擎版本 | Godot 4.x（最近测试 4.6.2，GL Compatibility） |
 | 目标平台 | Web / Android / iOS |

@@ -627,6 +627,14 @@ func _assert(condition: bool, message: String) -> void:
 		_failed += 1
 		push_error("  [FAIL] " + message)
 
+func _node_tree_contains_label_text(node: Node, text: String) -> bool:
+	if node is Label and (node as Label).text == text:
+		return true
+	for child in node.get_children():
+		if _node_tree_contains_label_text(child, text):
+			return true
+	return false
+
 func _wait(seconds: float):
 	return get_tree().create_timer(seconds, true).timeout
 
@@ -659,6 +667,29 @@ func _phase_path_system() -> void:
 	var path_option: UpgradeData = upgrade_system._make_path_option(melee, berserker_path)
 	_assert(path_option.description.contains("立即获得"), "Path choice card describes immediate Lv.2 upgrade")
 	_assert(path_option.damage_bonus == 5, "Path choice carries first path damage bonus for display")
+	_assert(path_option.build_tags.has("输出"), "Path choice carries build direction tag")
+	var allowed_build_tags := ["输出", "范围", "控制", "频率", "生存", "穿透"]
+	var missing_build_tags: Array[String] = []
+	var invalid_build_tags: Array[String] = []
+	for weapon_data in DataManager.all_weapons():
+		if not ("paths" in weapon_data):
+			continue
+		for path in weapon_data.paths:
+			var inferred_tags: Array[String] = upgrade_system._infer_path_build_tags(path)
+			if inferred_tags.is_empty():
+				missing_build_tags.append("%s/%s" % [str(weapon_data.id), str(path.path_id)])
+			for tag in inferred_tags:
+				if not allowed_build_tags.has(tag):
+					invalid_build_tags.append("%s/%s/%s" % [str(weapon_data.id), str(path.path_id), tag])
+	_assert(missing_build_tags.is_empty(), "All weapon paths infer build direction tags")
+	_assert(invalid_build_tags.is_empty(), "Build direction tags use player-facing labels")
+	var fire_spread := DataManager.get_weapon("fire_bottle").paths[1] as WeaponPath
+	_assert(upgrade_system._infer_path_build_tags(fire_spread).has("范围"), "Range-oriented path uses range build tag")
+	var upgrade_select: Node = _game.get_node_or_null("UpgradeSelect")
+	if upgrade_select:
+		var preview_card: Node = upgrade_select._create_option_card(path_option)
+		_assert(_node_tree_contains_label_text(preview_card, "输出"), "Path choice card displays build direction tag")
+		preview_card.free()
 	upgrade_system._apply_upgrade(path_option)
 	_assert(melee.current_path_id == &"berserker", "Berserker path set correctly")
 	_assert(melee.level == 2, "Path selection triggers level up to 2")
@@ -958,6 +989,21 @@ func _phase_weapon_path_tags() -> void:
 	print("[PHASE 10] Weapon Path Special Tags")
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 
+	_assert_weapon_path_value_mix()
+
+	# === melee_basic ===
+	var melee := _find_weapon(&"melee_basic")
+	if melee:
+		melee.level = 1
+		melee.current_path_id = &""
+		melee._recalc_stats()
+		var melee_base_damage := melee.get_damage()
+		melee.set_path(&"berserker")
+		melee.level = 8
+		melee._recalc_stats()
+		melee._apply_path_effects()
+		_assert(melee._get_final_damage() > melee_base_damage, "berserker Lv.8 crit_bonus increases melee final damage")
+
 	# === projectile_basic ===
 	var proj := _find_weapon(&"projectile_basic")
 	if proj:
@@ -1050,7 +1096,13 @@ func _phase_weapon_path_tags() -> void:
 			var ray := get_tree().current_scene.find_child("HolyPrismRay", true, false)
 			_assert(ray is Node2D, "Holy prism creates player-to-target ray")
 			if ray:
-				_assert(ray.get_node_or_null("HolyRayMid") is Sprite2D, "Holy prism ray has a beam body")
+				var ray_start := ray.get_node_or_null("HolyRayStart") as Sprite2D
+				var ray_mid := ray.get_node_or_null("HolyRayMid") as Sprite2D
+				var ray_end := ray.get_node_or_null("HolyRayEnd") as Sprite2D
+				_assert(ray_mid is Sprite2D, "Holy prism ray has a beam body")
+				_assert(ray_start and ray_start.texture and ray_start.texture.resource_path.ends_with("fx_holy_ray_start.png"), "Holy prism uses dedicated holy ray start asset")
+				_assert(ray_mid and ray_mid.texture and ray_mid.texture.resource_path.ends_with("fx_holy_ray_mid.png"), "Holy prism uses dedicated holy ray body asset")
+				_assert(ray_end and ray_end.texture and ray_end.texture.resource_path.ends_with("fx_holy_ray_end.png"), "Holy prism uses dedicated holy ray end asset")
 				ray.queue_free()
 
 	# === fire_bottle ===
@@ -1074,6 +1126,14 @@ func _phase_weapon_path_tags() -> void:
 		var expected_fire_radius: float = fire.weapon_data.field_radius + fire.get_range() - fire.weapon_data.range + 20.0
 		_assert(fire._get_fire_radius() == expected_fire_radius, "spread Lv.5 wider_fire adds +20 field radius")
 		await _assert_field_visual("fire")
+		var fire_trail_frames := VFXHelper.build_sprite_frames(
+			"res://assets/art/effects/by_type/fx_fire_trail",
+			"fire_trail",
+			4,
+			10.0,
+			true
+		)
+		_assert(fire_trail_frames.get_frame_count("default") == 4, "Fire bottle throw trail uses 4 distinct frames")
 
 	# === frost_ring ===
 	var frost := _find_weapon(&"frost_ring")
@@ -1094,13 +1154,22 @@ func _phase_weapon_path_tags() -> void:
 		frost._recalc_stats()
 		frost._apply_path_effects()
 		_assert(frost._get_slow_value() == 0.3, "frozen Lv.4 stronger_slow reduces to 0.3")
+		frost.level = 1
+		frost.current_path_id = &""
+		frost._recalc_stats()
+		frost.set_path(&"snowstorm")
+		frost.level = 6
+		frost._recalc_stats()
+		frost._apply_path_effects()
+		_assert(frost._get_ring_radius() == frost.get_range() + 15.0, "snowstorm Lv.6 wider_ring adds ring radius")
 		if player:
 			frost._show_ice_ring(player.global_position + Vector2.DOWN * 160.0, 80.0)
 			await _wait(0.05)
 			var frost_ring := get_tree().current_scene.find_child("FrostRingEffect", true, false)
-			_assert(frost_ring is Sprite2D, "Frost ring creates expanding ring visual")
-			if frost_ring is Sprite2D:
-				var ring_sprite := frost_ring as Sprite2D
+			_assert(frost_ring is AnimatedSprite2D, "Frost ring creates animated expanding ring visual")
+			if frost_ring is AnimatedSprite2D:
+				var ring_sprite := frost_ring as AnimatedSprite2D
+				_assert(ring_sprite.sprite_frames.get_frame_count("default") == 4, "Frost ring uses 4-frame animation")
 				_assert(ring_sprite.z_index < 10, "Frost ring renders below actor-height VFX")
 				_assert(ring_sprite.scale.x > 0.6, "Frost ring visual scales to radius")
 				ring_sprite.queue_free()
@@ -1119,6 +1188,14 @@ func _phase_weapon_path_tags() -> void:
 		orbit._recalc_stats()
 		orbit._apply_path_effects()
 		_assert(orbit._get_orbit_count() == base_count + 1, "star_ring Lv.2 extra_orb adds +1")
+		orbit.level = 1
+		orbit.current_path_id = &""
+		orbit._recalc_stats()
+		orbit.set_path(&"guardian_orbit")
+		orbit.level = 6
+		orbit._recalc_stats()
+		orbit._apply_path_effects()
+		_assert(orbit._get_orbit_radius() == orbit.get_range() + 15.0, "guardian_orbit Lv.6 wider_orbit adds orbit radius")
 
 	# === saw_blade ===
 	var saw := _find_weapon(&"saw_blade")
@@ -1182,6 +1259,14 @@ func _phase_weapon_path_tags() -> void:
 		mine._recalc_stats()
 		mine._apply_path_effects()
 		_assert(mine._get_blast_radius() == 60.0, "Mine blast radius unchanged without tag")
+		mine.level = 1
+		mine.current_path_id = &""
+		mine._recalc_stats()
+		mine.set_path(&"cluster")
+		mine.level = 5
+		mine._recalc_stats()
+		mine._apply_path_effects()
+		_assert(mine._get_cluster_count() == 2, "cluster Lv.5 cluster_mine enables secondary explosions")
 		var explosion_frames := VFXHelper.build_sprite_frames(
 			"res://assets/art/effects/by_type/fx_explosion",
 			"explosion",
@@ -1190,6 +1275,14 @@ func _phase_weapon_path_tags() -> void:
 			false
 		)
 		_assert(explosion_frames.get_frame_count("default") == 8, "Mine explosion uses 8 separate animation frames")
+		var mine_blink_frames := VFXHelper.build_sprite_frames(
+			"res://assets/art/effects/by_type/fx_mine_blink",
+			"mine_blink",
+			4,
+			4.0,
+			true
+		)
+		_assert(mine_blink_frames.get_frame_count("default") == 4, "Mine idle blink uses 4-frame mine body animation")
 
 	# === laser_pen ===
 	var laser := _find_weapon(&"laser_pen")
@@ -1204,6 +1297,31 @@ func _phase_weapon_path_tags() -> void:
 		laser._recalc_stats()
 		laser._apply_path_effects()
 		_assert(laser._get_beam_count() == 2, "rapid Lv.3 dual_beam adds +1")
+		laser.level = 1
+		laser.current_path_id = &""
+		laser._recalc_stats()
+		laser.set_path(&"beam")
+		laser.level = 5
+		laser._recalc_stats()
+		laser._apply_path_effects()
+		_assert(laser._get_beam_width() == 12.0, "beam Lv.5 wider_beam increases laser width")
+		laser.level = 8
+		laser._recalc_stats()
+		laser._apply_path_effects()
+		_assert(laser._get_beam_width() == 16.0, "beam Lv.8 intense_beam increases laser width further")
+		_assert(laser._get_beam_damage() > laser.get_damage(), "beam Lv.8 intense_beam increases laser damage")
+		laser.level = 1
+		laser.current_path_id = &""
+		laser._recalc_stats()
+		laser.set_path(&"sniper")
+		laser.level = 3
+		laser._recalc_stats()
+		laser._apply_path_effects()
+		_assert(laser._get_beam_range() == laser.get_range() + 20.0, "sniper Lv.3 pierce_beam extends effective beam range")
+		laser.level = 8
+		laser._recalc_stats()
+		laser._apply_path_effects()
+		_assert(laser._get_beam_range() == laser.get_range() + 80.0, "sniper Lv.8 extended_range extends effective beam range")
 		await _assert_laser_visual()
 
 	# === poison_vial ===
@@ -1221,7 +1339,22 @@ func _phase_weapon_path_tags() -> void:
 		poison._apply_path_effects()
 		var expected_poison_radius: float = poison.weapon_data.field_radius + poison.get_range() - poison.weapon_data.range + 20.0
 		_assert(poison._get_poison_radius() == expected_poison_radius, "plague Lv.3 wider_poison adds +20 field radius")
+		poison.level = 5
+		poison.current_path_id = &""
+		poison._recalc_stats()
+		var poison_base_cooldown := poison.get_cooldown()
+		poison.set_path(&"venom")
+		poison._apply_path_effects()
+		_assert(abs(poison.get_cooldown() - maxf(0.1, poison_base_cooldown - 0.2)) < 0.001, "venom Lv.5 faster throw is applied as cooldown bonus")
 		await _assert_field_visual("poison")
+		var poison_trail_frames := VFXHelper.build_sprite_frames(
+			"res://assets/art/effects/by_type/fx_poison_trail",
+			"poison_trail",
+			4,
+			10.0,
+			true
+		)
+		_assert(poison_trail_frames.get_frame_count("default") == 4, "Poison vial throw trail uses 4 distinct frames")
 
 	# === rocket_pack ===
 	var rocket := _find_weapon(&"rocket_pack")
@@ -1250,9 +1383,16 @@ func _phase_weapon_path_tags() -> void:
 			var flame := get_tree().current_scene.find_child("RocketFlameSegments", true, false)
 			_assert(flame is Node2D, "Rocket pack creates segmented flame visual")
 			if flame:
-				_assert(flame.get_node_or_null("RocketFlameStart") is Sprite2D, "Rocket flame has start cap")
-				_assert(flame.get_node_or_null("RocketFlameMid") is Sprite2D, "Rocket flame repeats middle segment")
-				_assert(flame.get_node_or_null("RocketFlameEnd") is Sprite2D, "Rocket flame has end cap")
+				var flame_start := flame.get_node_or_null("RocketFlameStart")
+				var flame_mid := flame.get_node_or_null("RocketFlameMid")
+				var flame_end := flame.get_node_or_null("RocketFlameEnd")
+				_assert(flame_start is AnimatedSprite2D, "Rocket flame has animated start cap")
+				_assert(flame_mid is AnimatedSprite2D, "Rocket flame repeats animated middle segment")
+				_assert(flame_end is AnimatedSprite2D, "Rocket flame has animated end cap")
+				for flame_node in [flame_start, flame_mid, flame_end]:
+					if flame_node is AnimatedSprite2D:
+						var flame_sprite := flame_node as AnimatedSprite2D
+						_assert(flame_sprite.sprite_frames.get_frame_count("default") == 4, "%s uses 4-frame animation" % flame_sprite.name)
 				flame.queue_free()
 
 	# === electromagnetic_chain ===
@@ -1284,7 +1424,166 @@ func _phase_weapon_path_tags() -> void:
 		# Base formula: 3 + (level - 1), at Lv.3 = 5, chain_1 adds +1 = 6
 		_assert(chain._get_chain_count() == 6, "conduction Lv.3 chain_1 adds +1 to base 5")
 
+	# === whirlwind ===
+	var whirlwind := _find_weapon(&"whirlwind")
+	if whirlwind:
+		_assert(whirlwind.weapon_data.paths.size() == 3, "Whirlwind has 3 path choices")
+		whirlwind.level = 1
+		whirlwind.current_path_id = &""
+		whirlwind._recalc_stats()
+		_assert(whirlwind._get_hit_count() == 1, "Whirlwind base hit count is 1")
+		whirlwind.set_path(&"rending")
+		whirlwind.level = 5
+		whirlwind._recalc_stats()
+		whirlwind._apply_path_effects()
+		_assert(whirlwind._get_hit_count() == 2, "rending Lv.5 whirlwind_double_hit adds a second hit")
+		whirlwind.level = 1
+		whirlwind.current_path_id = &""
+		whirlwind._recalc_stats()
+		whirlwind.set_path(&"wind_wall")
+		whirlwind.level = 8
+		whirlwind._recalc_stats()
+		whirlwind._apply_path_effects()
+		_assert(whirlwind._get_whirlwind_radius() == whirlwind.get_range() + 30.0, "wind_wall Lv.8 adds extra whirlwind radius")
+		_assert(whirlwind._should_slow() and whirlwind._should_knockback(), "wind_wall Lv.8 applies slow and knockback")
+		if player:
+			whirlwind._show_whirlwind(player.global_position + Vector2.RIGHT * 180.0, 80.0)
+			await _wait(0.05)
+			var whirlwind_effect := get_tree().current_scene.find_child("WhirlwindEffect", true, false)
+			_assert(whirlwind_effect is Node2D, "Whirlwind creates animated arc visual")
+			if whirlwind_effect:
+				var has_animated_arc := false
+				for child in whirlwind_effect.get_children():
+					if child is AnimatedSprite2D:
+						var slash_sprite := child as AnimatedSprite2D
+						has_animated_arc = true
+						_assert(slash_sprite.sprite_frames.get_frame_count("default") == 4, "Whirlwind arc uses 4-frame animation")
+						break
+				_assert(has_animated_arc, "Whirlwind visual contains animated slash arc")
+				whirlwind_effect.queue_free()
+
+	# === throwing_axe ===
+	var axe := _find_weapon(&"throwing_axe")
+	if axe:
+		_assert(axe.weapon_data.paths.size() == 3, "Throwing axe has 3 path choices")
+		axe.level = 1
+		axe.current_path_id = &""
+		axe._recalc_stats()
+		_assert(axe._get_axe_count() == 1, "Throwing axe base count is 1")
+		axe.set_path(&"twin_axes")
+		axe.level = 3
+		axe._recalc_stats()
+		axe._apply_path_effects()
+		_assert(axe._get_axe_count() == 2, "twin_axes Lv.3 dual_axe adds +1 axe")
+		axe.level = 1
+		axe.current_path_id = &""
+		axe._recalc_stats()
+		axe.set_path(&"cleaver")
+		axe.level = 6
+		axe._recalc_stats()
+		axe._apply_path_effects()
+		_assert(axe._get_pierce_count() == 3, "cleaver Lv.6 axe_pierce_2 adds +2 pierce")
+		axe.level = 1
+		axe.current_path_id = &""
+		axe._recalc_stats()
+		axe.set_path(&"returning")
+		axe.level = 3
+		axe._recalc_stats()
+		axe._apply_path_effects()
+		_assert(axe._should_return(), "returning Lv.3 makes throwing axe return")
+
+	# === shockwave ===
+	var shockwave := _find_weapon(&"shockwave")
+	if shockwave:
+		_assert(shockwave.weapon_data.paths.size() == 3, "Shockwave has 3 path choices")
+		shockwave.level = 1
+		shockwave.current_path_id = &""
+		shockwave._recalc_stats()
+		_assert(shockwave._get_pulse_count() == 1, "Shockwave base pulse count is 1")
+		shockwave.set_path(&"pulse")
+		shockwave.level = 3
+		shockwave._recalc_stats()
+		shockwave._apply_path_effects()
+		_assert(shockwave._get_pulse_count() == 2, "pulse Lv.3 double_pulse adds one pulse")
+		shockwave.level = 1
+		shockwave.current_path_id = &""
+		shockwave._recalc_stats()
+		shockwave.set_path(&"lockdown")
+		shockwave.level = 8
+		shockwave._recalc_stats()
+		shockwave._apply_path_effects()
+		_assert(shockwave._get_stun_duration() == 0.75, "lockdown Lv.8 increases shockwave stun duration")
+		_assert(shockwave._should_slow(), "lockdown Lv.8 adds shockwave slow")
+		if player:
+			shockwave._show_shockwave(player.global_position + Vector2.LEFT * 180.0, 90.0)
+			await _wait(0.05)
+			var shockwave_effect := get_tree().current_scene.find_child("ShockwaveEffect", true, false)
+			_assert(shockwave_effect is AnimatedSprite2D, "Shockwave creates animated expanding visual")
+			if shockwave_effect is AnimatedSprite2D:
+				var shockwave_sprite := shockwave_effect as AnimatedSprite2D
+				_assert(shockwave_sprite.sprite_frames.get_frame_count("default") == 4, "Shockwave uses 4-frame animation")
+				shockwave_sprite.queue_free()
+
+	# === spark_bomb ===
+	var spark := _find_weapon(&"spark_bomb")
+	if spark:
+		_assert(spark.weapon_data.paths.size() == 3, "Spark bomb has 3 path choices")
+		spark.level = 1
+		spark.current_path_id = &""
+		spark._recalc_stats()
+		var base_spark_radius: float = spark._get_explosion_radius()
+		_assert(spark._get_projectile_count() == 1, "Spark bomb base projectile count is 1")
+		spark.set_path(&"scatter")
+		spark.level = 3
+		spark._recalc_stats()
+		spark._apply_path_effects()
+		_assert(spark._get_projectile_count() == 2, "scatter Lv.3 spark_split adds one spark bomb")
+		spark.level = 1
+		spark.current_path_id = &""
+		spark._recalc_stats()
+		spark.set_path(&"blast")
+		spark.level = 5
+		spark._recalc_stats()
+		spark._apply_path_effects()
+		_assert(spark._get_explosion_radius() > base_spark_radius, "blast Lv.5 spark_wide increases explosion radius")
+		spark.level = 1
+		spark.current_path_id = &""
+		spark._recalc_stats()
+		spark.set_path(&"electro_spark")
+		spark.level = 8
+		spark._recalc_stats()
+		spark._apply_path_effects()
+		_assert(spark._get_explosion_status() == &"stun", "electro_spark Lv.8 applies stun on explosion")
+
 	await _wait(0.2)
+
+func _assert_weapon_path_value_mix() -> void:
+	var offenders: Array[String] = []
+	for weapon in DataManager.all_weapons():
+		if not ("paths" in weapon):
+			continue
+		for path in weapon.paths:
+			var pure_damage_levels := 0
+			var non_damage_levels := 0
+			for level_effect in path.levels:
+				var has_damage := int(level_effect.damage_bonus) != 0
+				var has_cooldown := absf(float(level_effect.cooldown_bonus)) > 0.001
+				var has_range := int(level_effect.range_bonus) != 0
+				var has_tag := str(level_effect.special_tag) != ""
+				if has_damage and not has_cooldown and not has_range and not has_tag:
+					pure_damage_levels += 1
+				if has_cooldown or has_range or has_tag:
+					non_damage_levels += 1
+			if pure_damage_levels > 3 or non_damage_levels < 2:
+				offenders.append("%s/%s pure_damage=%d non_damage=%d" % [
+					str(weapon.id),
+					str(path.path_id),
+					pure_damage_levels,
+					non_damage_levels,
+				])
+	if not offenders.is_empty():
+		print("  Path value mix offenders: " + str(offenders))
+	_assert(offenders.is_empty(), "Weapon paths avoid pure damage stacking")
 
 func _assert_laser_visual() -> void:
 	var projectiles_parent := _game.get_node_or_null("Projectiles")
@@ -1578,6 +1877,97 @@ func _phase_upgrade_edges() -> void:
 	upgrade_system._on_option_selected(hp_up)
 	_assert(GameState.run.max_hp == prev_max_hp + 30, "Max HP stat upgrade applies")
 	_assert(GameState.run.hp > 0, "HP bonus also heals player")
+
+	var saved_passive_state := {
+		"damage_multiplier": GameState.run.get("damage_multiplier", 1.0),
+		"cooldown_multiplier": GameState.run.get("cooldown_multiplier", 1.0),
+		"area_multiplier": GameState.run.get("area_multiplier", 1.0),
+		"field_lifetime_multiplier": GameState.run.get("field_lifetime_multiplier", 1.0),
+		"incoming_damage_multiplier": GameState.run.get("incoming_damage_multiplier", 1.0),
+		"exp_gain_multiplier": GameState.run.get("exp_gain_multiplier", 1.0),
+		"enhancements": (GameState.run.get("enhancements", {}) as Dictionary).duplicate(true),
+		"enhancement_order": (GameState.run.get("enhancement_order", []) as Array).duplicate(),
+	}
+	var saved_weapon_stats: Dictionary = {}
+	for w in _get_all_weapons():
+		saved_weapon_stats[w] = {
+			"damage": w._current_damage,
+			"cooldown": w._current_cooldown,
+			"range": w._current_range,
+		}
+	GameState.run["enhancements"] = {}
+	GameState.run["enhancement_order"] = []
+
+	var might := UpgradeData.new()
+	might.id = "test_might"
+	might.display_name = "Test Might"
+	might.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	might.damage_multiplier_bonus = 0.08
+	var melee_for_passives := _find_weapon(&"melee_basic")
+	var melee_damage_before := melee_for_passives._current_damage if melee_for_passives else 0
+	upgrade_system._on_option_selected(might)
+	_assert(abs(float(GameState.run.damage_multiplier) - (float(saved_passive_state["damage_multiplier"]) + 0.08)) < 0.001, "Damage multiplier passive applies")
+	if melee_for_passives:
+		_assert(melee_for_passives._current_damage >= melee_damage_before, "Damage multiplier updates equipped weapon damage")
+
+	var focus := UpgradeData.new()
+	focus.id = "test_focus"
+	focus.display_name = "Test Focus"
+	focus.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	focus.cooldown_multiplier_bonus = -0.06
+	var melee_cooldown_before := melee_for_passives._current_cooldown if melee_for_passives else 0.0
+	upgrade_system._on_option_selected(focus)
+	_assert(abs(float(GameState.run.cooldown_multiplier) - (float(saved_passive_state["cooldown_multiplier"]) - 0.06)) < 0.001, "Cooldown multiplier passive applies")
+	if melee_for_passives:
+		_assert(melee_for_passives._current_cooldown <= melee_cooldown_before, "Cooldown multiplier updates equipped weapon cooldown")
+
+	var expansion := UpgradeData.new()
+	expansion.id = "test_expansion"
+	expansion.display_name = "Test Expansion"
+	expansion.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	expansion.area_multiplier_bonus = 0.08
+	var melee_range_before := melee_for_passives._current_range if melee_for_passives else 0.0
+	upgrade_system._on_option_selected(expansion)
+	_assert(abs(float(GameState.run.area_multiplier) - (float(saved_passive_state["area_multiplier"]) + 0.08)) < 0.001, "Area multiplier passive applies")
+	if melee_for_passives:
+		_assert(melee_for_passives._current_range >= melee_range_before, "Area multiplier updates equipped weapon range")
+
+	var duration: UpgradeData = upgrade_system._make_duration_up()
+	_assert(duration.id == &"field_duration" and duration.display_name == "余烬延续", "Field duration enhancement option is generated")
+	upgrade_system._on_option_selected(duration)
+	_assert(abs(float(GameState.run.field_lifetime_multiplier) - (float(saved_passive_state["field_lifetime_multiplier"]) + 0.12)) < 0.001, "Field lifetime passive applies")
+	_assert(abs(GameState.get_character_field_lifetime_multiplier() - float(GameState.run.field_lifetime_multiplier)) < 0.001, "Field lifetime getter reflects passive")
+
+	var tenacity := UpgradeData.new()
+	tenacity.id = "test_tenacity"
+	tenacity.display_name = "Test Tenacity"
+	tenacity.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	tenacity.incoming_damage_multiplier_bonus = -0.08
+	upgrade_system._on_option_selected(tenacity)
+	_assert(abs(float(GameState.run.incoming_damage_multiplier) - (float(saved_passive_state["incoming_damage_multiplier"]) - 0.08)) < 0.001, "Incoming damage multiplier passive applies")
+
+	var training := UpgradeData.new()
+	training.id = "test_training"
+	training.display_name = "Test Training"
+	training.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+	training.exp_gain_multiplier_bonus = 0.10
+	upgrade_system._on_option_selected(training)
+	_assert(abs(float(GameState.run.exp_gain_multiplier) - (float(saved_passive_state["exp_gain_multiplier"]) + 0.10)) < 0.001, "EXP gain multiplier passive applies")
+
+	GameState.run.damage_multiplier = saved_passive_state["damage_multiplier"]
+	GameState.run.cooldown_multiplier = saved_passive_state["cooldown_multiplier"]
+	GameState.run.area_multiplier = saved_passive_state["area_multiplier"]
+	GameState.run.field_lifetime_multiplier = saved_passive_state["field_lifetime_multiplier"]
+	GameState.run.incoming_damage_multiplier = saved_passive_state["incoming_damage_multiplier"]
+	GameState.run.exp_gain_multiplier = saved_passive_state["exp_gain_multiplier"]
+	GameState.run["enhancements"] = saved_passive_state["enhancements"]
+	GameState.run["enhancement_order"] = saved_passive_state["enhancement_order"]
+	for w in saved_weapon_stats.keys():
+		if is_instance_valid(w):
+			var stats: Dictionary = saved_weapon_stats[w]
+			w._current_damage = stats["damage"]
+			w._current_cooldown = stats["cooldown"]
+			w._current_range = stats["range"]
 
 	var fill_idx := 0
 	while GameState.get_enhancement_count() < GameState.MAX_ENHANCEMENT_SLOTS:
@@ -2109,6 +2499,31 @@ func _phase_projectile_system() -> void:
 	await _wait(0.3)
 	_assert(not is_instance_valid(proj), "Projectile freed after exceeding max_range")
 
+	var animated_proj := preload("res://scenes/weapons/projectile.tscn").instantiate()
+	animated_proj.global_position = player.global_position
+	animated_proj.direction = Vector2.RIGHT
+	animated_proj.speed = 0.0
+	animated_proj.max_range = 200.0
+	animated_proj.visual_sprite_frames = VFXHelper.build_sprite_frames(
+		"res://assets/art/weapons/projectiles",
+		"spark_bomb",
+		4,
+		12.0,
+		true
+	)
+	animated_proj.visual_rotation_offset = 0.0
+	projectiles_parent.add_child(animated_proj)
+	await _wait(0.05)
+	var animated_visual: AnimatedSprite2D = null
+	for child in animated_proj.get_children():
+		if child is AnimatedSprite2D:
+			animated_visual = child
+			break
+	_assert(animated_visual != null, "Projectile supports animated visual frames")
+	if animated_visual:
+		_assert(animated_visual.sprite_frames.get_frame_count("default") == 4, "Animated projectile uses 4-frame spark bomb sheet")
+	animated_proj.queue_free()
+
 	# Test projectile damage with pierce
 	var enemy_scene := preload("res://scenes/enemy/enemy.tscn")
 	var enemy1 := enemy_scene.instantiate()
@@ -2144,6 +2559,23 @@ func _phase_projectile_system() -> void:
 	await _wait(0.05)
 	_assert(not is_instance_valid(proj2), "Projectile freed after exceeding pierce count")
 
+	var bomb := preload("res://scenes/weapons/projectile.tscn").instantiate()
+	bomb.global_position = enemy1.global_position
+	bomb.direction = Vector2.RIGHT
+	bomb.speed = 0.0
+	bomb.max_range = 200.0
+	bomb.damage = 7
+	bomb.explosion_radius = 12.0
+	projectiles_parent.add_child(bomb)
+	await _wait(0.05)
+	var enemy1_hp_before_bomb: int = enemy1._hp
+	var enemy2_hp_before_bomb: int = enemy2._hp
+	bomb._on_body_entered(enemy1)
+	_assert(enemy1._hp == enemy1_hp_before_bomb - 7, "Explosive projectile damages primary enemy")
+	_assert(enemy2._hp == enemy2_hp_before_bomb - 7, "Explosive projectile damages nearby enemy")
+	await _wait(0.05)
+	_assert(not is_instance_valid(bomb), "Explosive projectile frees after detonation")
+
 	# Cleanup
 	for child in projectiles_parent.get_children():
 		child.queue_free()
@@ -2178,10 +2610,16 @@ func _phase_weapon_orbit() -> void:
 		await _wait(0.1)
 
 	# Verify orbs were spawned
-	var orb_count: int = 0
-	for child in projectiles_parent.get_children():
-		if child is Area2D and child.get_child_count() >= 1:
-			orb_count += 1
+	var orbit_orbs: Array = []
+	if "_orbs" in orbit:
+		for orb in orbit._orbs:
+			if is_instance_valid(orb):
+				orbit_orbs.append(orb)
+	else:
+		for child in projectiles_parent.get_children():
+			if child is Area2D and child.get_child_count() >= 1:
+				orbit_orbs.append(child)
+	var orb_count: int = orbit_orbs.size()
 	var expected_orbs := 2
 	if orbit.has_method("_get_orbit_count"):
 		expected_orbs = orbit._get_orbit_count()
@@ -2190,8 +2628,8 @@ func _phase_weapon_orbit() -> void:
 	_assert(orb_count == expected_orbs, "Orbit spawns correct number of orbs")
 
 	# Verify orbs rotate around player
-	if projectiles_parent.get_child_count() > 0:
-		var orb: Node = projectiles_parent.get_child(0)
+	if orbit_orbs.size() > 0:
+		var orb: Node = orbit_orbs[0]
 		var pos1: Vector2 = orb.global_position
 		await _wait(0.2)
 		if is_instance_valid(orb):
@@ -2395,9 +2833,63 @@ func _phase_character_system() -> void:
 		_assert(abs(projectile.get_cooldown() - expected_cd) < 0.01, "Ranger projectile cooldown passive applied")
 
 	GameState.start_new_run(777, &"guardian")
-	var hp_before: int = GameState.run.hp
-	GameState.take_damage(10)
-	_assert(GameState.run.hp == hp_before - 9, "Guardian damage reduction passive applied")
+	_assert(StringName(GameState.run.get("passive_id", &"")) == GameState.GUARD_REFRACTION_PASSIVE_ID, "Guardian refraction passive id applied")
+	_assert(GameState.preview_take_damage(20) == 18, "Guardian refraction previews reduced incoming damage")
+
+	var enemies_parent := _game.get_node_or_null("Enemies")
+	if player is Node2D and enemies_parent:
+		for child in enemies_parent.get_children():
+			child.queue_free()
+		await _wait(0.1)
+
+		var player_2d := player as Node2D
+		var enemy_scene := preload("res://scenes/enemy/enemy.tscn")
+		var near_enemy := enemy_scene.instantiate()
+		var far_enemy := enemy_scene.instantiate()
+		var outside_enemy := enemy_scene.instantiate()
+		near_enemy.global_position = player_2d.global_position + Vector2.RIGHT * 30.0
+		far_enemy.global_position = player_2d.global_position + Vector2.RIGHT * 170.0
+		outside_enemy.global_position = player_2d.global_position + Vector2.RIGHT * 240.0
+		near_enemy.collision_layer = 0
+		near_enemy.collision_mask = 0
+		near_enemy.set_physics_process(false)
+		far_enemy.collision_layer = 0
+		far_enemy.collision_mask = 0
+		far_enemy.set_physics_process(false)
+		outside_enemy.collision_layer = 0
+		outside_enemy.collision_mask = 0
+		outside_enemy.set_physics_process(false)
+		enemies_parent.add_child(near_enemy)
+		enemies_parent.add_child(far_enemy)
+		enemies_parent.add_child(outside_enemy)
+		await _wait(0.1)
+		near_enemy._hp = 50
+		far_enemy._hp = 50
+		outside_enemy._hp = 50
+
+		var hp_before: int = GameState.run.hp
+		GameState.take_damage(20)
+		_assert(GameState.run.hp == hp_before - 18, "Guardian refraction reduces incoming damage")
+		var near_loss: int = 50 - int(near_enemy._hp)
+		var far_loss: int = 50 - int(far_enemy._hp)
+		_assert(near_loss > far_loss and far_loss > 0, "Guardian refraction damage falls off with distance")
+		_assert(outside_enemy._hp == 50, "Guardian refraction ignores enemies outside radius")
+
+		GameState.run.hp = 10
+		if "_invincible_until_msec" in player:
+			player._invincible_until_msec = 0
+		if "_invincibility_timer" in player:
+			player._invincibility_timer = 0.0
+		if "_invincible" in player:
+			player._invincible = false
+		player.take_damage(10)
+		await _wait(0.05)
+		_assert(GameState.run.hp == 1, "Guardian refraction prevents raw fatal player hit")
+		if "_dying" in player:
+			_assert(not player._dying, "Player does not enter death when refraction prevents fatal damage")
+		for child in enemies_parent.get_children():
+			child.queue_free()
+		await _wait(0.1)
 
 	GameState.start_new_run(888, &"alchemist")
 	_assert(abs(GameState.get_character_area_multiplier() - 1.08) < 0.001, "Alchemist area passive applied")

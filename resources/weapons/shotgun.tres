@@ -17,10 +17,10 @@ description = "伤害+2"
 script = ExtResource("91_level")
 level = 3
 damage_bonus = 2
-cooldown_bonus = 0.0
+cooldown_bonus = -0.2
 range_bonus = 0
 special_tag = &""
-description = "伤害+2"
+description = "伤害+2，冷却-0.2秒"
 [sub_resource type="Resource" id="Resource_shot_p0_l4"]
 script = ExtResource("91_level")
 level = 4

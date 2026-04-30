@@ -17,7 +17,7 @@ func _process(delta: float) -> void:
 	if not _player:
 		return
 	_angle += _orbit_speed * delta
-	var radius := get_range()
+	var radius := _get_orbit_radius()
 	var valid_orbs: Array[Area2D] = []
 	for i in range(_orbs.size()):
 		var orb := _orbs[i]
@@ -100,3 +100,9 @@ func _get_orbit_speed() -> float:
 	if has_special_tag(&"faster_spin"):
 		return base * 1.3
 	return base
+
+func _get_orbit_radius() -> float:
+	var r := get_range()
+	if has_special_tag(&"wider_orbit"):
+		r += 15.0
+	return r

@@ -1,0 +1,167 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=28 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_axe"]
+[ext_resource type="Texture2D" path="res://assets/art/weapons/icons_sliced/icon_18.png" id="2_icon"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path.gd" id="3_path"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path_level.gd" id="4_level"]
+
+[sub_resource type="Resource" id="Resource_axe_cleave_l2"]
+script = ExtResource("4_level")
+level = 2
+damage_bonus = 4
+description = "伤害+4"
+[sub_resource type="Resource" id="Resource_axe_cleave_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 0
+special_tag = &"axe_pierce_1"
+description = "穿透+1"
+[sub_resource type="Resource" id="Resource_axe_cleave_l4"]
+script = ExtResource("4_level")
+level = 4
+damage_bonus = 5
+description = "伤害+5"
+[sub_resource type="Resource" id="Resource_axe_cleave_l5"]
+script = ExtResource("4_level")
+level = 5
+damage_bonus = 0
+special_tag = &"axe_heavy"
+description = "重斧伤害+25%"
+[sub_resource type="Resource" id="Resource_axe_cleave_l6"]
+script = ExtResource("4_level")
+level = 6
+damage_bonus = 0
+special_tag = &"axe_pierce_2"
+description = "穿透+2"
+[sub_resource type="Resource" id="Resource_axe_cleave_l7"]
+script = ExtResource("4_level")
+level = 7
+damage_bonus = 5
+description = "伤害+5"
+[sub_resource type="Resource" id="Resource_axe_cleave_l8"]
+script = ExtResource("4_level")
+level = 8
+damage_bonus = 8
+special_tag = &"axe_cleaver"
+description = "伤害+8，穿透+3"
+[sub_resource type="Resource" id="Resource_axe_path_cleave"]
+script = ExtResource("3_path")
+path_id = &"cleaver"
+display_name = "断首"
+description = "追求高伤害和穿透"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_axe_cleave_l2"), SubResource("Resource_axe_cleave_l3"), SubResource("Resource_axe_cleave_l4"), SubResource("Resource_axe_cleave_l5"), SubResource("Resource_axe_cleave_l6"), SubResource("Resource_axe_cleave_l7"), SubResource("Resource_axe_cleave_l8")])
+
+[sub_resource type="Resource" id="Resource_axe_twin_l2"]
+script = ExtResource("4_level")
+level = 2
+cooldown_bonus = -0.2
+description = "冷却-0.2秒"
+[sub_resource type="Resource" id="Resource_axe_twin_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 0
+special_tag = &"dual_axe"
+description = "飞斧数+1"
+[sub_resource type="Resource" id="Resource_axe_twin_l4"]
+script = ExtResource("4_level")
+level = 4
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_axe_twin_l5"]
+script = ExtResource("4_level")
+level = 5
+cooldown_bonus = -0.2
+description = "冷却-0.2秒"
+[sub_resource type="Resource" id="Resource_axe_twin_l6"]
+script = ExtResource("4_level")
+level = 6
+damage_bonus = 0
+special_tag = &"triple_axe"
+description = "飞斧数+2"
+[sub_resource type="Resource" id="Resource_axe_twin_l7"]
+script = ExtResource("4_level")
+level = 7
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_axe_twin_l8"]
+script = ExtResource("4_level")
+level = 8
+damage_bonus = 4
+cooldown_bonus = -0.3
+range_bonus = 20
+description = "伤害+4，冷却-0.3秒，射程+20"
+[sub_resource type="Resource" id="Resource_axe_path_twin"]
+script = ExtResource("3_path")
+path_id = &"twin_axes"
+display_name = "双斧"
+description = "追求多发散射"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_axe_twin_l2"), SubResource("Resource_axe_twin_l3"), SubResource("Resource_axe_twin_l4"), SubResource("Resource_axe_twin_l5"), SubResource("Resource_axe_twin_l6"), SubResource("Resource_axe_twin_l7"), SubResource("Resource_axe_twin_l8")])
+
+[sub_resource type="Resource" id="Resource_axe_return_l2"]
+script = ExtResource("4_level")
+level = 2
+range_bonus = 30
+description = "射程+30"
+[sub_resource type="Resource" id="Resource_axe_return_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 0
+special_tag = &"returning_axe"
+description = "飞斧飞出后返回"
+[sub_resource type="Resource" id="Resource_axe_return_l4"]
+script = ExtResource("4_level")
+level = 4
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_axe_return_l5"]
+script = ExtResource("4_level")
+level = 5
+damage_bonus = 0
+special_tag = &"axe_fast"
+description = "飞行速度+60"
+[sub_resource type="Resource" id="Resource_axe_return_l6"]
+script = ExtResource("4_level")
+level = 6
+range_bonus = 30
+description = "射程+30"
+[sub_resource type="Resource" id="Resource_axe_return_l7"]
+script = ExtResource("4_level")
+level = 7
+cooldown_bonus = -0.2
+description = "冷却-0.2秒"
+[sub_resource type="Resource" id="Resource_axe_return_l8"]
+script = ExtResource("4_level")
+level = 8
+damage_bonus = 5
+range_bonus = 30
+special_tag = &"storm_axe"
+description = "伤害+5，射程+30，强化回旋"
+[sub_resource type="Resource" id="Resource_axe_path_return"]
+script = ExtResource("3_path")
+path_id = &"returning"
+display_name = "回旋"
+description = "追求往返命中和射程"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_axe_return_l2"), SubResource("Resource_axe_return_l3"), SubResource("Resource_axe_return_l4"), SubResource("Resource_axe_return_l5"), SubResource("Resource_axe_return_l6"), SubResource("Resource_axe_return_l7"), SubResource("Resource_axe_return_l8")])
+
+[resource]
+script = ExtResource("1_axe")
+id = &"throwing_axe"
+display_name = "投掷斧"
+description = "投出旋转重斧，穿透少量敌人"
+weapon_type = 1
+category = 0
+damage = 18
+cooldown = 1.8
+range = 260.0
+projectile_speed = 260.0
+projectile_count = 1
+pierce = 1
+heal_amount = 0
+orbit_count = 0
+reflect_percent = 0.0
+field_radius = 0.0
+acquire_range = 0.0
+tags = Array[StringName]([&"弹体", &"斩击"])
+icon = ExtResource("2_icon")
+max_level = 8
+paths = Array[ExtResource("3_path")]([SubResource("Resource_axe_path_cleave"), SubResource("Resource_axe_path_twin"), SubResource("Resource_axe_path_return")])

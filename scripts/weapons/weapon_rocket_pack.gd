@@ -1,8 +1,13 @@
 extends WeaponBase
 
-const FLAME_START_TEXTURE := preload("res://assets/art/effects/generated_missing/dynamic/fx_flame_start.png")
-const FLAME_MID_TEXTURE := preload("res://assets/art/effects/generated_missing/dynamic/fx_flame_mid.png")
-const FLAME_END_TEXTURE := preload("res://assets/art/effects/generated_missing/dynamic/fx_flame_end.png")
+const FLAME_START_FX_PATH := "res://assets/art/effects/by_type/fx_rocket_flame_start"
+const FLAME_MID_FX_PATH := "res://assets/art/effects/by_type/fx_rocket_flame_mid"
+const FLAME_END_FX_PATH := "res://assets/art/effects/by_type/fx_rocket_flame_end"
+const FLAME_START_FX_PREFIX := "flame_start"
+const FLAME_MID_FX_PREFIX := "flame_mid"
+const FLAME_END_FX_PREFIX := "flame_end"
+const FLAME_FRAME_COUNT := 4
+const FLAME_FPS := 14.0
 const FLAME_VISUAL_START_DISTANCE := 18.0
 const FLAME_VISUAL_END_DISTANCE := 62.0
 const FLAME_SEGMENT_SPACING := 18.0
@@ -67,24 +72,28 @@ func _show_flame_segments(from_pos: Vector2, to_pos: Vector2) -> void:
 	scene.add_child(container)
 
 	var angle := dir.angle()
-	_add_flame_sprite(container, FLAME_START_TEXTURE, from_pos, angle, "RocketFlameStart")
+	_add_flame_sprite(container, FLAME_START_FX_PATH, FLAME_START_FX_PREFIX, from_pos, angle, "RocketFlameStart")
 
 	var dist: float = from_pos.distance_to(to_pos)
 	var mid_count: int = maxi(1, int(floor(dist / FLAME_SEGMENT_SPACING)))
 	for i in range(mid_count):
 		var t: float = float(i + 1) / float(mid_count + 1)
-		_add_flame_sprite(container, FLAME_MID_TEXTURE, from_pos.lerp(to_pos, t), angle, "RocketFlameMid")
+		_add_flame_sprite(container, FLAME_MID_FX_PATH, FLAME_MID_FX_PREFIX, from_pos.lerp(to_pos, t), angle, "RocketFlameMid")
 
-	_add_flame_sprite(container, FLAME_END_TEXTURE, to_pos, angle, "RocketFlameEnd")
+	_add_flame_sprite(container, FLAME_END_FX_PATH, FLAME_END_FX_PREFIX, to_pos, angle, "RocketFlameEnd")
 
 	var tween := container.create_tween()
 	tween.tween_property(container, "modulate", Color(1, 1, 1, 0), FLAME_VISUAL_DURATION)
 	tween.tween_callback(container.queue_free)
 
-func _add_flame_sprite(parent: Node, texture: Texture2D, pos: Vector2, angle: float, sprite_name: String) -> void:
-	var sprite := Sprite2D.new()
+func _add_flame_sprite(parent: Node, base_path: String, prefix: String, pos: Vector2, angle: float, sprite_name: String) -> void:
+	var sprite := AnimatedSprite2D.new()
 	sprite.name = sprite_name
-	sprite.texture = texture
+	sprite.sprite_frames = VFXHelper.build_sprite_frames(base_path, prefix, FLAME_FRAME_COUNT, FLAME_FPS, true)
+	if not sprite.sprite_frames or sprite.sprite_frames.get_frame_count("default") <= 0:
+		sprite.queue_free()
+		return
+	sprite.play("default")
 	sprite.global_position = pos
 	sprite.rotation = angle
 	sprite.modulate = Color(1.0, 0.92, 0.72, 0.95)

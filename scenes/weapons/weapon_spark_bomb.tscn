@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_spark_bomb.gd" id="1_spark"]
+[ext_resource type="Resource" path="res://resources/weapons/spark_bomb.tres" id="2_data"]
+
+[node name="WeaponSparkBomb" type="Node"]
+script = ExtResource("1_spark")
+weapon_data = ExtResource("2_data")

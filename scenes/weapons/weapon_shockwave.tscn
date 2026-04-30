@@ -1,0 +1,8 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_shockwave.gd" id="1_wave"]
+[ext_resource type="Resource" path="res://resources/weapons/shockwave.tres" id="2_data"]
+
+[node name="WeaponShockwave" type="Node"]
+script = ExtResource("1_wave")
+weapon_data = ExtResource("2_data")

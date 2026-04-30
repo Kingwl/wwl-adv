@@ -15,7 +15,7 @@ WWL Adventure/
 │   ├── enemy/
 │   │   ├── enemy.tscn      # 基础敌人（CharacterBody2D）
 │   │   └── enemy_spawner.tscn
-│   ├── weapons/            # 16 种武器、弹体、区域效果子场景
+│   ├── weapons/            # 20 种武器、弹体、区域效果子场景
 │   ├── drops/              # 经验球、金币
 │   └── ui/                 # 主菜单、HUD、升级、暂停、结算、属性面板、摇杆、血条
 ├── scripts/
@@ -28,7 +28,7 @@ WWL Adventure/
 │   ├── game/          # Game、UpgradeSystem
 │   └── ui/
 └── resources/
-    ├── weapons/       # 16 个武器 .tres 数据资源
+    ├── weapons/       # 20 个武器 .tres 数据资源
     ├── enemies/       # 预留：敌人资源
     └── upgrades/      # 预留：外部升级资源
 ```
@@ -126,7 +126,7 @@ Enemy._physics_process()
 当前状态：
 
 - `resources/characters/` 已有 4 个默认可选角色数据资源
-- `resources/weapons/` 已有 16 个武器数据资源
+- `resources/weapons/` 已有 20 个武器数据资源
 - `resources/enemies/` 和 `resources/upgrades/` 目录存在，但当前核心敌人和大多数升级选项仍由代码提供
 - `DataManager` 启动时会扫描上述目录，`UpgradeSystem` 会把外部升级资源加入候选池
 
@@ -156,7 +156,7 @@ Enemy._physics_process()
 - 解锁：`UpgradeData.WEAPON_UNLOCK` 实例化 `WEAPON_SCENES[weapon_id]`
 - 强化：`UpgradeData.WEAPON_LEVEL` 调用 `level_up()` 并叠加 bonus
 - 流派：`UpgradeData.WEAPON_PATH` 设置 `current_path_id` 后升到 2 级，并应用该流派 Lv.2 效果
-- 属性：`UpgradeData.PLAYER_STAT` 修改玩家移速、HP、拾取范围等
+- 属性：`UpgradeData.PLAYER_STAT` 修改玩家移速、HP、拾取范围，以及全局伤害 / 冷却 / 范围 / 受伤 / 经验倍率
 
 ## 敌人和掉落
 

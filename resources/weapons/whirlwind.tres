@@ -1,0 +1,164 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=28 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_whirl"]
+[ext_resource type="Texture2D" path="res://assets/art/weapons/icons_sliced/icon_17.png" id="2_icon"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path.gd" id="3_path"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path_level.gd" id="4_level"]
+
+[sub_resource type="Resource" id="Resource_whirl_rend_l2"]
+script = ExtResource("4_level")
+level = 2
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_whirl_rend_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 0
+special_tag = &"whirlwind_rend"
+description = "割裂伤害+3"
+[sub_resource type="Resource" id="Resource_whirl_rend_l4"]
+script = ExtResource("4_level")
+level = 4
+damage_bonus = 4
+description = "伤害+4"
+[sub_resource type="Resource" id="Resource_whirl_rend_l5"]
+script = ExtResource("4_level")
+level = 5
+damage_bonus = 0
+special_tag = &"whirlwind_double_hit"
+description = "命中时额外判定一次"
+[sub_resource type="Resource" id="Resource_whirl_rend_l6"]
+script = ExtResource("4_level")
+level = 6
+damage_bonus = 4
+description = "伤害+4"
+[sub_resource type="Resource" id="Resource_whirl_rend_l7"]
+script = ExtResource("4_level")
+level = 7
+range_bonus = 10
+description = "范围+10"
+[sub_resource type="Resource" id="Resource_whirl_rend_l8"]
+script = ExtResource("4_level")
+level = 8
+damage_bonus = 6
+special_tag = &"whirlwind_bladestorm"
+description = "伤害+6，斩击轨迹增加"
+[sub_resource type="Resource" id="Resource_whirl_path_rend"]
+script = ExtResource("3_path")
+path_id = &"rending"
+display_name = "割裂"
+description = "追求近身高伤害"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_whirl_rend_l2"), SubResource("Resource_whirl_rend_l3"), SubResource("Resource_whirl_rend_l4"), SubResource("Resource_whirl_rend_l5"), SubResource("Resource_whirl_rend_l6"), SubResource("Resource_whirl_rend_l7"), SubResource("Resource_whirl_rend_l8")])
+
+[sub_resource type="Resource" id="Resource_whirl_cycl_l2"]
+script = ExtResource("4_level")
+level = 2
+cooldown_bonus = -0.2
+description = "冷却-0.2秒"
+[sub_resource type="Resource" id="Resource_whirl_cycl_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 2
+special_tag = &"whirlwind_extra_arcs"
+description = "斩击轨迹+2"
+[sub_resource type="Resource" id="Resource_whirl_cycl_l4"]
+script = ExtResource("4_level")
+level = 4
+cooldown_bonus = -0.2
+description = "冷却-0.2秒"
+[sub_resource type="Resource" id="Resource_whirl_cycl_l5"]
+script = ExtResource("4_level")
+level = 5
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_whirl_cycl_l6"]
+script = ExtResource("4_level")
+level = 6
+cooldown_bonus = -0.25
+description = "冷却-0.25秒"
+[sub_resource type="Resource" id="Resource_whirl_cycl_l7"]
+script = ExtResource("4_level")
+level = 7
+range_bonus = 10
+description = "范围+10"
+[sub_resource type="Resource" id="Resource_whirl_cycl_l8"]
+script = ExtResource("4_level")
+level = 8
+damage_bonus = 4
+cooldown_bonus = -0.25
+special_tag = &"whirlwind_extra_arcs"
+description = "伤害+4，冷却-0.25秒，斩击轨迹+2"
+[sub_resource type="Resource" id="Resource_whirl_path_cycl"]
+script = ExtResource("3_path")
+path_id = &"cyclone"
+display_name = "疾旋"
+description = "追求高频率和稳定范围"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_whirl_cycl_l2"), SubResource("Resource_whirl_cycl_l3"), SubResource("Resource_whirl_cycl_l4"), SubResource("Resource_whirl_cycl_l5"), SubResource("Resource_whirl_cycl_l6"), SubResource("Resource_whirl_cycl_l7"), SubResource("Resource_whirl_cycl_l8")])
+
+[sub_resource type="Resource" id="Resource_whirl_wall_l2"]
+script = ExtResource("4_level")
+level = 2
+range_bonus = 15
+description = "范围+15"
+[sub_resource type="Resource" id="Resource_whirl_wall_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 2
+special_tag = &"whirlwind_slow"
+description = "命中附带短暂减速"
+[sub_resource type="Resource" id="Resource_whirl_wall_l4"]
+script = ExtResource("4_level")
+level = 4
+range_bonus = 15
+description = "范围+15"
+[sub_resource type="Resource" id="Resource_whirl_wall_l5"]
+script = ExtResource("4_level")
+level = 5
+damage_bonus = 2
+special_tag = &"whirlwind_knockback"
+description = "命中附带击退"
+[sub_resource type="Resource" id="Resource_whirl_wall_l6"]
+script = ExtResource("4_level")
+level = 6
+range_bonus = 20
+description = "范围+20"
+[sub_resource type="Resource" id="Resource_whirl_wall_l7"]
+script = ExtResource("4_level")
+level = 7
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_whirl_wall_l8"]
+script = ExtResource("4_level")
+level = 8
+range_bonus = 20
+special_tag = &"whirlwind_wall"
+description = "范围+20，附带减速和击退"
+[sub_resource type="Resource" id="Resource_whirl_path_wall"]
+script = ExtResource("3_path")
+path_id = &"wind_wall"
+display_name = "风墙"
+description = "追求范围控制和自保"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_whirl_wall_l2"), SubResource("Resource_whirl_wall_l3"), SubResource("Resource_whirl_wall_l4"), SubResource("Resource_whirl_wall_l5"), SubResource("Resource_whirl_wall_l6"), SubResource("Resource_whirl_wall_l7"), SubResource("Resource_whirl_wall_l8")])
+
+[resource]
+script = ExtResource("1_whirl")
+id = &"whirlwind"
+display_name = "旋风斩"
+description = "周期性环身斩击，伤害近身敌人"
+weapon_type = 2
+category = 0
+damage = 7
+cooldown = 1.8
+range = 90.0
+projectile_speed = 0.0
+projectile_count = 0
+pierce = 0
+heal_amount = 0
+orbit_count = 0
+reflect_percent = 0.0
+field_radius = 0.0
+acquire_range = 0.0
+tags = Array[StringName]([&"近战", &"范围"])
+icon = ExtResource("2_icon")
+max_level = 8
+paths = Array[ExtResource("3_path")]([SubResource("Resource_whirl_path_rend"), SubResource("Resource_whirl_path_cycl"), SubResource("Resource_whirl_path_wall")])

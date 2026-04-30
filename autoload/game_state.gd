@@ -22,12 +22,18 @@ const REGEN_BASE_HEAL := 5
 const REGEN_HEAL_PER_LEVEL := 2
 const REGEN_INTERVAL := 5.0
 const DEFAULT_CHARACTER_ID := &"adventurer"
+const GUARD_REFRACTION_PASSIVE_ID := &"refraction_armor"
+const GUARD_REFRACTION_DAMAGE_REDUCTION := 0.12
+const GUARD_REFRACTION_RADIUS := 180.0
+const GUARD_REFRACTION_NEAR_MULTIPLIER := 1.8
+const GUARD_REFRACTION_FAR_MULTIPLIER := 0.6
 
 var run := {
 	"hp": STARTING_HP,
 	"max_hp": STARTING_HP,
 	"character_id": DEFAULT_CHARACTER_ID,
 	"character_name": "冒险者",
+	"passive_id": &"balanced",
 	"gold": STARTING_GOLD,
 	"level": 1,
 	"exp": 0,
@@ -58,6 +64,7 @@ func start_new_run(rng_seed: int = 0, character_id: StringName = &"") -> void:
 	var move_speed := 170.0
 	var display_name := "冒险者"
 	var selected_id := DEFAULT_CHARACTER_ID
+	var passive_id := &"balanced"
 	var pickup_bonus := 0.0
 	var exp_gain := 1.0
 	var incoming_damage := 1.0
@@ -70,6 +77,7 @@ func start_new_run(rng_seed: int = 0, character_id: StringName = &"") -> void:
 	if character:
 		selected_id = character.id
 		display_name = character.display_name
+		passive_id = character.passive_id
 		max_hp = character.max_hp
 		move_speed = character.move_speed
 		pickup_bonus = character.pickup_radius_bonus
@@ -88,6 +96,7 @@ func start_new_run(rng_seed: int = 0, character_id: StringName = &"") -> void:
 		"max_hp": max_hp,
 		"character_id": selected_id,
 		"character_name": display_name,
+		"passive_id": passive_id,
 		"gold": STARTING_GOLD,
 		"level": 1,
 		"exp": 0,
@@ -111,11 +120,22 @@ func start_new_run(rng_seed: int = 0, character_id: StringName = &"") -> void:
 	run_started.emit()
 
 func take_damage(amount: int) -> void:
-	var final_amount := _apply_incoming_damage_multiplier(amount)
+	if amount <= 0:
+		return
+	var damage_info := _calculate_incoming_damage(amount)
+	var final_amount := int(damage_info["final_amount"])
+	var guard_prevented := int(damage_info["guard_refraction_prevented"])
 	run.hp = max(0, run.hp - final_amount)
+	if guard_prevented > 0:
+		_reflect_guard_refraction_damage(guard_prevented)
 	hp_changed.emit(run.hp, run.max_hp)
 	if run.hp <= 0:
 		run_ended.emit(false)
+
+func preview_take_damage(amount: int) -> int:
+	if amount <= 0:
+		return 0
+	return int(_calculate_incoming_damage(amount)["final_amount"])
 
 func heal(amount: int) -> void:
 	run.hp = min(run.max_hp, run.hp + amount)
@@ -280,3 +300,48 @@ func _apply_incoming_damage_multiplier(amount: int) -> int:
 		return amount
 	var multiplier := maxf(0.0, float(run.get("incoming_damage_multiplier", 1.0)))
 	return maxi(1, int(ceil(amount * multiplier)))
+
+func _calculate_incoming_damage(amount: int) -> Dictionary:
+	var scaled_amount := _apply_incoming_damage_multiplier(amount)
+	var guard_prevented := _get_guard_refraction_prevented_damage(scaled_amount)
+	return {
+		"final_amount": maxi(0, scaled_amount - guard_prevented),
+		"guard_refraction_prevented": guard_prevented,
+	}
+
+func _get_guard_refraction_prevented_damage(amount: int) -> int:
+	if amount <= 1:
+		return 0
+	if StringName(run.get("passive_id", &"")) != GUARD_REFRACTION_PASSIVE_ID:
+		return 0
+	var max_prevented := amount - 1
+	var prevented := int(round(float(amount) * GUARD_REFRACTION_DAMAGE_REDUCTION))
+	return clampi(prevented, 1, max_prevented)
+
+func _reflect_guard_refraction_damage(prevented_damage: int) -> void:
+	if prevented_damage <= 0:
+		return
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	if not player:
+		return
+	var parent := get_tree().current_scene
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not (enemy is Node2D) or not enemy.has_method("take_damage"):
+			continue
+		var distance := player.global_position.distance_to(enemy.global_position)
+		if distance > GUARD_REFRACTION_RADIUS:
+			continue
+		var t := clampf(distance / GUARD_REFRACTION_RADIUS, 0.0, 1.0)
+		var multiplier := GUARD_REFRACTION_NEAR_MULTIPLIER + (GUARD_REFRACTION_FAR_MULTIPLIER - GUARD_REFRACTION_NEAR_MULTIPLIER) * t
+		var reflected_damage := maxi(1, int(round(float(prevented_damage) * multiplier)))
+		enemy.take_damage(reflected_damage)
+		if parent:
+			VFXHelper.spawn_animated_one_shot(
+				parent,
+				"res://assets/art/effects/by_type/fx_thorns",
+				"thorns",
+				4,
+				enemy.global_position,
+				8.0,
+				Vector2(0.75, 0.75)
+			)

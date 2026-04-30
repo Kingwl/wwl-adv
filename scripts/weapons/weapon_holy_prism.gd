@@ -1,8 +1,8 @@
 extends WeaponBase
 
-const HOLY_RAY_START_TEXTURE := preload("res://assets/art/effects/generated_missing/dynamic/fx_laser_start.png")
-const HOLY_RAY_MID_TEXTURE := preload("res://assets/art/effects/generated_missing/dynamic/fx_laser_mid.png")
-const HOLY_RAY_END_TEXTURE := preload("res://assets/art/effects/generated_missing/dynamic/fx_laser_end.png")
+const HOLY_RAY_START_TEXTURE := preload("res://assets/art/effects/generated_missing/dynamic/fx_holy_ray_start.png")
+const HOLY_RAY_MID_TEXTURE := preload("res://assets/art/effects/generated_missing/dynamic/fx_holy_ray_mid.png")
+const HOLY_RAY_END_TEXTURE := preload("res://assets/art/effects/generated_missing/dynamic/fx_holy_ray_end.png")
 const HOLY_RAY_DURATION := 0.2
 const HOLY_RAY_COLOR := Color(1.0, 0.88, 0.34, 0.72)
 

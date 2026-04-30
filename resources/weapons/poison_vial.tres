@@ -18,10 +18,10 @@ description = "伤害+1"
 script = ExtResource("91_level")
 level = 3
 damage_bonus = 1
-cooldown_bonus = 0.0
+cooldown_bonus = -0.2
 range_bonus = 0
 special_tag = &""
-description = "伤害+1"
+description = "伤害+1，冷却-0.2秒"
 
 [sub_resource type="Resource" id="Resource_pois_p0_l4"]
 script = ExtResource("91_level")
@@ -46,9 +46,9 @@ script = ExtResource("91_level")
 level = 6
 damage_bonus = 1
 cooldown_bonus = 0.0
-range_bonus = 0
+range_bonus = 15
 special_tag = &""
-description = "伤害+1"
+description = "伤害+1，范围+15"
 
 [sub_resource type="Resource" id="Resource_pois_p0_l7"]
 script = ExtResource("91_level")
@@ -176,9 +176,9 @@ description = "冷却-0.3秒"
 script = ExtResource("91_level")
 level = 5
 damage_bonus = 0
-cooldown_bonus = 0.0
+cooldown_bonus = -0.2
 range_bonus = 0
-special_tag = &"faster_throw"
+special_tag = &""
 description = "冷却-0.2秒"
 
 [sub_resource type="Resource" id="Resource_pois_p2_l6"]

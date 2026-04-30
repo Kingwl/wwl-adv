@@ -13,6 +13,10 @@ const STARTING_WEAPON_SCENES: Dictionary = {
 	&"thorns": "res://scenes/weapons/weapon_thorns.tscn",
 	&"fire_bottle": "res://scenes/weapons/weapon_fire_bottle.tscn",
 	&"poison_vial": "res://scenes/weapons/weapon_poison_vial.tscn",
+	&"whirlwind": "res://scenes/weapons/weapon_whirlwind.tscn",
+	&"throwing_axe": "res://scenes/weapons/weapon_throwing_axe.tscn",
+	&"shockwave": "res://scenes/weapons/weapon_shockwave.tscn",
+	&"spark_bomb": "res://scenes/weapons/weapon_spark_bomb.tscn",
 }
 
 var _invincible: bool = false
@@ -212,7 +216,8 @@ func take_damage(amount: int) -> void:
 	if _dying:
 		return
 	# Intercept fatal damage to play death animation first
-	if GameState.run.hp <= amount:
+	var final_amount := GameState.preview_take_damage(amount)
+	if GameState.run.hp <= final_amount:
 		_dying = true
 		set_physics_process(false)
 		if _sprite:

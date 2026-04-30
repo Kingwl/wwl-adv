@@ -104,15 +104,17 @@ func _create_option_card(option: UpgradeData) -> PanelContainer:
 	tag_label.add_theme_color_override("font_color", border_color)
 
 	# Category tag (only for weapon upgrades)
+	var cat_label: Label = null
 	if option.weapon_id:
 		var cat_name := _get_weapon_category_name(option.weapon_id)
 		if not cat_name.is_empty():
-			var cat_label := Label.new()
+			cat_label = Label.new()
 			cat_label.text = cat_name
 			cat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			cat_label.add_theme_font_size_override("font_size", 11)
 			cat_label.add_theme_color_override("font_color", _get_weapon_category_color(option.weapon_id))
-			vbox.add_child(cat_label)
+
+	var build_tags_row := _create_build_tags_row(option)
 
 	# Name
 	var name_label := Label.new()
@@ -140,6 +142,10 @@ func _create_option_card(option: UpgradeData) -> PanelContainer:
 		detail_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85, 1))
 
 	vbox.add_child(tag_label)
+	if cat_label:
+		vbox.add_child(cat_label)
+	if build_tags_row:
+		vbox.add_child(build_tags_row)
 	vbox.add_child(name_label)
 	vbox.add_child(desc_label)
 	if not detail.is_empty():
@@ -147,6 +153,35 @@ func _create_option_card(option: UpgradeData) -> PanelContainer:
 
 	card.add_child(vbox)
 	return card
+
+func _create_build_tags_row(option: UpgradeData) -> Control:
+	if option.build_tags.is_empty():
+		return null
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 4)
+	for tag in option.build_tags:
+		var chip := PanelContainer.new()
+		var style := StyleBoxFlat.new()
+		style.bg_color = _get_build_tag_color(tag)
+		style.corner_radius_top_left = 4
+		style.corner_radius_top_right = 4
+		style.corner_radius_bottom_left = 4
+		style.corner_radius_bottom_right = 4
+		style.content_margin_left = 6
+		style.content_margin_right = 6
+		style.content_margin_top = 2
+		style.content_margin_bottom = 2
+		chip.add_theme_stylebox_override("panel", style)
+
+		var label := Label.new()
+		label.text = tag
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.add_theme_font_size_override("font_size", 10)
+		label.add_theme_color_override("font_color", Color(0.98, 0.98, 0.98, 1))
+		chip.add_child(label)
+		row.add_child(chip)
+	return row
 
 func _get_type_color(t: UpgradeData.UpgradeType) -> Color:
 	match t:
@@ -200,6 +235,22 @@ func _get_weapon_category_color(weapon_id: StringName) -> Color:
 					return Color(0.5, 0.9, 0.5, 1)
 	return Color(0.7, 0.7, 0.7, 1)
 
+func _get_build_tag_color(tag: String) -> Color:
+	match tag:
+		"输出":
+			return Color(0.78, 0.24, 0.18, 0.92)
+		"范围":
+			return Color(0.22, 0.42, 0.74, 0.92)
+		"控制":
+			return Color(0.19, 0.58, 0.72, 0.92)
+		"频率":
+			return Color(0.72, 0.56, 0.18, 0.92)
+		"生存":
+			return Color(0.22, 0.58, 0.32, 0.92)
+		"穿透":
+			return Color(0.55, 0.35, 0.78, 0.92)
+	return Color(0.42, 0.44, 0.5, 0.92)
+
 func _format_detail(option: UpgradeData) -> String:
 	var parts: Array[String] = []
 	if option.damage_bonus != 0:
@@ -216,6 +267,16 @@ func _format_detail(option: UpgradeData) -> String:
 		parts.append("生命 %+d" % option.hp_bonus)
 	if option.pickup_radius_bonus != 0:
 		parts.append("拾取 %+d" % int(option.pickup_radius_bonus))
+	if option.damage_multiplier_bonus != 0:
+		parts.append("伤害 %+d%%" % int(round(option.damage_multiplier_bonus * 100.0)))
+	if option.cooldown_multiplier_bonus != 0:
+		parts.append("冷却 %+d%%" % int(round(option.cooldown_multiplier_bonus * 100.0)))
+	if option.area_multiplier_bonus != 0:
+		parts.append("范围 %+d%%" % int(round(option.area_multiplier_bonus * 100.0)))
+	if option.incoming_damage_multiplier_bonus != 0:
+		parts.append("受伤 %+d%%" % int(round(option.incoming_damage_multiplier_bonus * 100.0)))
+	if option.exp_gain_multiplier_bonus != 0:
+		parts.append("经验 %+d%%" % int(round(option.exp_gain_multiplier_bonus * 100.0)))
 	return "  |  ".join(parts)
 
 func _get_option_icon(option: UpgradeData) -> Texture2D:

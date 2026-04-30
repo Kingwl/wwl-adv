@@ -8,18 +8,19 @@
 
 当前实现状态：
 
-- 16 种武器
+- 20 种武器
 - 每种武器均有独立 `.tscn` 场景
 - 每种武器均有 `resources/weapons/*.tres` 数据资源
 - 每种武器默认等级上限 8
-- 已接入 3 条流派路径和 `special_tag` 特殊效果机制
+- 20 种武器均已接入 3 条流派路径和 `special_tag` 特殊效果机制；资源中的 `special_tag` 均有脚本侧消费点
+- 路径数值已做 P1 重排：单条路线不能长期只堆 `damage_bonus`，至少混入冷却、范围或机制 tag
 
 ## 武器分类
 
 | 分类 | 英文 | 定位 | 当前武器 |
 |------|------|------|----------|
-| 攻击 | DAMAGE | 主动输出、范围伤害、弹幕、陷阱 | 基础利刃、弓箭精通、天雷引、散弹枪、火焰瓶、圣光棱镜、毒液罐、地雷、激光笔、回旋镖、电磁链、锯片陷阱、火箭背包 |
-| 防御 | DEFENSE | 自保、控制、反伤 | 护盾球、荆棘护甲、冰霜环 |
+| 攻击 | DAMAGE | 主动输出、范围伤害、弹幕、陷阱 | 基础利刃、弓箭精通、天雷引、散弹枪、火焰瓶、圣光棱镜、毒液罐、地雷、激光笔、回旋镖、电磁链、锯片陷阱、火箭背包、旋风斩、投掷斧、火花弹 |
+| 防御 | DEFENSE | 自保、控制、反伤 | 护盾球、荆棘护甲、冰霜环、冲击波 |
 | 增益 | BUFF | 治疗 / 辅助 | 预留；生命源泉已迁移为角色强化 |
 
 分类标签已在升级选择、暂停菜单、结算界面和 StatsPanel 中展示。
@@ -51,6 +52,8 @@ enum Category { DAMAGE, DEFENSE, BUFF }
 @export var heal_amount: int = 0
 @export var orbit_count: int = 0
 @export var reflect_percent: float = 0.0
+@export var field_radius: float = 0.0
+@export var acquire_range: float = 0.0
 
 @export var tags: Array[StringName] = []
 
@@ -108,6 +111,10 @@ enum Category { DAMAGE, DEFENSE, BUFF }
 | `electromagnetic_chain` | 电磁链 | 攻击 | 多目标连锁弹跳 |
 | `saw_blade` | 锯片陷阱 | 攻击 | 持续旋转锯片 |
 | `rocket_pack` | 火箭背包 | 攻击 | 移动时留下火焰轨迹 |
+| `whirlwind` | 旋风斩 | 攻击 | 周期性环身斩击 |
+| `throwing_axe` | 投掷斧 | 攻击 | 旋转飞斧，穿透少量敌人 |
+| `shockwave` | 冲击波 | 防御 | 范围伤害并短暂眩晕 |
+| `spark_bomb` | 火花弹 | 攻击 | 命中后小范围爆炸 |
 
 ## 升级系统联动
 
@@ -115,12 +122,13 @@ enum Category { DAMAGE, DEFENSE, BUFF }
 
 `UpgradeSystem._generate_options()` 生成候选池：
 
-1. 角色强化：疾风步、生命强化、磁力增幅、生命源泉
+1. 角色强化：疾风步、生命强化、磁力增幅、生命源泉、强攻、专注、扩张、余烬延续、坚韧、历练
 2. 未持有武器：从 `WEAPON_SCENES` 生成解锁选项，并从 `resources/weapons/{id}.tres` 读取名称、描述、图标
 3. 已持有武器：
    - 若武器有路径、等级为 1 且尚未选流派，提供流派选择；卡片会展示选择后立即获得的 Lv.2 路径效果
+   - 流派卡会根据路径效果推断并展示构筑方向标签，如输出、范围、控制、频率、生存、穿透
    - 若武器已选流派，提供下一等级的 `WeaponPathLevel` 效果
-   - 若武器无路径，回退到硬编码强化选项
+   - 若未来新增无路径武器，仍可回退到硬编码强化选项
 4. 外部升级：追加 `DataManager.all_upgrades()`
 
 ### 过滤规则
@@ -159,8 +167,12 @@ resources/weapons/
 ├── projectile_basic.tres
 ├── rocket_pack.tres
 ├── saw_blade.tres
+├── shockwave.tres
 ├── shotgun.tres
+├── spark_bomb.tres
 ├── thorns.tres
+├── throwing_axe.tres
+├── whirlwind.tres
 └── thunder.tres
 ```
 
@@ -168,7 +180,7 @@ resources/weapons/
 
 ### 1. 创建数据资源
 
-在 `resources/weapons/` 下新建 `.tres` 文件，填写 `WeaponData`。如果需要流派，补充 `paths: Array[WeaponPath]`。
+在 `resources/weapons/` 下新建 `.tres` 文件，填写 `WeaponData`。当前设计要求每种主动武器补齐 3 条 `paths: Array[WeaponPath]`。
 
 ### 2. 创建场景
 

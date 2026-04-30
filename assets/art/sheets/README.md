@@ -12,7 +12,9 @@ Each atlas has two versions:
 | File | Covers |
 |------|--------|
 | `characters_animation_atlas.png` | Player idle/run/hit/death frames and basic enemy walk/hit/death frames |
-| `weapon_icons_atlas.png` | 17 weapon icons for HUD, upgrade cards, pause menu, and weapon slots |
+| `weapon_icons_atlas.png` | Legacy weapon icon concept atlas |
+| `../../../tmp/skill_pack_2026/icons/active_weapons/sheet-transparent.png` | Current 20 active weapon icon source sheet, excluded from export |
+| `../../../tmp/skill_pack_2026/icons/passive_upgrades/sheet-transparent.png` | Current 10 passive upgrade icon source sheet, excluded from export |
 | `combat_effects_projectiles_atlas.png` | Weapon VFX, projectiles, orbit objects, drops, hit flash, death dust, level-up, pickup glow |
 | `dynamic_scalable_effects_atlas.png` | Scalable laser, lightning chain, tiled fire/poison fields, and stretchable flame parts |
 | `missing_animation_effects_atlas.png` | Source atlas for missing/underfilled projectile, attack, and shared VFX frames |
@@ -24,9 +26,9 @@ Each atlas has two versions:
 
 ## Weapon Icon Mapping
 
-`weapon_icons_atlas.png` corresponds to the weapon icon list in `docs/art_requirements.md` under "Weapons — HUD / 升级UI".
+`weapon_icons_atlas.png` is the legacy concept atlas. Current runtime weapon and passive icons are documented in `docs/skill_visual_redesign.md`.
 
-Expected icon order:
+Legacy icon order:
 
 | Order | Target file | Weapon |
 |-------|-------------|--------|
@@ -47,6 +49,8 @@ Expected icon order:
 | 15 | `icon_chain.png` | 电磁链 |
 | 16 | `icon_saw_blade.png` | 锯片陷阱 |
 | 17 | `icon_rocket_pack.png` | 火箭背包 |
+
+The current active weapon redesign adds `whirlwind`, `throwing_axe`, `shockwave`, and `spark_bomb` as independent icons instead of reusing old entries.
 
 ## Combat Effect Mapping
 

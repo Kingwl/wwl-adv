@@ -2,6 +2,7 @@ extends Area2D
 
 var damage: int = 20
 var explosion_radius: float = 60.0
+var cluster_count: int = 0
 var _triggered: bool = false
 
 func _ready() -> void:
@@ -17,7 +18,7 @@ func _ready() -> void:
 		self,
 		"res://assets/art/effects/by_type/fx_mine_blink",
 		"mine_blink",
-		2,
+		4,
 		4.0
 	)
 
@@ -29,21 +30,35 @@ func _on_body_entered(body: Node2D) -> void:
 		_explode()
 
 func _explode() -> void:
-	# 范围伤害
-	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if enemy.global_position.distance_to(global_position) <= explosion_radius:
-			enemy.take_damage(damage)
+	_deal_area_damage(global_position, explosion_radius, damage)
+	_show_explosion(global_position, explosion_radius)
+	if cluster_count > 0:
+		_explode_clusters()
 
-	# 爆炸视觉效果
-	var scale_factor := maxf(1.0, explosion_radius * 2.0 / 64.0)
+	queue_free()
+
+func _deal_area_damage(center: Vector2, radius: float, amount: int) -> void:
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if enemy.global_position.distance_to(center) <= radius:
+			enemy.take_damage(amount)
+
+func _show_explosion(pos: Vector2, radius: float) -> void:
+	var scale_factor := maxf(1.0, radius * 2.0 / 64.0)
 	VFXHelper.spawn_animated_one_shot(
 		get_tree().current_scene,
 		"res://assets/art/effects/by_type/fx_explosion",
 		"explosion",
 		8,
-		global_position,
+		pos,
 		12.0,
 		Vector2(scale_factor, scale_factor)
 	)
 
-	queue_free()
+func _explode_clusters() -> void:
+	var cluster_radius := explosion_radius * 0.55
+	var cluster_damage := maxi(1, int(round(float(damage) * 0.5)))
+	for i in range(cluster_count):
+		var angle := TAU * float(i) / float(cluster_count)
+		var pos := global_position + Vector2(cos(angle), sin(angle)) * explosion_radius * 0.55
+		_deal_area_damage(pos, cluster_radius, cluster_damage)
+		_show_explosion(pos, cluster_radius)

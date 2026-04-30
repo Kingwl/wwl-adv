@@ -128,6 +128,8 @@ func _get_final_damage() -> int:
 		var player := get_tree().get_first_node_in_group("player")
 		if player and GameState.run.hp >= GameState.run.max_hp:
 			dmg *= 2
+	if has_special_tag(&"crit_bonus"):
+		dmg = int(round(float(dmg) * 1.35))
 	return dmg
 
 func _get_strike_count() -> int:

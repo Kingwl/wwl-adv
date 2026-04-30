@@ -1,0 +1,164 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=28 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/weapon_data.gd" id="1_spark"]
+[ext_resource type="Texture2D" path="res://assets/art/weapons/icons_sliced/icon_20.png" id="2_icon"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path.gd" id="3_path"]
+[ext_resource type="Script" path="res://scripts/data/weapon_path_level.gd" id="4_level"]
+
+[sub_resource type="Resource" id="Resource_spark_blast_l2"]
+script = ExtResource("4_level")
+level = 2
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_spark_blast_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 0
+special_tag = &"spark_overload"
+description = "爆炸伤害+4"
+[sub_resource type="Resource" id="Resource_spark_blast_l4"]
+script = ExtResource("4_level")
+level = 4
+range_bonus = 20
+description = "射程+20"
+[sub_resource type="Resource" id="Resource_spark_blast_l5"]
+script = ExtResource("4_level")
+level = 5
+damage_bonus = 0
+special_tag = &"spark_wide"
+description = "爆炸范围+20"
+[sub_resource type="Resource" id="Resource_spark_blast_l6"]
+script = ExtResource("4_level")
+level = 6
+damage_bonus = 4
+description = "伤害+4"
+[sub_resource type="Resource" id="Resource_spark_blast_l7"]
+script = ExtResource("4_level")
+level = 7
+cooldown_bonus = -0.2
+description = "冷却-0.2秒"
+[sub_resource type="Resource" id="Resource_spark_blast_l8"]
+script = ExtResource("4_level")
+level = 8
+damage_bonus = 6
+special_tag = &"spark_supernova"
+description = "伤害+6，爆炸范围大幅提升"
+[sub_resource type="Resource" id="Resource_spark_path_blast"]
+script = ExtResource("3_path")
+path_id = &"blast"
+display_name = "爆裂"
+description = "追求高爆发和大爆炸"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_spark_blast_l2"), SubResource("Resource_spark_blast_l3"), SubResource("Resource_spark_blast_l4"), SubResource("Resource_spark_blast_l5"), SubResource("Resource_spark_blast_l6"), SubResource("Resource_spark_blast_l7"), SubResource("Resource_spark_blast_l8")])
+
+[sub_resource type="Resource" id="Resource_spark_scatter_l2"]
+script = ExtResource("4_level")
+level = 2
+cooldown_bonus = -0.2
+description = "冷却-0.2秒"
+[sub_resource type="Resource" id="Resource_spark_scatter_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 0
+special_tag = &"spark_split"
+description = "火花弹数量+1"
+[sub_resource type="Resource" id="Resource_spark_scatter_l4"]
+script = ExtResource("4_level")
+level = 4
+damage_bonus = 2
+description = "伤害+2"
+[sub_resource type="Resource" id="Resource_spark_scatter_l5"]
+script = ExtResource("4_level")
+level = 5
+cooldown_bonus = -0.2
+description = "冷却-0.2秒"
+[sub_resource type="Resource" id="Resource_spark_scatter_l6"]
+script = ExtResource("4_level")
+level = 6
+damage_bonus = 0
+special_tag = &"spark_triple"
+description = "火花弹数量+2"
+[sub_resource type="Resource" id="Resource_spark_scatter_l7"]
+script = ExtResource("4_level")
+level = 7
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_spark_scatter_l8"]
+script = ExtResource("4_level")
+level = 8
+damage_bonus = 3
+cooldown_bonus = -0.25
+description = "伤害+3，冷却-0.25秒"
+[sub_resource type="Resource" id="Resource_spark_path_scatter"]
+script = ExtResource("3_path")
+path_id = &"scatter"
+display_name = "散射"
+description = "追求多发和频率"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_spark_scatter_l2"), SubResource("Resource_spark_scatter_l3"), SubResource("Resource_spark_scatter_l4"), SubResource("Resource_spark_scatter_l5"), SubResource("Resource_spark_scatter_l6"), SubResource("Resource_spark_scatter_l7"), SubResource("Resource_spark_scatter_l8")])
+
+[sub_resource type="Resource" id="Resource_spark_elec_l2"]
+script = ExtResource("4_level")
+level = 2
+range_bonus = 20
+description = "射程+20"
+[sub_resource type="Resource" id="Resource_spark_elec_l3"]
+script = ExtResource("4_level")
+level = 3
+damage_bonus = 0
+special_tag = &"spark_slow"
+description = "爆炸附带减速"
+[sub_resource type="Resource" id="Resource_spark_elec_l4"]
+script = ExtResource("4_level")
+level = 4
+damage_bonus = 2
+description = "伤害+2"
+[sub_resource type="Resource" id="Resource_spark_elec_l5"]
+script = ExtResource("4_level")
+level = 5
+damage_bonus = 0
+special_tag = &"spark_fast"
+description = "弹体速度+50"
+[sub_resource type="Resource" id="Resource_spark_elec_l6"]
+script = ExtResource("4_level")
+level = 6
+range_bonus = 30
+description = "射程+30"
+[sub_resource type="Resource" id="Resource_spark_elec_l7"]
+script = ExtResource("4_level")
+level = 7
+damage_bonus = 3
+description = "伤害+3"
+[sub_resource type="Resource" id="Resource_spark_elec_l8"]
+script = ExtResource("4_level")
+level = 8
+damage_bonus = 4
+special_tag = &"spark_stun"
+description = "伤害+4，爆炸附带短暂眩晕"
+[sub_resource type="Resource" id="Resource_spark_path_elec"]
+script = ExtResource("3_path")
+path_id = &"electro_spark"
+display_name = "电火花"
+description = "追求控制和弹速"
+levels = Array[ExtResource("4_level")]([SubResource("Resource_spark_elec_l2"), SubResource("Resource_spark_elec_l3"), SubResource("Resource_spark_elec_l4"), SubResource("Resource_spark_elec_l5"), SubResource("Resource_spark_elec_l6"), SubResource("Resource_spark_elec_l7"), SubResource("Resource_spark_elec_l8")])
+
+[resource]
+script = ExtResource("1_spark")
+id = &"spark_bomb"
+display_name = "火花弹"
+description = "发射火花弹，命中后小范围爆炸"
+weapon_type = 1
+category = 0
+damage = 10
+cooldown = 2.0
+range = 260.0
+projectile_speed = 240.0
+projectile_count = 1
+pierce = 0
+heal_amount = 0
+orbit_count = 0
+reflect_percent = 0.0
+field_radius = 70.0
+acquire_range = 0.0
+tags = Array[StringName]([&"弹体", &"爆炸"])
+icon = ExtResource("2_icon")
+max_level = 8
+paths = Array[ExtResource("3_path")]([SubResource("Resource_spark_path_blast"), SubResource("Resource_spark_path_scatter"), SubResource("Resource_spark_path_elec")])

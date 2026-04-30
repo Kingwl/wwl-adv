@@ -18,6 +18,11 @@ func _get_blast_radius() -> float:
 		r += 30.0
 	return r
 
+func _get_cluster_count() -> int:
+	if has_special_tag(&"cluster_mine"):
+		return 2
+	return 0
+
 func _activate() -> void:
 	var player := get_parent().get_parent() as Node2D
 	if not player:
@@ -34,6 +39,7 @@ func _activate() -> void:
 		mine.global_position = place_pos
 		mine.damage = get_damage()
 		mine.explosion_radius = _get_blast_radius()
+		mine.cluster_count = _get_cluster_count()
 		var __proj := get_tree().current_scene.get_node_or_null("Projectiles")
 		if __proj == null:
 			__proj = get_tree().current_scene.find_child("Projectiles", true, false)

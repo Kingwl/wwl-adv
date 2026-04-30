@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_enemy"]
+[ext_resource type="Texture2D" path="res://assets/art/characters/enemies/dasher_sheet.png" id="2_sheet"]
+
+[resource]
+script = ExtResource("1_enemy")
+id = &"dasher"
+display_name = "突袭者"
+max_hp = 18
+speed = 54.0
+damage = 7
+exp_reward = 4
+gold_reward = 1
+animation_sheet = ExtResource("2_sheet")
+contact_damage_cooldown = 1.1
+collision_radius = 14.0
+visual_scale = 1.05
+tags = Array[StringName]([&"dash"])
+behavior_id = &"dash"
+dash_speed_multiplier = 2.6
+dash_windup = 0.25
+dash_duration = 0.32
+dash_recover_duration = 0.45
+dash_cooldown = 2.6
+spawn_weight = 1.0
+min_spawn_time = 180.0
+max_spawn_time = -1.0
+pack_size = 1

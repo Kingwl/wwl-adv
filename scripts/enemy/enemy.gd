@@ -4,12 +4,40 @@ extends CharacterBody2D
 
 const CONTACT_DAMAGE_PADDING := 2.0
 const DEFAULT_CONTACT_RADIUS := 16.0
+const DEFAULT_FRAME_SIZE := Vector2i(64, 64)
+const DEFAULT_ANIMATION_COLUMNS := 6
+const DASH_STATE_COOLDOWN := &"cooldown"
+const DASH_STATE_WINDUP := &"windup"
+const DASH_STATE_DASHING := &"dashing"
+const DASH_STATE_RECOVER := &"recover"
 
 var _hp: int = 12
 var _base_speed: float = 60.0
 var _damage: int = 5
 var _exp_reward: int = 2
 var _gold_reward: int = 1
+var _configured_collision_radius: float = DEFAULT_CONTACT_RADIUS
+var _base_modulate: Color = Color.WHITE
+var _behavior_id: StringName = EnemyData.BEHAVIOR_CHASE
+var _dash_speed_multiplier: float = 2.6
+var _dash_windup: float = 0.22
+var _dash_duration: float = 0.32
+var _dash_recover_duration: float = 0.42
+var _dash_cooldown: float = 2.4
+var _preferred_range: float = 260.0
+var _retreat_range: float = 150.0
+var _attack_range: float = 360.0
+var _ranged_attack_cooldown: float = 2.0
+var _projectile_damage: int = 0
+var _projectile_speed: float = 280.0
+var _projectile_range: float = 420.0
+var _projectile_radius: float = 5.0
+var _projectile_modulate: Color = Color.WHITE
+var _dash_state: StringName = DASH_STATE_COOLDOWN
+var _dash_timer: float = 0.0
+var _dash_direction: Vector2 = Vector2.RIGHT
+var _ranged_attack_timer: float = 0.0
+var _strafe_sign: float = 1.0
 var _can_damage: bool = true
 var _damage_cooldown: float = 1.0
 var _dead: bool = false
@@ -29,47 +57,91 @@ func _ready() -> void:
 		_damage = enemy_data.damage
 		_exp_reward = enemy_data.exp_reward
 		_gold_reward = enemy_data.gold_reward
+		_damage_cooldown = enemy_data.contact_damage_cooldown
+		_configured_collision_radius = enemy_data.collision_radius
+		_base_modulate = enemy_data.visual_modulate
+		_behavior_id = enemy_data.behavior_id
+		_dash_speed_multiplier = enemy_data.dash_speed_multiplier
+		_dash_windup = enemy_data.dash_windup
+		_dash_duration = enemy_data.dash_duration
+		_dash_recover_duration = enemy_data.dash_recover_duration
+		_dash_cooldown = enemy_data.dash_cooldown
+		_preferred_range = enemy_data.preferred_range
+		_retreat_range = enemy_data.retreat_range
+		_attack_range = enemy_data.attack_range
+		_ranged_attack_cooldown = enemy_data.attack_cooldown
+		_projectile_damage = enemy_data.projectile_damage
+		_projectile_speed = enemy_data.projectile_speed
+		_projectile_range = enemy_data.projectile_range
+		_projectile_radius = enemy_data.projectile_radius
+		_projectile_modulate = enemy_data.projectile_modulate
+		if _sprite:
+			_sprite.scale = Vector2.ONE * enemy_data.visual_scale
+	_setup_collision_shape()
 	_setup_animations()
 	_setup_health_bar()
+	_reset_behavior_state()
+	_refresh_status_visual()
+
+func _setup_collision_shape() -> void:
+	var shape_node := get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if not shape_node:
+		return
+	var circle := shape_node.shape as CircleShape2D
+	if not circle:
+		circle = CircleShape2D.new()
+		shape_node.shape = circle
+	circle.radius = maxf(_configured_collision_radius, 1.0)
 
 func _setup_animations() -> void:
 	var frames := SpriteFrames.new()
+	var animation_sheet: Texture2D = null
+	var frame_size := DEFAULT_FRAME_SIZE
+	var columns := DEFAULT_ANIMATION_COLUMNS
+	if enemy_data:
+		animation_sheet = enemy_data.animation_sheet
+		if enemy_data.animation_frame_size.x > 0 and enemy_data.animation_frame_size.y > 0:
+			frame_size = enemy_data.animation_frame_size
+		columns = maxi(enemy_data.animation_columns, DEFAULT_ANIMATION_COLUMNS)
 
-	# Walk: 4 frames
-	frames.add_animation("walk")
-	var walk_sheet := load("res://assets/art/characters/enemy_walk_sheet.png")
-	for i in range(4):
-		var atlas := AtlasTexture.new()
-		atlas.atlas = walk_sheet
-		atlas.region = Rect2(i * 64, 0, 64, 64)
-		frames.add_frame("walk", atlas)
-	frames.set_animation_loop("walk", true)
-	frames.set_animation_speed("walk", 6.0)
-
-	# Hit: 2 frames
-	frames.add_animation("hit")
-	var hit_sheet := load("res://assets/art/characters/enemy_hit_sheet.png")
-	for i in range(2):
-		var atlas := AtlasTexture.new()
-		atlas.atlas = hit_sheet
-		atlas.region = Rect2(i * 64, 0, 64, 64)
-		frames.add_frame("hit", atlas)
-	frames.set_animation_loop("hit", false)
-	frames.set_animation_speed("hit", 8.0)
-
-	# Death: 6 frames
-	frames.add_animation("death")
-	var death_sheet := load("res://assets/art/characters/enemy_death_sheet.png")
-	for i in range(6):
-		var atlas := AtlasTexture.new()
-		atlas.atlas = death_sheet
-		atlas.region = Rect2(i * 64, 0, 64, 64)
-		frames.add_frame("death", atlas)
-	frames.set_animation_loop("death", false)
-	frames.set_animation_speed("death", 8.0)
+	if animation_sheet:
+		_setup_sheet_animations(frames, animation_sheet, frame_size, columns)
+	else:
+		_setup_default_animations(frames)
 
 	_sprite.sprite_frames = frames
 	_sprite.play("walk")
+
+func _setup_sheet_animations(frames: SpriteFrames, sheet: Texture2D, frame_size: Vector2i, columns: int) -> void:
+	_add_sheet_animation(frames, &"walk", sheet, [0, 1, 2, 3], frame_size, columns, true, 6.0)
+	_add_sheet_animation(frames, &"hit", sheet, [4, 0], frame_size, columns, false, 8.0)
+	_add_sheet_animation(frames, &"death", sheet, [4, 5, 5, 5, 5, 5], frame_size, columns, false, 8.0)
+
+func _setup_default_animations(frames: SpriteFrames) -> void:
+	_add_sheet_animation(frames, &"walk", load("res://assets/art/characters/enemy_walk_sheet.png"), [0, 1, 2, 3], DEFAULT_FRAME_SIZE, 4, true, 6.0)
+	_add_sheet_animation(frames, &"hit", load("res://assets/art/characters/enemy_hit_sheet.png"), [0, 1], DEFAULT_FRAME_SIZE, 2, false, 8.0)
+	_add_sheet_animation(frames, &"death", load("res://assets/art/characters/enemy_death_sheet.png"), [0, 1, 2, 3, 4, 5], DEFAULT_FRAME_SIZE, 6, false, 8.0)
+
+func _add_sheet_animation(
+	frames: SpriteFrames,
+	animation: StringName,
+	sheet: Texture2D,
+	frame_indices: Array[int],
+	frame_size: Vector2i,
+	columns: int,
+	loop: bool,
+	speed: float
+) -> void:
+	frames.add_animation(animation)
+	for frame_index in frame_indices:
+		var atlas := AtlasTexture.new()
+		atlas.atlas = sheet
+		var column := frame_index % columns
+		var row := frame_index / columns
+		atlas.region = Rect2(column * frame_size.x, row * frame_size.y, frame_size.x, frame_size.y)
+		frames.add_frame(animation, atlas)
+	frames.set_animation_loop(animation, loop)
+	frames.set_animation_speed(animation, speed)
 
 func _process(delta: float) -> void:
 	var expired: Array[String] = []
@@ -82,7 +154,7 @@ func _process(delta: float) -> void:
 		_statuses.erase(status_key)
 		_on_status_removed(effect.id if effect else StringName(status_key))
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	if _player:
 		if _has_status(&"stun"):
 			velocity = Vector2.ZERO
@@ -95,7 +167,9 @@ func _physics_process(_delta: float) -> void:
 			current_speed *= slow_effect.effective_value()
 
 		var dir := (_player.global_position - global_position).normalized()
-		velocity = dir * current_speed
+		var distance := global_position.distance_to(_player.global_position)
+		_try_ranged_attack(delta, dir, distance)
+		velocity = _get_behavior_velocity(delta, dir, current_speed)
 		move_and_slide()
 		_try_damage_player()
 
@@ -135,6 +209,121 @@ func _get_status(status: StringName) -> StatusEffect:
 
 func _has_status(status: StringName) -> bool:
 	return _get_status(status) != null
+
+func _get_behavior_velocity(delta: float, dir: Vector2, current_speed: float) -> Vector2:
+	match _behavior_id:
+		EnemyData.BEHAVIOR_DASH:
+			return _get_dash_velocity(delta, dir, current_speed)
+		EnemyData.BEHAVIOR_RANGED:
+			return _get_ranged_velocity(dir, current_speed)
+		_:
+			return dir * current_speed
+
+func _get_dash_velocity(delta: float, dir: Vector2, current_speed: float) -> Vector2:
+	match _dash_state:
+		DASH_STATE_WINDUP:
+			_dash_timer -= delta
+			if _dash_timer <= 0.0:
+				_dash_direction = dir if dir != Vector2.ZERO else _dash_direction
+				_dash_state = DASH_STATE_DASHING
+				_dash_timer = _dash_duration
+				return _dash_direction * current_speed * _dash_speed_multiplier
+			return dir * current_speed * 0.25
+		DASH_STATE_DASHING:
+			_dash_timer -= delta
+			if _dash_timer <= 0.0:
+				_dash_state = DASH_STATE_RECOVER
+				_dash_timer = _dash_recover_duration
+				return Vector2.ZERO
+			return _dash_direction * current_speed * _dash_speed_multiplier
+		DASH_STATE_RECOVER:
+			_dash_timer -= delta
+			if _dash_timer <= 0.0:
+				_dash_state = DASH_STATE_COOLDOWN
+				_dash_timer = _dash_cooldown
+			return dir * current_speed * 0.35
+		_:
+			_dash_timer -= delta
+			if _dash_timer <= 0.0:
+				_dash_state = DASH_STATE_WINDUP
+				_dash_timer = _dash_windup
+				_dash_direction = dir if dir != Vector2.ZERO else _dash_direction
+			return dir * current_speed
+
+func _reset_behavior_state() -> void:
+	if _behavior_id == EnemyData.BEHAVIOR_DASH:
+		_dash_state = DASH_STATE_COOLDOWN
+		_dash_timer = randf_range(_dash_cooldown * 0.35, _dash_cooldown)
+		_dash_direction = Vector2.RIGHT
+	elif _behavior_id == EnemyData.BEHAVIOR_RANGED:
+		_dash_state = DASH_STATE_COOLDOWN
+		_dash_timer = 0.0
+		_ranged_attack_timer = randf_range(_ranged_attack_cooldown * 0.35, _ranged_attack_cooldown)
+		_strafe_sign = -1.0 if randf() < 0.5 else 1.0
+	else:
+		_dash_state = DASH_STATE_COOLDOWN
+		_dash_timer = 0.0
+
+func _get_ranged_velocity(dir: Vector2, current_speed: float) -> Vector2:
+	if not is_instance_valid(_player):
+		return Vector2.ZERO
+	var distance := global_position.distance_to(_player.global_position)
+	if distance < _retreat_range:
+		return -dir * current_speed * 0.85
+	if distance > _preferred_range:
+		return dir * current_speed
+	var strafe := dir.orthogonal() * _strafe_sign
+	return strafe * current_speed * 0.25
+
+func _try_ranged_attack(delta: float, dir: Vector2, distance: float) -> void:
+	if _behavior_id != EnemyData.BEHAVIOR_RANGED:
+		return
+	_ranged_attack_timer -= delta
+	if _ranged_attack_timer > 0.0:
+		return
+	if distance > _attack_range or dir == Vector2.ZERO:
+		return
+	_fire_ranged_projectile(dir)
+	_ranged_attack_timer = _ranged_attack_cooldown
+
+func _fire_ranged_projectile(dir: Vector2) -> Node:
+	var projectiles_parent := _get_projectiles_parent()
+	if not projectiles_parent:
+		return null
+	var projectile := preload("res://scenes/weapons/projectile.tscn").instantiate()
+	projectile.global_position = global_position + dir * (_configured_collision_radius + _projectile_radius + 2.0)
+	projectile.direction = dir
+	projectile.speed = _projectile_speed
+	projectile.max_range = _projectile_range
+	projectile.damage = _projectile_damage if _projectile_damage > 0 else _damage
+	projectile.pierce = 0
+	projectile.source = self
+	projectile.damage_owner = self
+	projectile.weapon_id = &"enemy_projectile"
+	projectile.damage_type = DamageEvent.DAMAGE_TYPE_PHYSICAL
+	projectile.delivery_type = DamageEvent.DELIVERY_PROJECTILE
+	projectile.target_group = &"player"
+	projectile.collision_mask = 1
+	projectile.visual_modulate = _projectile_modulate
+	var shape_node := projectile.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if shape_node and shape_node.shape is CircleShape2D:
+		var circle := (shape_node.shape as CircleShape2D).duplicate() as CircleShape2D
+		circle.radius = maxf(_projectile_radius, 1.0)
+		shape_node.shape = circle
+	projectiles_parent.add_child(projectile)
+	return projectile
+
+func _get_projectiles_parent() -> Node:
+	var node := get_parent()
+	while node:
+		var projectiles := node.get_node_or_null("Projectiles")
+		if projectiles:
+			return projectiles
+		node = node.get_parent()
+	var current := get_tree().current_scene
+	if current:
+		return current.find_child("Projectiles", true, false)
+	return null
 
 func _try_damage_player() -> void:
 	if not _can_damage or not is_instance_valid(_player):
@@ -182,7 +371,7 @@ func _refresh_status_visual() -> void:
 	elif _has_status(&"slow"):
 		_sprite.modulate = Color(0.6, 0.8, 1.0, 1.0)
 	else:
-		_sprite.modulate = Color.WHITE
+		_sprite.modulate = _base_modulate
 
 func _setup_health_bar() -> void:
 	if _health_bar:

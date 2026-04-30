@@ -15,6 +15,9 @@ func _ready() -> void:
 	SaveManager.load_or_create()
 
 	_game = load("res://scenes/game/game.tscn").instantiate()
+	var spawner := _game.get_node_or_null("EnemySpawner")
+	if spawner:
+		spawner.set_process(false)
 	add_child(_game)
 
 	await _wait(0.5)
@@ -535,6 +538,7 @@ func _phase_game_over() -> void:
 
 	if game_over:
 		# Add some stats first
+		GameState.run.kills = 0
 		GameState.add_gold(10)
 		GameState.add_kill()
 		GameState.add_kill()
@@ -727,7 +731,7 @@ func _phase_path_system() -> void:
 	_assert(melee.current_path_id == &"berserker", "Berserker path set correctly")
 	_assert(melee.level == 2, "Path selection triggers level up to 2")
 	# Berserker Lv.2: damage +5 + base growth
-	var expected_dmg := int(round(melee.weapon_data.damage * 1.1)) + 5
+	var expected_dmg := int(round(melee.weapon_data.damage * 1.1 * GameState.get_character_damage_multiplier())) + 5
 	_assert(melee._current_damage == expected_dmg, "Berserker Lv.2 damage bonus applied")
 
 	# Level to 3 (wider_arc)
@@ -2514,6 +2518,56 @@ func _phase_enemy_spawner() -> void:
 	if not spawner:
 		await _wait(0.2)
 		return
+	var previous_spawner_process := spawner.is_processing()
+	spawner.set_process(false)
+
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	var enemies_parent := _game.get_node_or_null("Enemies")
+	var projectiles_parent := _game.get_node_or_null("Projectiles")
+
+	var enemy_resources := DataManager.all_enemies()
+	_assert(enemy_resources.size() >= 7, "Enemy data resources loaded")
+	var imp_data := DataManager.get_enemy("imp") as EnemyData
+	var runner_data := DataManager.get_enemy("runner") as EnemyData
+	var brute_data := DataManager.get_enemy("brute") as EnemyData
+	var dasher_data := DataManager.get_enemy("dasher") as EnemyData
+	var cultist_data := DataManager.get_enemy("cultist") as EnemyData
+	var elite_brute_data := DataManager.get_enemy("elite_brute") as EnemyData
+	var elite_arcanist_data := DataManager.get_enemy("elite_arcanist") as EnemyData
+	_assert(
+		imp_data != null
+		and runner_data != null
+		and brute_data != null
+		and dasher_data != null
+		and cultist_data != null
+		and elite_brute_data != null
+		and elite_arcanist_data != null,
+		"Core enemy archetypes are registered"
+	)
+	for data in [imp_data, runner_data, brute_data, dasher_data, cultist_data, elite_brute_data, elite_arcanist_data]:
+		var enemy_data := data as EnemyData
+		if enemy_data:
+			_assert(enemy_data.animation_sheet != null, "Enemy %s has dedicated animation sheet" % enemy_data.id)
+			if enemy_data.animation_sheet:
+				_assert(
+					enemy_data.animation_sheet.get_width() == enemy_data.animation_frame_size.x * enemy_data.animation_columns
+					and enemy_data.animation_sheet.get_height() == enemy_data.animation_frame_size.y,
+					"Enemy %s animation sheet matches frame metadata" % enemy_data.id
+				)
+	if imp_data:
+		_assert(imp_data.pack_size >= 2 and imp_data.behavior_id == EnemyData.BEHAVIOR_CHASE, "Imp is swarm chase archetype")
+	if imp_data and runner_data:
+		_assert(runner_data.speed > imp_data.speed and runner_data.behavior_id == EnemyData.BEHAVIOR_FAST_CHASE, "Runner is faster chase archetype")
+	if imp_data and brute_data:
+		_assert(brute_data.max_hp > imp_data.max_hp and brute_data.speed < imp_data.speed, "Brute is slow tank archetype")
+	if dasher_data:
+		_assert(dasher_data.behavior_id == EnemyData.BEHAVIOR_DASH and dasher_data.dash_speed_multiplier > 1.0, "Dasher uses dash behavior")
+	if cultist_data:
+		_assert(cultist_data.behavior_id == EnemyData.BEHAVIOR_RANGED and cultist_data.attack_range > cultist_data.preferred_range, "Cultist is ranged archetype")
+	if elite_brute_data and brute_data:
+		_assert(elite_brute_data.tags.has(&"elite") and elite_brute_data.max_hp > brute_data.max_hp, "Elite brute is stronger tank archetype")
+	if elite_arcanist_data:
+		_assert(elite_arcanist_data.tags.has(&"elite") and elite_arcanist_data.behavior_id == EnemyData.BEHAVIOR_RANGED, "Elite arcanist is ranged elite archetype")
 
 	# Test spawn interval scaling with elapsed time
 	spawner._elapsed_time = 0.0
@@ -2565,6 +2619,97 @@ func _phase_enemy_spawner() -> void:
 			pick_counts[1] += 1
 	_assert(pick_counts[1] > pick_counts[0], "Weighted pick favors higher weight enemy")
 
+	# Test resource spawn pool and archetype application
+	spawner._elapsed_time = 0.0
+	var early_pool: Array = spawner._get_valid_enemy_data()
+	_assert(imp_data == null or early_pool.has(imp_data), "Early enemy spawn pool includes imp")
+	_assert(cultist_data == null or not early_pool.has(cultist_data), "Early enemy spawn pool excludes ranged cultist")
+	_assert(dasher_data == null or not early_pool.has(dasher_data), "Early enemy spawn pool excludes late dasher")
+	spawner._elapsed_time = 240.0
+	var late_pool: Array = spawner._get_valid_enemy_data()
+	_assert(brute_data == null or late_pool.has(brute_data), "Late enemy spawn pool includes brute")
+	_assert(dasher_data == null or late_pool.has(dasher_data), "Late enemy spawn pool includes dasher")
+	_assert(cultist_data == null or late_pool.has(cultist_data), "Late enemy spawn pool includes ranged cultist")
+	_assert(elite_brute_data == null or not late_pool.has(elite_brute_data), "Mid game spawn pool excludes elite brute")
+	spawner._elapsed_time = 400.0
+	var elite_pool: Array = spawner._get_valid_enemy_data()
+	_assert(elite_brute_data == null or elite_pool.has(elite_brute_data), "Elite spawn pool includes elite brute")
+	_assert(elite_arcanist_data == null or elite_pool.has(elite_arcanist_data), "Elite spawn pool includes elite arcanist")
+	if imp_data:
+		_assert(spawner._get_pack_size(imp_data) == imp_data.pack_size, "Spawner uses enemy pack size")
+
+	if player and enemies_parent and brute_data:
+		spawner._elapsed_time = 0.0
+		var spawned = spawner._spawn_single_enemy(brute_data, player.global_position + Vector2.RIGHT * 320.0)
+		_assert(spawned != null and spawned.enemy_data == brute_data, "Spawner applies EnemyData to spawned enemy")
+		if spawned:
+			_assert(spawned._hp == brute_data.max_hp and spawned._damage == brute_data.damage, "Spawned enemy uses data stats")
+			_assert(abs(spawned._base_speed - brute_data.speed) < 0.01, "Spawned enemy uses data speed")
+			var shape_node := spawned.get_node_or_null("CollisionShape2D") as CollisionShape2D
+			var circle: CircleShape2D = null
+			if shape_node:
+				circle = shape_node.shape as CircleShape2D
+			_assert(circle != null and abs(circle.radius - brute_data.collision_radius) < 0.01, "Spawned enemy uses data collision radius")
+			var sprite := spawned.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+			var walk_atlas: AtlasTexture = null
+			if sprite and sprite.sprite_frames:
+				walk_atlas = sprite.sprite_frames.get_frame_texture(&"walk", 0) as AtlasTexture
+			_assert(
+				walk_atlas != null
+				and walk_atlas.atlas
+				and walk_atlas.atlas.resource_path == brute_data.animation_sheet.resource_path,
+				"Spawned enemy uses data animation sheet"
+			)
+			_assert(
+				sprite != null
+				and sprite.sprite_frames.get_frame_count(&"walk") == 4
+				and sprite.sprite_frames.get_frame_count(&"hit") == 2
+				and sprite.sprite_frames.get_frame_count(&"death") == 6,
+				"Spawned enemy builds expected animation frame sets"
+			)
+			spawned.queue_free()
+			await _wait(0.05)
+
+	if player and enemies_parent and dasher_data:
+		var dash_enemy := enemy_scene.instantiate()
+		dash_enemy.enemy_data = dasher_data
+		dash_enemy.global_position = player.global_position + Vector2.RIGHT * 320.0
+		enemies_parent.add_child(dash_enemy)
+		await _wait(0.05)
+		dash_enemy._dash_state = &"windup"
+		dash_enemy._dash_timer = 0.0
+		var dash_velocity: Vector2 = dash_enemy._get_behavior_velocity(0.05, Vector2.LEFT, dash_enemy._base_speed)
+		_assert(dash_enemy._dash_state == &"dashing" and dash_velocity.length() > dash_enemy._base_speed * 1.5, "Dash enemy enters high-speed dash")
+		dash_enemy.queue_free()
+		await _wait(0.05)
+
+	if player and enemies_parent and projectiles_parent and cultist_data:
+		for child in projectiles_parent.get_children():
+			child.queue_free()
+		await _wait(0.05)
+		var ranged_enemy := enemy_scene.instantiate()
+		ranged_enemy.enemy_data = cultist_data
+		ranged_enemy.global_position = player.global_position + Vector2.RIGHT * cultist_data.preferred_range
+		enemies_parent.add_child(ranged_enemy)
+		await _wait(0.05)
+		ranged_enemy.global_position = player.global_position + Vector2.RIGHT * (cultist_data.preferred_range + 80.0)
+		var approach_velocity: Vector2 = ranged_enemy._get_ranged_velocity(Vector2.LEFT, ranged_enemy._base_speed)
+		_assert(approach_velocity.x < 0.0, "Ranged enemy approaches when outside preferred range")
+		ranged_enemy.global_position = player.global_position + Vector2.RIGHT * (cultist_data.retreat_range - 20.0)
+		var retreat_velocity: Vector2 = ranged_enemy._get_ranged_velocity(Vector2.LEFT, ranged_enemy._base_speed)
+		_assert(retreat_velocity.x > 0.0, "Ranged enemy retreats when too close")
+		ranged_enemy.global_position = player.global_position + Vector2.RIGHT * cultist_data.preferred_range
+		ranged_enemy._ranged_attack_timer = 0.0
+		var enemy_projectile = ranged_enemy._fire_ranged_projectile(Vector2.LEFT)
+		await _wait(0.05)
+		_assert(enemy_projectile != null and enemy_projectile.get_parent() == projectiles_parent, "Ranged enemy fires projectile")
+		if enemy_projectile:
+			_assert(enemy_projectile.target_group == &"player" and enemy_projectile.collision_mask == 1, "Ranged enemy projectile targets player")
+			_assert(enemy_projectile.damage == cultist_data.projectile_damage, "Ranged enemy projectile uses data damage")
+			enemy_projectile.queue_free()
+		ranged_enemy.queue_free()
+		await _wait(0.05)
+
 	# Test viewport-relative spawn radius
 	var view_radius: float = spawner._get_view_radius()
 	var radius_bounds: Vector2 = spawner._get_spawn_radius_bounds()
@@ -2576,6 +2721,7 @@ func _phase_enemy_spawner() -> void:
 	# Reset spawner state
 	spawner._elapsed_time = 0.0
 	spawner._spawn_timer = spawner._get_spawn_interval()
+	spawner.set_process(previous_spawner_process)
 	e1.queue_free()
 
 func _phase_projectile_system() -> void:
@@ -2701,6 +2847,28 @@ func _phase_projectile_system() -> void:
 	_assert(enemy1._statuses.has("slow") and enemy2._statuses.has("slow"), "Explosive projectile applies DamageEvent status")
 	await _wait(0.05)
 	_assert(not is_instance_valid(bomb), "Explosive projectile frees after detonation")
+
+	var enemy_proj := preload("res://scenes/weapons/projectile.tscn").instantiate()
+	enemy_proj.global_position = player.global_position + Vector2.RIGHT * 40.0
+	enemy_proj.direction = Vector2.LEFT
+	enemy_proj.speed = 0.0
+	enemy_proj.max_range = 200.0
+	enemy_proj.damage = 6
+	enemy_proj.target_group = &"player"
+	enemy_proj.collision_mask = 1
+	projectiles_parent.add_child(enemy_proj)
+	await _wait(0.05)
+	if "_invincible" in player:
+		player._invincible = false
+	if "_dying" in player:
+		player._dying = false
+	GameState.run.hp = GameState.run.max_hp
+	GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
+	var player_hp_before_projectile: int = GameState.run.hp
+	enemy_proj._on_body_entered(player)
+	_assert(GameState.run.hp == player_hp_before_projectile - 6, "Enemy projectile can damage player")
+	await _wait(0.05)
+	_assert(not is_instance_valid(enemy_proj), "Enemy projectile frees after hitting player")
 
 	# Cleanup
 	for child in projectiles_parent.get_children():

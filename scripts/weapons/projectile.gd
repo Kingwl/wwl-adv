@@ -21,6 +21,7 @@ var damage_owner: Node = null
 var weapon_id: StringName = &""
 var damage_type: StringName = DamageEvent.DAMAGE_TYPE_PHYSICAL
 var delivery_type: StringName = DamageEvent.DELIVERY_PROJECTILE
+var target_group: StringName = &"enemies"
 
 var _start_pos: Vector2
 var _pierced: int = 0
@@ -93,29 +94,30 @@ func _process(delta: float) -> void:
 			queue_free()
 
 func _on_body_entered(body: Node2D) -> void:
-	if body.is_in_group("enemies"):
-		if explosion_radius > 0.0:
-			_explode()
-			if not is_boomerang:
-				queue_free()
-			return
-		DamageCalculator.deal_damage(body, _make_damage_event(body, damage, global_position, delivery_type))
-		_pierced += 1
-		if _pierced > pierce and not is_boomerang:
+	if not body.is_in_group(target_group):
+		return
+	if explosion_radius > 0.0:
+		_explode()
+		if not is_boomerang:
 			queue_free()
+		return
+	DamageCalculator.deal_damage(body, _make_damage_event(body, damage, global_position, delivery_type))
+	_pierced += 1
+	if _pierced > pierce and not is_boomerang:
+		queue_free()
 
 func _explode() -> void:
 	if _exploded:
 		return
 	_exploded = true
 	var dmg := explosion_damage if explosion_damage >= 0 else damage
-	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if enemy.global_position.distance_to(global_position) <= explosion_radius:
-			var event := _make_damage_event(enemy, dmg, global_position, DamageEvent.DELIVERY_AREA)
+	for target in get_tree().get_nodes_in_group(target_group):
+		if target.global_position.distance_to(global_position) <= explosion_radius:
+			var event := _make_damage_event(target, dmg, global_position, DamageEvent.DELIVERY_AREA)
 			event.status_id = explosion_status
 			event.status_duration = explosion_status_duration
 			event.status_value = explosion_status_value
-			DamageCalculator.deal_damage(enemy, event)
+			DamageCalculator.deal_damage(target, event)
 	var current := get_tree().current_scene
 	if current:
 		var scale_factor := maxf(explosion_radius * 2.0 / 64.0, 0.5)

@@ -6,6 +6,8 @@ extends Node
 @export var stat_scale_period: float = 120.0
 @export var speed_scale_period: float = 300.0
 @export var max_speed_scale: float = 1.75
+@export var max_alive_enemies: int = 180
+@export var pack_spawn_spread: float = 48.0
 
 var _player: Node2D
 var _elapsed_time: float = 0.0
@@ -24,26 +26,38 @@ func _process(delta: float) -> void:
 func _spawn_enemy() -> void:
 	if not _player:
 		return
+	if _get_alive_enemy_count() >= max_alive_enemies:
+		return
 
+	var data := _pick_enemy_data()
+	_spawn_enemy_pack(data)
+
+func _spawn_enemy_pack(data: EnemyData = null) -> Array[CharacterBody2D]:
+	var spawned: Array[CharacterBody2D] = []
+	if not _player:
+		return spawned
+
+	var pack_size := _get_pack_size(data)
+	var base_pos := _get_spawn_position()
+	for i in range(pack_size):
+		if _get_alive_enemy_count() >= max_alive_enemies:
+			break
+		var offset := Vector2.ZERO
+		if i > 0:
+			offset = Vector2.RIGHT.rotated(randf() * TAU) * randf_range(8.0, pack_spawn_spread)
+		var enemy := _spawn_single_enemy(data, base_pos + offset)
+		if enemy:
+			spawned.append(enemy)
+	return spawned
+
+func _spawn_single_enemy(data: EnemyData, spawn_pos: Vector2) -> CharacterBody2D:
 	var enemy_scene := preload("res://scenes/enemy/enemy.tscn")
 	var enemy := enemy_scene.instantiate() as CharacterBody2D
-
-	var angle := randf() * TAU
-	var radius_bounds := _get_spawn_radius_bounds()
-	var radius := randf_range(radius_bounds.x, radius_bounds.y)
-	var spawn_pos := _player.global_position + Vector2(cos(angle), sin(angle)) * radius
 	enemy.global_position = spawn_pos
+	if data:
+		enemy.enemy_data = data
 
-	var enemy_data_list := DataManager.all_enemies()
-	if not enemy_data_list.is_empty():
-		var valid_enemies := enemy_data_list.filter(func(d: EnemyData) -> bool:
-			return _elapsed_time >= d.min_spawn_time
-		)
-		if not valid_enemies.is_empty():
-			var data: EnemyData = _weighted_pick(valid_enemies)
-			enemy.enemy_data = data
-
-	var enemies_parent := get_tree().current_scene.get_node_or_null("Enemies")
+	var enemies_parent := _get_enemies_parent()
 	if enemies_parent:
 		enemies_parent.add_child(enemy)
 		# Apply time-based difficulty scaling
@@ -53,6 +67,57 @@ func _spawn_enemy() -> void:
 		enemy._base_speed *= speed_factor
 		enemy._damage = int(enemy._damage * stat_factor)
 		enemy._setup_health_bar()
+		return enemy
+	enemy.queue_free()
+	return null
+
+func _get_spawn_position() -> Vector2:
+	var angle := randf() * TAU
+	var radius_bounds := _get_spawn_radius_bounds()
+	var radius := randf_range(radius_bounds.x, radius_bounds.y)
+	return _player.global_position + Vector2(cos(angle), sin(angle)) * radius
+
+func _pick_enemy_data() -> EnemyData:
+	var valid_enemies := _get_valid_enemy_data()
+	if valid_enemies.is_empty():
+		return null
+	return _weighted_pick(valid_enemies)
+
+func _get_valid_enemy_data() -> Array:
+	var enemy_data_list := DataManager.all_enemies()
+	return enemy_data_list.filter(func(d: EnemyData) -> bool:
+		if d.spawn_weight <= 0.0:
+			return false
+		if _elapsed_time < d.min_spawn_time:
+			return false
+		return d.max_spawn_time < 0.0 or _elapsed_time <= d.max_spawn_time
+	)
+
+func _get_pack_size(data: EnemyData) -> int:
+	if not data:
+		return 1
+	return maxi(data.pack_size, 1)
+
+func _get_alive_enemy_count() -> int:
+	var enemies_parent := _get_enemies_parent()
+	if not enemies_parent:
+		return 0
+	var count := 0
+	for child in enemies_parent.get_children():
+		if is_instance_valid(child) and not child.is_queued_for_deletion():
+			count += 1
+	return count
+
+func _get_enemies_parent() -> Node:
+	var parent := get_parent()
+	if parent:
+		var sibling := parent.get_node_or_null("Enemies")
+		if sibling:
+			return sibling
+	var current := get_tree().current_scene
+	if current:
+		return current.find_child("Enemies", true, false)
+	return null
 
 func _get_spawn_interval() -> float:
 	var difficulty_multiplier := 1.0 + (_elapsed_time / 60.0) * 0.5

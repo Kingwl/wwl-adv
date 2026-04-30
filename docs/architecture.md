@@ -29,7 +29,7 @@ WWL Adventure/
 │   └── ui/
 └── resources/
     ├── weapons/       # 20 个武器 .tres 数据资源
-    ├── enemies/       # 预留：敌人资源
+    ├── enemies/       # 7 个敌人 .tres 数据资源
     └── upgrades/      # 预留：外部升级资源
 ```
 
@@ -102,14 +102,14 @@ Enemy._physics_process()
 |-------|------|------|
 | 1 | Player | 玩家物理体 |
 | 2 | Enemy | 敌人物理体 |
-| 3 | Projectile | 玩家弹体 |
+| 3 | Projectile | 弹体 |
 | 4 | Drop | 经验球 / 金币（Area2D） |
 
 碰撞掩码：
 
 - Player: 与 Enemy 碰撞（layer 1 mask 2）
 - Enemy: 与 Player + Projectile 碰撞（layer 2 mask 3）
-- Projectile: 与 Enemy 碰撞（layer 3 mask 2）
+- Projectile: 玩家弹体与 Enemy 碰撞（layer 3 mask 2）；敌人弹体运行时改为 mask 1，只命中 Player
 - Drop: 与 Player 碰撞（layer 4 mask 1）
 
 ## 数据资源类
@@ -122,7 +122,7 @@ Enemy._physics_process()
 | `CharacterData` | Resource | 角色基础属性、初始武器、战斗修正和被动描述 |
 | `WeaponPath` | Resource | 武器流派名称、描述、图标、每级效果 |
 | `WeaponPathLevel` | Resource | 某一级的伤害 / 冷却 / 范围 bonus 和 `special_tag` |
-| `EnemyData` | Resource | 敌人 HP、速度、伤害、掉落、生成权重 |
+| `EnemyData` | Resource | 敌人 HP、速度、伤害、掉落、体型、颜色、动画条带、行为、远程弹体、生成权重、时间窗口和小队数量 |
 | `UpgradeData` | Resource | 升级选项类型、关联武器、bonus 数值 |
 
 ## 伤害系统
@@ -148,7 +148,7 @@ Enemy._physics_process()
 
 - `resources/characters/` 已有 4 个默认可选角色数据资源
 - `resources/weapons/` 已有 20 个武器数据资源
-- `resources/enemies/` 和 `resources/upgrades/` 目录存在，但当前核心敌人和大多数升级选项仍由代码提供
+- `resources/enemies/` 已有 7 个敌人数据资源，并各自配置专属动画条带；`resources/upgrades/` 目录存在，但大多数升级选项仍由代码提供
 - `DataManager` 启动时会扫描上述目录，`UpgradeSystem` 会把外部升级资源加入候选池
 
 ## 武器系统
@@ -183,9 +183,11 @@ Enemy._physics_process()
 
 - `EnemySpawner` 以玩家为中心，在可视区外的视口半对角线 + `80~300` 像素环形区域生成敌人
 - 生成间隔随时间缩短，最低 0.3 秒
+- 生成器从 `resources/enemies/*.tres` 读取时间池，按 `spawn_weight` 加权选择，并按 `pack_size` 生成小队
 - 敌人 HP、伤害按 `1.0 + elapsed_time / 120.0` 缩放
 - 敌人速度单独按 `1.0 + elapsed_time / 300.0` 缩放，并封顶到 `1.75x`
-- 若 `resources/enemies/` 有可用 `EnemyData`，生成器会按 `spawn_weight` 加权选择
+- 当前原型：小鬼（群体追踪）、疾行者（高速追踪）、邪教射手（远程）、蛮兵（慢速高血量）、突袭者（前摇冲刺）、精英蛮兵（精英肉盾）、精英秘法师（精英远程）
+- `EnemyData.animation_sheet` 指向 6 帧 64×64 条带，运行时拆成 `walk`、`hit`、`death` 动画；未配置时回退到旧共享敌人图
 - 敌人死亡后生成经验球和金币，掉落物受玩家拾取范围 bonus 影响
 
 ## 输入系统

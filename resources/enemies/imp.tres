@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_enemy"]
+[ext_resource type="Texture2D" path="res://assets/art/characters/enemies/imp_sheet.png" id="2_sheet"]
+
+[resource]
+script = ExtResource("1_enemy")
+id = &"imp"
+display_name = "小鬼"
+max_hp = 10
+speed = 58.0
+damage = 4
+exp_reward = 2
+gold_reward = 1
+animation_sheet = ExtResource("2_sheet")
+contact_damage_cooldown = 1.0
+collision_radius = 13.0
+visual_scale = 0.92
+tags = Array[StringName]([&"swarm"])
+behavior_id = &"chase"
+spawn_weight = 7.0
+min_spawn_time = 0.0
+max_spawn_time = -1.0
+pack_size = 3

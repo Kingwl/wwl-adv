@@ -31,7 +31,7 @@
 - **当前武器数**: 20
 - **当前角色数**: 4（全部默认可选，暂不做解锁）
 - **当前角色强化槽**: 6（生命源泉为被动恢复强化，不占武器槽）
-- **当前敌人数**: 1（基础追踪型；生成器支持读取 `resources/enemies/`，但当前没有敌人 `.tres`）
+- **当前敌人数**: 7（小鬼 / 疾行者 / 蛮兵 / 突袭者 / 邪教射手 / 精英蛮兵 / 精英秘法师，均来自 `resources/enemies/*.tres`，并配置专属动画条带）
 - **输入**: 键盘 WASD/方向键 + 触屏虚拟摇杆
 - **Web CI**: `.github/workflows/deploy-web.yml` 使用 Godot 4.6.2 导出并部署 GitHub Pages；CI preset 来自 `ci/export_presets.web.cfg`
 - **字体子集**: CI 每次 Web 导出前都会下载完整 `NotoSansCJKsc-Regular.otf`，扫描 `project.godot` / `autoload` / `scripts` / `scenes` / `resources` 文本后重建 `assets/fonts/NotoSansCJKsc-WWL-Subset.otf`
@@ -50,8 +50,10 @@
 ### 添加一种新敌人
 
 1. 在 `scripts/data/enemy_data.gd` 了解已有字段
-2. 在 `resources/enemies/` 创建 `.tres` 资源文件（可选，也可硬编码）
-3. 敌人生成器 `scripts/enemy/enemy_spawner.gd` 会自动读取 `resources/enemies/` 下的资源
+2. 在 `resources/enemies/` 创建 `.tres` 资源文件
+3. 通过 `behavior_id` 选择追踪 / 高速 / 肉盾 / 突袭 / 远程等轻量行为
+4. 配置 `animation_sheet`、`animation_frame_size`、`animation_columns`，运行时会拆成 walk / hit / death 动画
+5. 配置 `spawn_weight`、`min_spawn_time`、`max_spawn_time`、`pack_size`，生成器会自动按时间池和权重选择
 
 ### 添加一种升级选项
 
@@ -91,6 +93,7 @@ CI 或自定义安装路径可通过 `GODOT_BIN=/path/to/godot ./tests/run_tests
 - **武器使用** — 运行多帧后验证所有武器基础数值、触发逻辑和持续型武器状态
 - 武器流派系统（路径选择、等级上限、special_tag 效果）
 - 敌人受伤、掉落、状态效果、碰撞伤害和生成器曲线
+- 敌人数据资源、专属动画条带和运行时取帧
 - 玩家移动、受击无敌、治疗、死亡结算
 - 角色数据加载、主菜单角色选择、所选角色开局属性 / 初始武器 / 被动修正
 - HUD、StatsPanel、暂停菜单、游戏结束界面同步
@@ -98,8 +101,8 @@ CI 或自定义安装路径可通过 `GODOT_BIN=/path/to/godot ./tests/run_tests
 
 ## 已知限制
 
-- 武器已经 `.tres` 资源化；敌人和通用升级资源仍待内容化
-- 敌人类型仍只有基础追踪型
+- 武器和敌人已经 `.tres` 资源化；通用升级资源仍待内容化
+- 敌人仍缺少 Boss
 - 没有音效系统
 - 存档当前只保存局外数值，不保存或恢复战斗状态
 - 移动端安全区、发布包体和真机性能仍待验证

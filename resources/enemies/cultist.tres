@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_enemy"]
+[ext_resource type="Texture2D" path="res://assets/art/characters/enemies/cultist_sheet.png" id="2_sheet"]
+
+[resource]
+script = ExtResource("1_enemy")
+id = &"cultist"
+display_name = "邪教射手"
+max_hp = 14
+speed = 48.0
+damage = 5
+exp_reward = 4
+gold_reward = 1
+animation_sheet = ExtResource("2_sheet")
+contact_damage_cooldown = 1.1
+collision_radius = 13.0
+visual_scale = 0.96
+visual_modulate = Color(0.82, 0.9, 1.0, 1.0)
+tags = Array[StringName]([&"ranged"])
+behavior_id = &"ranged"
+preferred_range = 260.0
+retreat_range = 150.0
+attack_range = 360.0
+attack_cooldown = 2.2
+projectile_damage = 5
+projectile_speed = 260.0
+projectile_range = 420.0
+projectile_radius = 5.0
+projectile_modulate = Color(0.75, 0.9, 1.0, 1.0)
+spawn_weight = 1.4
+min_spawn_time = 90.0
+max_spawn_time = -1.0
+pack_size = 1

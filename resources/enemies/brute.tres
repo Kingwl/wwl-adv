@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_enemy"]
+[ext_resource type="Texture2D" path="res://assets/art/characters/enemies/brute_sheet.png" id="2_sheet"]
+
+[resource]
+script = ExtResource("1_enemy")
+id = &"brute"
+display_name = "蛮兵"
+max_hp = 46
+speed = 38.0
+damage = 8
+exp_reward = 5
+gold_reward = 2
+animation_sheet = ExtResource("2_sheet")
+contact_damage_cooldown = 1.1
+collision_radius = 18.0
+visual_scale = 1.18
+tags = Array[StringName]([&"tank"])
+behavior_id = &"brute_chase"
+spawn_weight = 1.2
+min_spawn_time = 120.0
+max_spawn_time = -1.0
+pack_size = 1

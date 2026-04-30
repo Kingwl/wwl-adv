@@ -312,6 +312,7 @@ func _phase_level_up() -> void:
 
 	get_tree().paused = false
 	await _wait(0.3)
+	_reset_runtime_modifiers_for_tests()
 
 func _phase_weapon_unlocks() -> void:
 	print("[PHASE 3] Weapon Unlocks")
@@ -629,6 +630,45 @@ func _get_weapon_count() -> int:
 			count += 1
 	return count
 
+func _set_all_weapon_processing(enabled: bool) -> Array:
+	var states := []
+	for weapon in _get_all_weapons():
+		states.append([weapon, weapon.is_processing()])
+		weapon.set_process(enabled)
+	return states
+
+func _restore_weapon_processing(states: Array) -> void:
+	for entry in states:
+		if entry.size() < 2:
+			continue
+		var weapon := entry[0] as Node
+		if is_instance_valid(weapon):
+			weapon.set_process(bool(entry[1]))
+
+func _clear_container_children(container: Node) -> void:
+	if not container:
+		return
+	for child in container.get_children():
+		child.queue_free()
+
+func _reset_runtime_modifiers_for_tests() -> void:
+	GameState.run.pickup_radius_bonus = 0.0
+	GameState.run.exp_gain_multiplier = 1.0
+	GameState.run.incoming_damage_multiplier = 1.0
+	GameState.run.damage_multiplier = 1.0
+	GameState.run.cooldown_multiplier = 1.0
+	GameState.run.area_multiplier = 1.0
+	GameState.run.projectile_cooldown_multiplier = 1.0
+	GameState.run.field_lifetime_multiplier = 1.0
+	GameState.run.enhancements = {}
+	GameState.run.enhancement_order = []
+	var player: Node = get_tree().get_first_node_in_group("player")
+	if player and "move_speed" in player:
+		player.move_speed = float(GameState.run.get("move_speed", 170.0))
+	for weapon in _get_all_weapons():
+		weapon._recalc_stats()
+		weapon._apply_path_effects()
+
 func _assert(condition: bool, message: String) -> void:
 	if condition:
 		_passed += 1
@@ -807,6 +847,7 @@ func _phase_enemy_damage() -> void:
 
 	var enemies_parent := _game.get_node_or_null("Enemies")
 	var drops_parent := _game.get_node_or_null("Drops")
+	var projectiles_parent := _game.get_node_or_null("Projectiles")
 	_assert(enemies_parent != null, "Enemies container exists")
 	_assert(drops_parent != null, "Drops container exists")
 	if not enemies_parent or not drops_parent:
@@ -819,12 +860,22 @@ func _phase_enemy_damage() -> void:
 		await _wait(0.2)
 		return
 
+	var weapon_states := _set_all_weapon_processing(false)
+	_clear_container_children(enemies_parent)
+	_clear_container_children(drops_parent)
+	_clear_container_children(projectiles_parent)
+	await _wait(0.1)
+
 	# Spawn enemy far enough that drops won't be auto-collected
 	var enemy_scene := preload("res://scenes/enemy/enemy.tscn")
 	var enemy := enemy_scene.instantiate()
 	enemy.global_position = player.global_position + Vector2.RIGHT * 150.0
 	enemies_parent.add_child(enemy)
 	await _wait(0.1)
+	enemy.set_physics_process(false)
+	enemy._hp = 999
+	if enemy.has_method("_setup_health_bar"):
+		enemy._setup_health_bar()
 
 	var initial_hp: int = enemy._hp
 	var initial_kills: int = GameState.run.kills
@@ -846,9 +897,10 @@ func _phase_enemy_damage() -> void:
 	status_event.status_value = 0.5
 	DamageCalculator.deal_damage(enemy, status_event)
 	_assert(enemy._statuses.has("slow"), "DamageEvent applies status through target")
-	var applied_status := enemy._statuses["slow"] as StatusEffect
-	_assert(applied_status != null and is_equal_approx(applied_status.value, 0.5), "DamageEvent status stores StatusEffect data")
-	enemy.clear_status(&"slow")
+	if enemy._statuses.has("slow"):
+		var applied_status := enemy._statuses["slow"] as StatusEffect
+		_assert(applied_status != null and is_equal_approx(applied_status.value, 0.5), "DamageEvent status stores StatusEffect data")
+		enemy.clear_status(&"slow")
 
 	# Deal damage
 	initial_hp = enemy._hp
@@ -880,8 +932,8 @@ func _phase_enemy_damage() -> void:
 
 	# Cleanup
 	enemy.queue_free()
-	for child in enemies_parent.get_children():
-		child.queue_free()
+	_clear_container_children(enemies_parent)
+	_restore_weapon_processing(weapon_states)
 	await _wait(0.2)
 
 func _phase_special_tags() -> void:
@@ -1920,9 +1972,12 @@ func _phase_enemy_behavior() -> void:
 		await _wait(0.2)
 		return
 
+	var weapon_states := _set_all_weapon_processing(false)
+	var projectiles_parent := _game.get_node_or_null("Projectiles")
+
 	# Clean up
-	for child in enemies_parent.get_children():
-		child.queue_free()
+	_clear_container_children(enemies_parent)
+	_clear_container_children(projectiles_parent)
 	await _wait(0.1)
 
 	# Spawn enemy far from player, make it invulnerable to weapon attacks
@@ -1983,8 +2038,8 @@ func _phase_enemy_behavior() -> void:
 	# Cleanup
 	if is_instance_valid(enemy):
 		enemy.queue_free()
-	for child in enemies_parent.get_children():
-		child.queue_free()
+	_clear_container_children(enemies_parent)
+	_restore_weapon_processing(weapon_states)
 	await _wait(0.1)
 
 func _phase_upgrade_edges() -> void:
@@ -2033,14 +2088,18 @@ func _phase_upgrade_edges() -> void:
 
 	# Test PLAYER_STAT max_hp bonus
 	var prev_max_hp: int = GameState.run.max_hp
+	GameState.run.hp = maxi(1, prev_max_hp - 20)
+	GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
+	var prev_hp_for_max_hp: int = GameState.run.hp
 	var hp_up := UpgradeData.new()
 	hp_up.id = "test_hp"
 	hp_up.display_name = "Test HP"
 	hp_up.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	hp_up.max_hp_bonus = 30
+	hp_up.hp_bonus = 30
 	upgrade_system._on_option_selected(hp_up)
 	_assert(GameState.run.max_hp == prev_max_hp + 30, "Max HP stat upgrade applies")
-	_assert(GameState.run.hp > 0, "HP bonus also heals player")
+	_assert(GameState.run.hp > prev_hp_for_max_hp, "HP bonus also heals player")
 
 	var saved_passive_state := {
 		"damage_multiplier": GameState.run.get("damage_multiplier", 1.0),
@@ -2452,8 +2511,9 @@ func _phase_hud_sync() -> void:
 	var hp_bar: ProgressBar = hud.get_node_or_null("HPPanel/HPBar")
 	var hp_label: Label = hud.get_node_or_null("HPPanel/HPBar/HPLabel")
 	if hp_bar and hp_label:
-		GameState.hp_changed.emit(60, 100)
-		await _wait(0.05)
+		GameState.run.hp = 60
+		GameState.run.max_hp = 100
+		GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
 		_assert(hp_bar.value == 60, "HP bar value syncs")
 		_assert(hp_bar.max_value == 100, "HP bar max_value syncs")
 		_assert(hp_label.text == "60 / 100", "HP label text syncs")

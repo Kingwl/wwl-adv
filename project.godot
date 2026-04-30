@@ -27,6 +27,7 @@ GameState="*res://autoload/game_state.gd"
 DataManager="*res://autoload/data_manager.gd"
 UITheme="*res://autoload/ui_theme.gd"
 SaveManager="*res://autoload/save_manager.gd"
+AudioManager="*res://autoload/audio_manager.gd"
 CrashReporter="*res://autoload/crash_reporter.gd"
 
 [debug]

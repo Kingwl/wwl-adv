@@ -14,6 +14,7 @@ func _activate() -> void:
 
 	var radius := _get_ring_radius()
 	_show_ice_ring(player.global_position, radius)
+	_play_sfx()
 
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if enemy.global_position.distance_to(player.global_position) <= radius:

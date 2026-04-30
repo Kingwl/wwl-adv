@@ -20,6 +20,7 @@ func _on_hp_changed(current: int, _max_hp: int) -> void:
 		var reflect_damage := int(damage_taken * reflect_percent) + _get_thorns_damage_bonus()
 		_reflect_damage(reflect_damage)
 		_show_thorns_visual()
+		_play_sfx(0.0, 0.18)
 		if has_special_tag(&"thorns_heal") or has_special_tag(&"thorns_vengeance"):
 			var heal_amount := 1
 			if has_special_tag(&"thorns_vengeance"):

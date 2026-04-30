@@ -62,6 +62,13 @@ var run := {
 	"starting_weapon_ids": [&"melee_basic"],
 	"enhancements": {},
 	"enhancement_order": [],
+	"weapon_damage": {},
+	"weapon_hits": {},
+	"weapon_kills": {},
+	"weapon_damage_stats": {},
+	"damage_taken_by_source": {},
+	"death_reason": {},
+	"upgrade_history": [],
 }
 var game_speed_multiplier := 1.0
 
@@ -127,6 +134,13 @@ func start_new_run(rng_seed: int = 0, character_id: StringName = &"") -> void:
 		"starting_weapon_ids": starting_weapons,
 		"enhancements": {},
 		"enhancement_order": [],
+		"weapon_damage": {},
+		"weapon_hits": {},
+		"weapon_kills": {},
+		"weapon_damage_stats": {},
+		"damage_taken_by_source": {},
+		"death_reason": {},
+		"upgrade_history": [],
 	}
 	run_started.emit()
 
@@ -146,7 +160,10 @@ func apply_damage(event: DamageEvent) -> DamageResult:
 	base_result.prevented_amount += maxi(0, base_result.final_amount - final_amount)
 	base_result.final_amount = final_amount
 	base_result.was_blocked = final_amount <= 0
+	var hp_before := int(run.hp)
 	run.hp = max(0, run.hp - final_amount)
+	if final_amount > 0:
+		_record_damage_taken(event, final_amount, hp_before <= final_amount)
 	if guard_prevented > 0:
 		_reflect_guard_refraction_damage(guard_prevented)
 	hp_changed.emit(run.hp, run.max_hp)
@@ -196,6 +213,104 @@ func add_exp(amount: int) -> void:
 func add_kill() -> void:
 	run.kills += 1
 	SaveManager.add_lifetime_kills(1)
+
+func record_damage_result(result: DamageResult) -> void:
+	if not result or not result.event or result.final_amount <= 0:
+		return
+	var event := result.event
+	if not event.target or not event.target.is_in_group("enemies"):
+		return
+	var weapon_id := _get_event_weapon_id(event)
+	if weapon_id.is_empty():
+		return
+	record_weapon_damage(weapon_id, result.final_amount, result.killed)
+
+func record_weapon_damage(weapon_id: StringName, amount: int, killed: bool = false) -> void:
+	if weapon_id.is_empty() or amount <= 0:
+		return
+	var key := str(weapon_id)
+	var weapon_damage: Dictionary = run.get("weapon_damage", {})
+	var weapon_hits: Dictionary = run.get("weapon_hits", {})
+	var weapon_kills: Dictionary = run.get("weapon_kills", {})
+	var weapon_stats: Dictionary = run.get("weapon_damage_stats", {})
+	weapon_damage[key] = int(weapon_damage.get(key, 0)) + amount
+	weapon_hits[key] = int(weapon_hits.get(key, 0)) + 1
+	if killed:
+		weapon_kills[key] = int(weapon_kills.get(key, 0)) + 1
+
+	var entry: Dictionary = weapon_stats.get(key, {})
+	if entry.is_empty():
+		entry = {
+			"id": key,
+			"display_name": _get_weapon_display_name(weapon_id),
+			"damage": 0,
+			"hits": 0,
+			"kills": 0,
+		}
+	entry["damage"] = int(entry.get("damage", 0)) + amount
+	entry["hits"] = int(entry.get("hits", 0)) + 1
+	if killed:
+		entry["kills"] = int(entry.get("kills", 0)) + 1
+	weapon_stats[key] = entry
+
+	run["weapon_damage"] = weapon_damage
+	run["weapon_hits"] = weapon_hits
+	run["weapon_kills"] = weapon_kills
+	run["weapon_damage_stats"] = weapon_stats
+
+func get_weapon_combat_summary(limit: int = 5) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var weapon_stats: Dictionary = run.get("weapon_damage_stats", {})
+	for key in weapon_stats.keys():
+		var entry: Dictionary = weapon_stats[key]
+		result.append(entry.duplicate(true))
+	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		var damage_a := int(a.get("damage", 0))
+		var damage_b := int(b.get("damage", 0))
+		if damage_a == damage_b:
+			return int(a.get("kills", 0)) > int(b.get("kills", 0))
+		return damage_a > damage_b
+	)
+	return result.slice(0, maxi(0, limit))
+
+func record_upgrade_selected(upgrade: UpgradeData) -> void:
+	if not upgrade:
+		return
+	var history: Array = run.get("upgrade_history", [])
+	history.append({
+		"id": str(upgrade.id),
+		"display_name": upgrade.display_name,
+		"type": int(upgrade.upgrade_type),
+		"type_name": _upgrade_type_name(upgrade.upgrade_type),
+		"weapon_id": str(upgrade.weapon_id),
+		"path_id": str(upgrade.path_id),
+		"level": int(run.get("level", 1)),
+		"time": float(run.get("run_time", 0.0)),
+		"build_tags": upgrade.build_tags.duplicate(),
+	})
+	if history.size() > 80:
+		history = history.slice(history.size() - 80)
+	run["upgrade_history"] = history
+
+func get_upgrade_history(limit: int = 8) -> Array[Dictionary]:
+	var history: Array = run.get("upgrade_history", [])
+	var result: Array[Dictionary] = []
+	var start_index := maxi(0, history.size() - limit)
+	for i in range(start_index, history.size()):
+		var entry: Dictionary = history[i]
+		result.append(entry.duplicate(true))
+	return result
+
+func get_damage_taken_summary(limit: int = 3) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var sources: Dictionary = run.get("damage_taken_by_source", {})
+	for key in sources.keys():
+		var entry: Dictionary = sources[key]
+		result.append(entry.duplicate(true))
+	result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return int(a.get("amount", 0)) > int(b.get("amount", 0))
+	)
+	return result.slice(0, maxi(0, limit))
 
 func add_run_time(delta: float) -> void:
 	run.run_time += delta
@@ -349,6 +464,101 @@ func _calculate_incoming_damage(amount: int, event: DamageEvent = null) -> Dicti
 		"final_amount": maxi(0, scaled_amount - guard_prevented),
 		"guard_refraction_prevented": guard_prevented,
 	}
+
+func _record_damage_taken(event: DamageEvent, amount: int, fatal: bool) -> void:
+	if amount <= 0:
+		return
+	var source_key := _get_damage_source_key(event)
+	var source_name := _get_damage_source_display_name(event)
+	var sources: Dictionary = run.get("damage_taken_by_source", {})
+	var entry: Dictionary = sources.get(source_key, {})
+	if entry.is_empty():
+		entry = {
+			"id": source_key,
+			"display_name": source_name,
+			"amount": 0,
+			"hits": 0,
+		}
+	entry["display_name"] = source_name
+	entry["amount"] = int(entry.get("amount", 0)) + amount
+	entry["hits"] = int(entry.get("hits", 0)) + 1
+	sources[source_key] = entry
+	run["damage_taken_by_source"] = sources
+	if fatal:
+		run["death_reason"] = {
+			"id": source_key,
+			"display_name": source_name,
+			"amount": amount,
+			"damage_type": str(event.damage_type if event else DamageEvent.DAMAGE_TYPE_PHYSICAL),
+			"delivery_type": str(event.delivery_type if event else DamageEvent.DELIVERY_DIRECT),
+		}
+
+func _get_event_weapon_id(event: DamageEvent) -> StringName:
+	if not event:
+		return &""
+	if not event.weapon_id.is_empty():
+		return event.weapon_id
+	if event.source:
+		var data = event.source.get("weapon_data")
+		if data is WeaponData:
+			return (data as WeaponData).id
+	return &""
+
+func _get_weapon_display_name(weapon_id: StringName) -> String:
+	var weapon := DataManager.get_weapon(str(weapon_id))
+	if weapon is WeaponData:
+		return (weapon as WeaponData).display_name
+	match weapon_id:
+		&"enemy_projectile":
+			return "敌方弹体"
+	return str(weapon_id)
+
+func _get_damage_source_key(event: DamageEvent) -> String:
+	if not event:
+		return "unknown"
+	if not event.weapon_id.is_empty():
+		if event.weapon_id == &"enemy_projectile" and event.source:
+			var enemy_data = event.source.get("enemy_data")
+			if enemy_data is EnemyData:
+				return "enemy:%s:projectile" % str((enemy_data as EnemyData).id)
+		return "weapon:%s" % str(event.weapon_id)
+	if event.source:
+		var enemy_data = event.source.get("enemy_data")
+		if enemy_data is EnemyData:
+			return "enemy:%s:%s" % [str((enemy_data as EnemyData).id), str(event.delivery_type)]
+		if event.source == self:
+			return "direct"
+	return "unknown"
+
+func _get_damage_source_display_name(event: DamageEvent) -> String:
+	if not event:
+		return "未知伤害"
+	if event.source:
+		var enemy_data = event.source.get("enemy_data")
+		if enemy_data is EnemyData:
+			var base_name := (enemy_data as EnemyData).display_name
+			if event.weapon_id == &"enemy_projectile" or event.delivery_type == DamageEvent.DELIVERY_PROJECTILE:
+				return "%s弹体" % base_name
+			if event.delivery_type == DamageEvent.DELIVERY_CONTACT:
+				return "%s接触" % base_name
+			return base_name
+	if not event.weapon_id.is_empty():
+		return _get_weapon_display_name(event.weapon_id)
+	if event.source == self:
+		return "直接伤害"
+	return "未知伤害"
+
+func _upgrade_type_name(upgrade_type: int) -> String:
+	match upgrade_type:
+		UpgradeData.UpgradeType.WEAPON_UNLOCK:
+			return "武器解锁"
+		UpgradeData.UpgradeType.WEAPON_LEVEL:
+			return "武器强化"
+		UpgradeData.UpgradeType.WEAPON_PATH:
+			return "流派选择"
+		UpgradeData.UpgradeType.PLAYER_STAT:
+			return "角色强化"
+	return "升级"
 
 func _get_guard_refraction_prevented_damage(amount: int) -> int:
 	if amount <= 1:

@@ -12,6 +12,7 @@ func _activate() -> void:
 	var base_dir := (target.global_position - player.global_position).normalized()
 	var count := _get_beam_count()
 	var spread := deg_to_rad(8.0)
+	_play_sfx()
 	for i in range(count):
 		var dir := base_dir
 		if count > 1:

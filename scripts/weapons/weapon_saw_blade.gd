@@ -33,6 +33,8 @@ func _rebuild_saws() -> void:
 	var count := _get_saw_count()
 	for i in range(count):
 		_spawn_saw(i)
+	if count > 0:
+		_play_sfx(-3.0, 1.0)
 
 func _spawn_saw(index: int) -> void:
 	var saw := Area2D.new()

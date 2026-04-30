@@ -12,6 +12,7 @@ func _activate() -> void:
 	var count := _get_boomerang_count()
 	var base_dir := (target.global_position - player.global_position).normalized()
 	var spread := deg_to_rad(10.0)
+	_play_sfx()
 	for i in range(count):
 		var projectile := preload("res://scenes/weapons/projectile.tscn").instantiate()
 		projectile.global_position = player.global_position

@@ -15,6 +15,7 @@ func _activate() -> void:
 
 	var count := _get_axe_count()
 	var base_dir := (target.global_position - player.global_position).normalized()
+	_play_sfx()
 	for i in range(count):
 		var dir := base_dir
 		if count > 1:

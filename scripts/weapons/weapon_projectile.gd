@@ -9,6 +9,7 @@ func _activate() -> void:
 	if not target:
 		return
 
+	_play_sfx()
 	var count := _get_projectile_count()
 	for i in range(count):
 		var projectile := preload("res://scenes/weapons/projectile.tscn").instantiate()

@@ -20,6 +20,7 @@ func _activate() -> void:
 	var jump_range := get_range()
 
 	# 伤害第一个目标
+	_play_sfx()
 	_deal_damage_to(current, dmg, DamageEvent.DAMAGE_TYPE_LIGHTNING, DamageEvent.DELIVERY_DIRECT)
 	_show_chain(player.global_position, current.global_position)
 

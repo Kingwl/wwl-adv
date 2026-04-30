@@ -14,6 +14,7 @@ func _activate() -> void:
 	var spread := _get_spread_angle()
 	var dmg := _get_final_damage()
 	var pierce := _get_pierce_count()
+	_play_sfx()
 
 	for i in range(count):
 		var projectile := preload("res://scenes/weapons/projectile.tscn").instantiate()

@@ -33,13 +33,16 @@ static func deal_damage(target: Node, event: DamageEvent) -> DamageResult:
 	if target.has_method("apply_damage"):
 		var applied = target.call("apply_damage", event)
 		if applied is DamageResult:
-			return applied as DamageResult
+			var applied_result := applied as DamageResult
+			GameState.record_damage_result(applied_result)
+			return applied_result
 		return calculate(event)
 
 	var result := calculate(event)
 	if result.final_amount > 0 and target.has_method("take_damage"):
 		target.call("take_damage", result.final_amount)
 		_apply_status_if_needed(target, event, result)
+		GameState.record_damage_result(result)
 	return result
 
 static func _apply_status_if_needed(target: Node, event: DamageEvent, result: DamageResult) -> void:

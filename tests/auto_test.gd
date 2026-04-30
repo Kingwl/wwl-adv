@@ -76,6 +76,12 @@ func _phase_load() -> void:
 	_assert(CrashReporter != null, "CrashReporter autoload exists")
 	_assert(ProjectSettings.get_setting("sentry/options/auto_init", true) == false, "Sentry auto-init is disabled for wrapper-controlled startup")
 	_assert(not CrashReporter._get_release().is_empty(), "CrashReporter builds a release name")
+	_assert(AudioManager != null, "AudioManager autoload exists")
+	var weapon_resources := DataManager.all_weapons()
+	_assert(AudioManager.get_weapon_sfx_count() == weapon_resources.size(), "AudioManager registers one SFX per weapon")
+	for weapon_data in weapon_resources:
+		_assert(AudioManager.has_weapon_sfx(weapon_data.id), "Weapon %s has SFX mapping" % weapon_data.id)
+		_assert(AudioManager.get_weapon_sfx(weapon_data.id) is AudioStream, "Weapon %s SFX stream loads" % weapon_data.id)
 
 	# Verify HUD has icon elements
 	var hud: Node = _game.get_node_or_null("HUD")
@@ -546,9 +552,22 @@ func _phase_game_over() -> void:
 	if game_over:
 		# Add some stats first
 		GameState.run.kills = 0
+		GameState.run["weapon_damage"] = {}
+		GameState.run["weapon_hits"] = {}
+		GameState.run["weapon_kills"] = {}
+		GameState.run["weapon_damage_stats"] = {}
+		GameState.run["damage_taken_by_source"] = {}
+		GameState.run["death_reason"] = {}
+		GameState.run["upgrade_history"] = []
 		GameState.add_gold(10)
 		GameState.add_kill()
 		GameState.add_kill()
+		GameState.record_weapon_damage(&"melee_basic", 42, true)
+		var recorded_upgrade := UpgradeData.new()
+		recorded_upgrade.id = &"might"
+		recorded_upgrade.display_name = "强攻"
+		recorded_upgrade.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
+		GameState.record_upgrade_selected(recorded_upgrade)
 
 		GameState.take_damage(9999)
 		await _wait(0.5)
@@ -579,6 +598,19 @@ func _phase_game_over() -> void:
 		var enhancements_container: HBoxContainer = game_over.get_node_or_null("Panel/VBoxContainer/EnhancementsSection/EnhancementsContainer")
 		if enhancements_container:
 			_assert(enhancements_container.get_child_count() == GameState.MAX_ENHANCEMENT_SLOTS, "GameOver shows 6 enhancement slots")
+
+		var weapon_damage_list: VBoxContainer = game_over.get_node_or_null("Panel/VBoxContainer/CombatSummarySection/WeaponDamageList")
+		if weapon_damage_list:
+			_assert(weapon_damage_list.get_child_count() > 0, "GameOver shows weapon damage summary")
+			_assert(_node_text_contains(weapon_damage_list, "基础利刃") and _node_text_contains(weapon_damage_list, "42伤害"), "GameOver weapon damage row populated")
+
+		var death_reason_label: Label = game_over.get_node_or_null("Panel/VBoxContainer/CombatSummarySection/DeathReasonLabel")
+		if death_reason_label:
+			_assert(death_reason_label.text.contains("最后伤害"), "GameOver death reason populated")
+
+		var upgrade_history_list: VBoxContainer = game_over.get_node_or_null("Panel/VBoxContainer/UpgradeHistorySection/UpgradeHistoryList")
+		if upgrade_history_list:
+			_assert(_node_text_contains(upgrade_history_list, "强攻"), "GameOver upgrade history populated")
 
 	# Unpause so subsequent phases can use non-always timers
 	get_tree().paused = false
@@ -682,6 +714,14 @@ func _node_tree_contains_label_text(node: Node, text: String) -> bool:
 		return true
 	for child in node.get_children():
 		if _node_tree_contains_label_text(child, text):
+			return true
+	return false
+
+func _node_text_contains(node: Node, text: String) -> bool:
+	if node is Label and (node as Label).text.contains(text):
+		return true
+	for child in node.get_children():
+		if _node_text_contains(child, text):
 			return true
 	return false
 
@@ -890,6 +930,7 @@ func _phase_enemy_damage() -> void:
 	_assert(fire_result.raw_amount == 4 and fire_result.final_amount == 4, "DamageResult preserves raw and final damage")
 	_assert(fire_result.event.damage_type == DamageEvent.DAMAGE_TYPE_FIRE, "DamageEvent carries damage type")
 	_assert(enemy._hp == event_hp_before - 4, "DamageCalculator reduces enemy HP")
+	_assert(int((GameState.run.get("weapon_damage", {}) as Dictionary).get("test_fire", 0)) >= 4, "DamageCalculator records weapon damage")
 
 	var status_event := DamageEvent.from_amount(1, player, DamageEvent.DAMAGE_TYPE_FROST, DamageEvent.DELIVERY_AREA)
 	status_event.status_id = &"slow"
@@ -1873,6 +1914,7 @@ func _phase_melee_kill() -> void:
 		enemy._setup_health_bar()
 	melee._active_attack_windows.clear()
 	var initial_hp: int = enemy._hp
+	var initial_melee_kills := int((GameState.run.get("weapon_kills", {}) as Dictionary).get("melee_basic", 0))
 	_assert(initial_hp == 10, "Enemy HP set to 10 for one-hit kill")
 
 	# Force melee to trigger quickly
@@ -1884,6 +1926,7 @@ func _phase_melee_kill() -> void:
 
 	var enemy_killed: bool = not is_instance_valid(enemy) or enemy._hp <= 0
 	_assert(enemy_killed, "Enemy killed by melee weapon")
+	_assert(int((GameState.run.get("weapon_kills", {}) as Dictionary).get("melee_basic", 0)) > initial_melee_kills, "Melee kill recorded in weapon stats")
 
 	# Cleanup
 	if enemies_parent:

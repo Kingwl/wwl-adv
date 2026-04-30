@@ -1,6 +1,7 @@
 # 武器系统设计文档
 
 > 策划侧的武器种类、效果、流派和组合进化蓝图见 [`weapon_system_blueprint.md`](./weapon_system_blueprint.md)。
+> 当前 20 把武器的定位、重复边界和构筑联动见 [`content_structure.md`](./content_structure.md)。
 
 ## 概述
 

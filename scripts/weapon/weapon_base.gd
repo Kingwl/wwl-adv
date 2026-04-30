@@ -25,6 +25,14 @@ func _process(delta: float) -> void:
 func _activate() -> void:
 	push_warning("WeaponBase._activate() should be overridden")
 
+func _play_sfx(volume_offset_db: float = 0.0, min_interval: float = -1.0) -> bool:
+	if not weapon_data:
+		return false
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager == null or not audio_manager.has_method("play_weapon_sfx"):
+		return false
+	return bool(audio_manager.call("play_weapon_sfx", weapon_data.id, volume_offset_db, min_interval))
+
 func _recalc_stats() -> void:
 	if not weapon_data:
 		return

@@ -12,21 +12,20 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -260.0
-offset_top = -330.0
-offset_right = 260.0
-offset_bottom = 330.0
+offset_left = -280.0
+offset_top = -400.0
+offset_right = 280.0
+offset_bottom = 400.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
 layout_mode = 2
-alignment = 1
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="Panel/VBoxContainer"]
 layout_mode = 2
 text = "游戏结束"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 40
+theme_override_font_sizes/font_size = 34
 
 [node name="Stats" type="VBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
@@ -88,7 +87,7 @@ theme_override_constants/separation = 6
 layout_mode = 2
 text = "本局武器"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
 
 [node name="WeaponsContainer" type="HBoxContainer" parent="Panel/VBoxContainer/WeaponsSection"]
@@ -104,7 +103,7 @@ theme_override_constants/separation = 6
 layout_mode = 2
 text = "本局强化"
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
 
 [node name="EnhancementsContainer" type="HBoxContainer" parent="Panel/VBoxContainer/EnhancementsSection"]
@@ -112,17 +111,63 @@ layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 8
 
+[node name="CombatSummarySection" type="VBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="CombatSummaryTitle" type="Label" parent="Panel/VBoxContainer/CombatSummarySection"]
+layout_mode = 2
+text = "战斗复盘"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
+
+[node name="WeaponDamageList" type="VBoxContainer" parent="Panel/VBoxContainer/CombatSummarySection"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="DamageTakenLabel" type="Label" parent="Panel/VBoxContainer/CombatSummarySection"]
+layout_mode = 2
+text = "受到伤害：0"
+horizontal_alignment = 1
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.78, 0.78, 0.84, 1)
+
+[node name="DeathReasonLabel" type="Label" parent="Panel/VBoxContainer/CombatSummarySection"]
+layout_mode = 2
+text = "最后伤害：暂无"
+horizontal_alignment = 1
+autowrap_mode = 2
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.86, 0.72, 0.58, 1)
+
+[node name="UpgradeHistorySection" type="VBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="UpgradeHistoryTitle" type="Label" parent="Panel/VBoxContainer/UpgradeHistorySection"]
+layout_mode = 2
+text = "升级路线"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.85, 0.85, 0.9, 1)
+
+[node name="UpgradeHistoryList" type="VBoxContainer" parent="Panel/VBoxContainer/UpgradeHistorySection"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
 [node name="Spacer" type="Control" parent="Panel/VBoxContainer"]
-custom_minimum_size = Vector2(0, 12)
+custom_minimum_size = Vector2(0, 4)
 layout_mode = 2
 
 [node name="RestartButton" type="Button" parent="Panel/VBoxContainer"]
-custom_minimum_size = Vector2(200, 48)
+custom_minimum_size = Vector2(200, 42)
 layout_mode = 2
 text = "再来一局"
 
 [node name="QuitButton" type="Button" parent="Panel/VBoxContainer"]
-custom_minimum_size = Vector2(200, 48)
+custom_minimum_size = Vector2(200, 42)
 layout_mode = 2
 text = "返回主菜单"
 

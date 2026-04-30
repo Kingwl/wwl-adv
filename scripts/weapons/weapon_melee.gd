@@ -25,6 +25,7 @@ func _activate() -> void:
 		attack_dir = (target.global_position - player.global_position).normalized()
 
 	_show_slash_effect(player, attack_dir)
+	_play_sfx()
 	_start_attack_window(player, attack_dir)
 
 func _start_attack_window(player: Node2D, attack_dir: Vector2) -> void:

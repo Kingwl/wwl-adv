@@ -33,6 +33,7 @@ func _activate() -> void:
 		if __proj:
 			__proj.add_child(field)
 
+	_play_sfx()
 	_show_throw_visual(player.global_position, target.global_position)
 
 func _get_vial_count() -> int:

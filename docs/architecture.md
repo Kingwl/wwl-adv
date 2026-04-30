@@ -7,6 +7,7 @@ WWL Adventure/
 ├── autoload/          # 全局单例
 │   ├── game_state.gd       # 单局游戏状态（HP、经验、金币、时间、击杀等）
 │   ├── data_manager.gd     # 扫描 resources/ 下的 .tres 并提供查询
+│   ├── audio_manager.gd    # 武器 SFX 播放池和触发限流
 │   └── crash_reporter.gd   # 可选 Sentry 崩溃 / 异常监控封装
 ├── scenes/            # Godot 场景 (.tscn)
 │   ├── game/
@@ -64,6 +65,7 @@ Game (Node2D)
 |------|------|---------|
 | `GameState` | 单局状态管理 | `run_started`, `run_ended`, `hp_changed`, `exp_changed`, `level_up`, `gold_changed`, `game_speed_changed` |
 | `DataManager` | 扫描 `resources/characters`、`resources/weapons`、`resources/enemies`、`resources/upgrades` | 无 |
+| `AudioManager` | 武器 SFX 映射、播放池、武器级最小播放间隔 | 无 |
 | `CrashReporter` | 可选 Sentry SDK 初始化、场景 / 平台 / 版本标签、业务 breadcrumb / message 上报 | 无 |
 
 ## 主信号流

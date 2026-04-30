@@ -9,6 +9,7 @@ func _activate() -> void:
 	if enemies.is_empty():
 		return
 
+	_play_sfx()
 	var strikes := _get_strike_count()
 	for i in range(strikes):
 		var target: Node2D = enemies.pick_random()

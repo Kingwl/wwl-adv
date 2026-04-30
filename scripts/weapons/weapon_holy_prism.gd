@@ -16,6 +16,7 @@ func _activate() -> void:
 		return
 
 	var target: Node2D = enemies.pick_random()
+	_play_sfx()
 	_strike_at(target.global_position)
 	_show_visual(target.global_position, player)
 

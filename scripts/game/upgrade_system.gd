@@ -190,6 +190,7 @@ func _apply_upgrade(upgrade: UpgradeData) -> void:
 	if not player:
 		return
 
+	var applied := true
 	match upgrade.upgrade_type:
 		UpgradeData.UpgradeType.WEAPON_UNLOCK:
 			_level_up_weapon(upgrade.weapon_id, upgrade)
@@ -201,6 +202,10 @@ func _apply_upgrade(upgrade: UpgradeData) -> void:
 			if not GameState.add_enhancement(upgrade):
 				return
 			_apply_stat_upgrade(player, upgrade)
+		_:
+			applied = false
+	if applied:
+		GameState.record_upgrade_selected(upgrade)
 
 func _get_weapon_count() -> int:
 	var player := get_tree().get_first_node_in_group("player")

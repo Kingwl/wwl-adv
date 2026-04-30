@@ -35,6 +35,9 @@ func _on_body_entered(body: Node2D) -> void:
 		_explode()
 
 func _explode() -> void:
+	var audio_manager := get_node_or_null("/root/AudioManager")
+	if audio_manager and audio_manager.has_method("play_weapon_sfx"):
+		audio_manager.call("play_weapon_sfx", weapon_id, 0.0, 0.05)
 	_deal_area_damage(global_position, explosion_radius, damage)
 	_show_explosion(global_position, explosion_radius)
 	if cluster_count > 0:

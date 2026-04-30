@@ -55,6 +55,7 @@ func _spawn_fire_behind(player: Node2D) -> void:
 		player.global_position + back_dir * FLAME_VISUAL_START_DISTANCE,
 		player.global_position + back_dir * FLAME_VISUAL_END_DISTANCE
 	)
+	_play_sfx(0.0, 0.24)
 
 	var __proj := get_tree().current_scene.get_node_or_null("Projectiles")
 	if __proj == null:

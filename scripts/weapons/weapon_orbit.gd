@@ -57,6 +57,8 @@ func _spawn_orbs() -> void:
 		if __proj:
 			__proj.add_child(orb)
 		_orbs.append(orb)
+	if _orbit_count > 0:
+		_play_sfx(-2.0, 1.2)
 
 func _on_orb_hit(body: Node2D) -> void:
 	if body.is_in_group("enemies"):

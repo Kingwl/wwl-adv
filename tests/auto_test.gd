@@ -831,6 +831,24 @@ func _phase_path_system() -> void:
 	_assert(path_option.description.contains("立即获得"), "Path choice card describes immediate Lv.2 upgrade")
 	_assert(path_option.damage_bonus == 5, "Path choice carries first path damage bonus for display")
 	_assert(path_option.build_tags.has("强击"), "Path choice carries build direction tag")
+	_assert(path_option.choice_hint.is_empty(), "Path choice card omits extra choice hint text")
+	_assert(path_option.resonance_preview.contains("+0.5"), "Path choice card shows path specialization resonance contribution")
+	_assert(not path_option.resonance_preview.contains("还差") and not path_option.resonance_preview.contains("→"), "Resonance preview keeps concise progress format")
+	var resonance_state: Dictionary = upgrade_system.get_build_resonance_state()
+	var resonance_scores: Dictionary = resonance_state.get("scores", {})
+	_assert(float(resonance_scores.get("近身", 0.0)) > 0.0, "Build resonance scores current weapon tags")
+	_assert(upgrade_system._get_build_resonance_tier(2.0) == 1, "Build resonance tier I starts at 2.0")
+	_assert(upgrade_system._get_build_resonance_tier(4.0) == 2, "Build resonance tier II starts at 4.0")
+	_assert(upgrade_system._get_build_resonance_tier(6.0) == 3, "Build resonance tier III starts at 6.0")
+	_assert(is_equal_approx(upgrade_system._get_weapon_build_resonance_tag_score(0, 8, true), 3.0), "Full primary weapon specialization reaches 3.0 resonance points")
+	_assert(is_equal_approx(upgrade_system._get_weapon_build_resonance_tag_score(1, 8, true), 1.5), "Full secondary weapon specialization uses half resonance weight")
+	var orbit_unlock: UpgradeData = upgrade_system._make_unlock(&"orbit")
+	_assert(orbit_unlock.build_tags.has("近身"), "Weapon unlock card carries weapon build tag")
+	_assert(not orbit_unlock.resonance_preview.is_empty(), "Weapon unlock card carries build resonance preview")
+	_assert(orbit_unlock.resonance_preview.contains("+1.0"), "Weapon unlock card shows exact build resonance contribution")
+	_assert(orbit_unlock.choice_hint.is_empty(), "Weapon unlock card omits extra recommendation hint")
+	var off_build_unlock: UpgradeData = upgrade_system._make_unlock(&"fire_bottle")
+	_assert(not off_build_unlock.choice_hint.contains("偏向") and not off_build_unlock.choice_hint.contains("当前主线"), "Weapon unlock card avoids off-build warning hint")
 	var allowed_weapon_build_tags := ["近身", "弹幕", "场地", "控制", "爆发", "生存"]
 	var allowed_build_tags := ["强击", "扩散", "疾速", "穿透", "控制", "守护", "持续"]
 	var missing_weapon_build_tags: Array[String] = []
@@ -866,7 +884,17 @@ func _phase_path_system() -> void:
 	if upgrade_select:
 		var preview_card: Node = upgrade_select._create_option_card(path_option)
 		_assert(_node_tree_contains_label_text(preview_card, "强击"), "Path choice card displays build direction tag")
+		_assert(not _node_text_contains(preview_card, "选择提示"), "Path choice card does not display extra choice hint")
+		_assert(_node_text_contains(preview_card, "共鸣："), "Path choice card displays concise resonance change")
 		preview_card.free()
+		upgrade_select.show_options([orbit_unlock], upgrade_system.get_build_resonance_state())
+		await _wait(0.05)
+		_assert(_node_text_contains(upgrade_select, "构筑共鸣"), "UpgradeSelect displays build resonance summary")
+		_assert(_node_text_contains(upgrade_select, "共鸣："), "Upgrade card displays concise build resonance change")
+		_assert(not _node_text_contains(upgrade_select, "选择提示"), "Upgrade card omits extra recommendation hint")
+		upgrade_select.visible = false
+	var resonance_rewards: Dictionary = GameState.run.get("build_resonance_rewards", {})
+	_assert(not resonance_rewards.is_empty(), "Build resonance rewards are tracked")
 	upgrade_system._apply_upgrade(path_option)
 	_assert(melee.current_path_id == &"berserker", "Berserker path set correctly")
 	_assert(melee.level == 2, "Path selection triggers level up to 2")
@@ -879,6 +907,7 @@ func _phase_path_system() -> void:
 	_assert(lvl3_effect != null, "Berserker Lv.3 effect exists")
 	var lvl3_option: UpgradeData = upgrade_system._make_level_from_path(melee, berserker_path, lvl3_effect)
 	_assert(lvl3_option.path_id == &"berserker", "Path level card carries path id")
+	_assert(lvl3_option.resonance_preview.contains("+0.25"), "Path level card shows weapon depth resonance contribution")
 	upgrade_system._apply_upgrade(lvl3_option)
 	var expected_lv3_dmg := int(round(melee.weapon_data.damage * 1.2 * GameState.get_character_damage_multiplier())) + 10
 	_assert(melee._current_damage == expected_lv3_dmg, "Berserker Lv.3 cumulative damage applies once")
@@ -985,6 +1014,34 @@ func _phase_enemy_damage() -> void:
 	_assert(fire_result.event.damage_type == DamageEvent.DAMAGE_TYPE_FIRE, "DamageEvent carries damage type")
 	_assert(enemy._hp == event_hp_before - 4, "DamageCalculator reduces enemy HP")
 	_assert(int((GameState.run.get("weapon_damage", {}) as Dictionary).get("test_fire", 0)) >= 4, "DamageCalculator records weapon damage")
+
+	var saved_resonance_rewards: Dictionary = (GameState.run.get("build_resonance_rewards", {}) as Dictionary).duplicate(true)
+	GameState.run["build_resonance_rewards"] = {}
+	var barrage_event := DamageEvent.from_amount(100, player, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_PROJECTILE)
+	barrage_event.weapon_id = &"projectile_basic"
+	barrage_event.owner = player
+	barrage_event.target = enemy
+	enemy.global_position = player.global_position + Vector2.RIGHT * 420.0
+	_assert(DamageCalculator.calculate(barrage_event).final_amount == 100, "Barrage weapon has no resonance bonus before unlock")
+	GameState.record_build_resonance_reward("弹幕", 1, "test")
+	_assert(GameState.get_build_resonance_reward_tier("弹幕") == 1, "Build resonance tier getter reads unlocked tier")
+	_assert(DamageCalculator.calculate(barrage_event).final_amount == 108, "Barrage I applies fixed damage bonus")
+	GameState.record_build_resonance_reward("弹幕", 2, "test")
+	_assert(DamageCalculator.calculate(barrage_event).final_amount == 127, "Barrage II applies distance-scaled damage bonus")
+	var melee_event := DamageEvent.from_amount(100, player, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_MELEE)
+	melee_event.weapon_id = &"melee_basic"
+	melee_event.owner = player
+	melee_event.target = enemy
+	_assert(DamageCalculator.calculate(melee_event).final_amount == 100, "Barrage resonance does not buff non-barrage weapons")
+	GameState.record_build_resonance_reward("弹幕", 3, "test")
+	var knockback_event := DamageEvent.from_amount(10, player, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_PROJECTILE)
+	knockback_event.weapon_id = &"projectile_basic"
+	knockback_event.owner = player
+	knockback_event.target = enemy
+	enemy.velocity = Vector2.ZERO
+	DamageCalculator.deal_damage(enemy, knockback_event)
+	_assert(enemy.velocity.x > 0.0, "Barrage III applies knockback away from the player")
+	GameState.run["build_resonance_rewards"] = saved_resonance_rewards
 
 	var stale_owner := Node.new()
 	stale_owner.free()
@@ -2089,6 +2146,39 @@ func _phase_player_combat() -> void:
 	GameState.heal(999)
 	_assert(GameState.run.hp == GameState.run.max_hp, "Heal caps at max HP")
 
+	# Test local debug assist hidden activation and damage blocking
+	if GameState.is_local_debug_available():
+		var hud: Node = _game.get_node_or_null("HUD")
+		_assert(GameState.set_local_debug_mode(false), "Local debug assist can be disabled")
+		var hp_before_debug: int = GameState.run.hp
+		_assert(GameState.set_local_debug_mode(true), "Local debug assist can be enabled in debug builds")
+		var blocked_result := GameState.take_damage(50)
+		_assert(blocked_result.was_blocked and GameState.run.hp == hp_before_debug, "Local debug assist blocks direct player damage")
+		_assert(GameState.preview_take_damage(50) == 0, "Local debug assist preview reports zero incoming damage")
+		GameState.set_local_debug_mode(false)
+
+		if hud:
+			for keycode in [KEY_I, KEY_D, KEY_D, KEY_Q, KEY_D]:
+				var key_event := InputEventKey.new()
+				key_event.keycode = keycode
+				key_event.pressed = true
+				hud._input(key_event)
+			_assert(GameState.local_debug_mode_enabled, "Local debug assist toggles from keyboard hidden code")
+			GameState.set_local_debug_mode(false)
+
+			var hp_bar := hud.get_node_or_null("HPPanel/HPBar") as Control
+			_assert(hp_bar != null, "HUD HP bar exists for mobile debug gesture")
+			if hp_bar:
+				var tap_position := hp_bar.get_global_rect().get_center()
+				for i in range(7):
+					var tap_event := InputEventScreenTouch.new()
+					tap_event.index = i
+					tap_event.pressed = true
+					tap_event.position = tap_position
+					hud._input(tap_event)
+				_assert(GameState.local_debug_mode_enabled, "Local debug assist toggles from HP bar touch gesture")
+				GameState.set_local_debug_mode(false)
+
 	# Test player death triggers game over
 	get_tree().paused = false
 	var game_over: Node = _game.get_node_or_null("GameOver")
@@ -2204,6 +2294,12 @@ func _phase_upgrade_edges() -> void:
 	GameState.run["enhancements"] = {}
 	GameState.run["enhancement_order"] = []
 
+	var passive_might: UpgradeData = upgrade_system._make_might_up()
+	_assert(passive_might.build_tags.has("爆发"), "Passive upgrade carries build resonance tag")
+	_assert(passive_might.resonance_preview.contains("+0.2"), "Passive upgrade card shows specialization resonance contribution")
+	_assert(is_equal_approx(upgrade_system._get_passive_build_resonance_tag_score(0, GameState.MAX_ENHANCEMENT_LEVEL), 1.0), "Full primary passive specialization reaches 1.0 resonance point")
+	_assert(is_equal_approx(upgrade_system._get_passive_build_resonance_tag_score(1, GameState.MAX_ENHANCEMENT_LEVEL), 0.5), "Full secondary passive specialization uses half resonance weight")
+
 	# Test PLAYER_STAT speed bonus and enhancement slot tracking
 	var prev_speed: float = player.move_speed
 	var speed_up := UpgradeData.new()
@@ -2301,9 +2397,15 @@ func _phase_upgrade_edges() -> void:
 
 	var duration: UpgradeData = upgrade_system._make_duration_up()
 	_assert(duration.id == &"field_duration" and duration.display_name == "余烬延续", "Field duration enhancement option is generated")
+	_assert(duration.build_tags.has("场地") and duration.resonance_preview.contains("+0.2"), "Field duration passive contributes field resonance")
+	var field_score_before := float(upgrade_system.get_build_resonance_state().get("scores", {}).get("场地", 0.0))
 	upgrade_system._on_option_selected(duration)
 	_assert(abs(float(GameState.run.field_lifetime_multiplier) - (float(saved_passive_state["field_lifetime_multiplier"]) + 0.12)) < 0.001, "Field lifetime passive applies")
 	_assert(abs(GameState.get_character_field_lifetime_multiplier() - float(GameState.run.field_lifetime_multiplier)) < 0.001, "Field lifetime getter reflects passive")
+	var duration_enhancement: Dictionary = GameState.run.get("enhancements", {}).get("field_duration", {})
+	_assert((duration_enhancement.get("build_tags", []) as Array).has("场地"), "Stored passive enhancement keeps build tags")
+	var field_score_after := float(upgrade_system.get_build_resonance_state().get("scores", {}).get("场地", 0.0))
+	_assert(field_score_after >= field_score_before + 0.19, "Passive enhancement contributes to build resonance score")
 
 	var tenacity := UpgradeData.new()
 	tenacity.id = "test_tenacity"

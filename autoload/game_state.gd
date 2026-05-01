@@ -9,6 +9,8 @@ signal exp_changed(current: int, required: int)
 signal level_up(new_level: int)
 signal game_speed_changed(multiplier: float)
 signal weapons_changed
+signal build_resonance_changed
+signal local_debug_mode_changed(enabled: bool)
 
 const STARTING_HP := 100
 const STARTING_GOLD := 0
@@ -72,8 +74,10 @@ var run := {
 	"damage_taken_by_source": {},
 	"death_reason": {},
 	"upgrade_history": [],
+	"build_resonance_rewards": {},
 }
 var game_speed_multiplier := 1.0
+var local_debug_mode_enabled := false
 
 func start_new_run(rng_seed: int = 0, character_id: StringName = &"") -> void:
 	reset_game_speed()
@@ -144,6 +148,7 @@ func start_new_run(rng_seed: int = 0, character_id: StringName = &"") -> void:
 		"damage_taken_by_source": {},
 		"death_reason": {},
 		"upgrade_history": [],
+		"build_resonance_rewards": {},
 	}
 	run_started.emit()
 
@@ -153,6 +158,8 @@ func take_damage(amount: int) -> DamageResult:
 
 func apply_damage(event: DamageEvent) -> DamageResult:
 	if not event or event.amount <= 0:
+		return DamageResult.blocked(event)
+	if is_local_debug_mode_active():
 		return DamageResult.blocked(event)
 	var base_result := DamageCalculator.calculate(event)
 	if base_result.final_amount <= 0:
@@ -182,6 +189,8 @@ func preview_take_damage(amount: int) -> int:
 
 func preview_apply_damage(event: DamageEvent) -> DamageResult:
 	if not event or event.amount <= 0:
+		return DamageResult.blocked(event)
+	if is_local_debug_mode_active():
 		return DamageResult.blocked(event)
 	var base_result := DamageCalculator.calculate(event)
 	var damage_info := _calculate_incoming_damage(base_result.final_amount, event)
@@ -290,10 +299,47 @@ func record_upgrade_selected(upgrade: UpgradeData) -> void:
 		"level": int(run.get("level", 1)),
 		"time": float(run.get("run_time", 0.0)),
 		"build_tags": upgrade.build_tags.duplicate(),
+		"resonance_preview": upgrade.resonance_preview,
+		"choice_hint": upgrade.choice_hint,
 	})
 	if history.size() > 80:
 		history = history.slice(history.size() - 80)
 	run["upgrade_history"] = history
+
+func record_build_resonance_reward(tag: String, tier: int, reward_name: String) -> bool:
+	if tag.is_empty() or tier <= 0:
+		return false
+	var rewards: Dictionary = run.get("build_resonance_rewards", {})
+	var key := "%s_%d" % [tag, tier]
+	if rewards.has(key):
+		return false
+	rewards[key] = {
+		"tag": tag,
+		"tier": tier,
+		"reward_name": reward_name,
+		"level": int(run.get("level", 1)),
+		"time": float(run.get("run_time", 0.0)),
+	}
+	run["build_resonance_rewards"] = rewards
+	build_resonance_changed.emit()
+	return true
+
+func get_build_resonance_reward_tier(tag: String) -> int:
+	if tag.is_empty():
+		return 0
+	var rewards: Dictionary = run.get("build_resonance_rewards", {})
+	var highest := 0
+	for key in rewards.keys():
+		var entry = rewards[key]
+		if entry is Dictionary:
+			var entry_data := entry as Dictionary
+			if str(entry_data.get("tag", "")) == tag:
+				highest = maxi(highest, int(entry_data.get("tier", 0)))
+		elif str(key).begins_with("%s_" % tag):
+			var parts := str(key).split("_")
+			if parts.size() >= 2:
+				highest = maxi(highest, int(parts[parts.size() - 1]))
+	return highest
 
 func get_upgrade_history(limit: int = 8) -> Array[Dictionary]:
 	var history: Array = run.get("upgrade_history", [])
@@ -358,6 +404,7 @@ func add_enhancement(upgrade: UpgradeData) -> bool:
 			"description": upgrade.description,
 			"level": 1,
 			"icon": upgrade.icon if upgrade.icon else STAT_UPGRADE_ICON,
+			"build_tags": upgrade.build_tags.duplicate(),
 		}
 		order.append(key)
 	else:
@@ -371,6 +418,7 @@ func add_enhancement(upgrade: UpgradeData) -> bool:
 			data["icon"] = upgrade.icon
 		elif not data.has("icon"):
 			data["icon"] = STAT_UPGRADE_ICON
+		data["build_tags"] = upgrade.build_tags.duplicate()
 		enhancements[key] = data
 	run["enhancements"] = enhancements
 	run["enhancement_order"] = order
@@ -414,6 +462,27 @@ func get_total_gold() -> int:
 
 func notify_weapons_changed() -> void:
 	weapons_changed.emit()
+
+func is_local_debug_available() -> bool:
+	return OS.has_feature("editor") or OS.has_feature("debug") or OS.is_debug_build()
+
+func is_local_debug_mode_active() -> bool:
+	return local_debug_mode_enabled and is_local_debug_available()
+
+func set_local_debug_mode(enabled: bool) -> bool:
+	if enabled and not is_local_debug_available():
+		return false
+	if local_debug_mode_enabled == enabled:
+		return true
+	local_debug_mode_enabled = enabled
+	if local_debug_mode_enabled:
+		heal(int(run.get("max_hp", STARTING_HP)))
+	local_debug_mode_changed.emit(local_debug_mode_enabled)
+	return true
+
+func toggle_local_debug_mode() -> bool:
+	set_local_debug_mode(not local_debug_mode_enabled)
+	return local_debug_mode_enabled
 
 func set_game_speed(multiplier: float) -> bool:
 	var normalized := _normalize_game_speed(multiplier)

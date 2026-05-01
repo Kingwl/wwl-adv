@@ -137,9 +137,11 @@
 - `StatusEffect` 记录状态剩余时间、刷新策略、堆叠、数值和周期伤害载荷；简单状态仍可通过 `DamageEvent.status_id/status_duration/status_value` 传递。
 - 已使用的伤害类型包括 `physical`、`fire`、`poison`、`frost`、`lightning`、`holy`、`pure`。
 - 已使用的命中方式包括 `melee`、`projectile`、`area`、`dot`、`beam`、`contact`、`reflect`。
+- “弹幕”共鸣已接入伤害结算：I 档固定增伤，II 档按命中距离额外增伤，III 档命中后短时击退敌人；精英 / Boss 击退力度降低。
 - 旧的 `take_damage(int)` 保持兼容，便于测试和后续逐步迁移。
 - 敌人死亡后不再重复吃伤害或重复结算击杀。
 - 玩家受伤减免、守卫折光甲胄和死亡结算仍由 `GameState` 统一处理。
+- 本地调试护身只在 editor / debug 构建可用，开启后由 `GameState` 拦截玩家受到的伤害，不写入存档；键盘输入 `iddqd` 或触屏连续点击生命条 7 次可切换。
 
 ### 战斗统计
 
@@ -150,6 +152,7 @@
 - `damage_taken_by_source`：按敌人接触、敌方弹体等来源统计玩家受到的伤害。
 - `death_reason`：记录最后一次致死伤害来源、伤害值和伤害类型；胜利时结算页显示 Boss 击败结果。
 - `upgrade_history`：记录本局选择过的升级、流派、角色强化和选择时等级。
+- `build_resonance_rewards`：记录本局已触发的构筑共鸣奖励，当前用于 UI 展示，并驱动已接入的弹幕奖励效果。
 
 这些数据当前用于结算页“战斗复盘”和“升级路线”，后续 Debug Overlay、平衡分析和 Web smoke 流程测试可以复用。
 
@@ -173,6 +176,8 @@ level > 20:  exp_required = 15 * 1.2^19 * 1.1^(level - 20)
 | 外部升级 | `DataManager.all_upgrades()` 返回的资源会加入候选池 |
 
 武器路径的数值 bonus 由 `WeaponBase` 按当前等级累计结算；路径升级卡上的 `damage_bonus` / `cooldown_bonus` / `range_bonus` 只用于展示，不再由 `UpgradeSystem` 二次叠加。
+
+升级卡只显示标签和共鸣进度：武器解锁、流派选择、后续武器升级和局内被动都会展示本次贡献与选择后的进度，例如 `近身 +0.25 1.75/2.0` 或 `近身 +1.0 解锁I`。当前路线标签只用于决策表达，不参与 P1 共鸣计分。数值按 12 分钟局最多约 2 个满级武器专精设计，两把同构筑满级专精约可触发 III 档，被动用于补足差距。
 
 当前内置角色强化：
 

@@ -50,6 +50,8 @@ var _boss_volley_index: int = 0
 var _can_damage: bool = true
 var _damage_cooldown: float = 1.0
 var _dead: bool = false
+var _knockback_velocity: Vector2 = Vector2.ZERO
+var _knockback_timer: float = 0.0
 
 # 状态系统: status_name -> StatusEffect
 var _statuses: Dictionary = {}
@@ -175,6 +177,13 @@ func _process(delta: float) -> void:
 
 func _physics_process(delta: float) -> void:
 	if _player:
+		if _knockback_timer > 0.0:
+			_knockback_timer = maxf(0.0, _knockback_timer - delta)
+			velocity = _knockback_velocity
+			move_and_slide()
+			_knockback_velocity = _knockback_velocity.move_toward(Vector2.ZERO, 900.0 * delta)
+			return
+
 		if _has_status(&"stun"):
 			velocity = Vector2.ZERO
 			move_and_slide()
@@ -223,6 +232,19 @@ func clear_status(status: StringName) -> void:
 	var status_key := str(status)
 	if _statuses.erase(status_key):
 		_on_status_removed(status)
+
+func apply_knockback(from_pos: Vector2, force: float, duration: float = 0.12) -> void:
+	if _dead or force <= 0.0 or duration <= 0.0:
+		return
+	var dir := (global_position - from_pos).normalized()
+	if dir == Vector2.ZERO and _player:
+		dir = (global_position - _player.global_position).normalized()
+	if dir == Vector2.ZERO:
+		return
+	_knockback_velocity = dir * force
+	_knockback_timer = duration
+	velocity = _knockback_velocity
+	move_and_slide()
 
 func _get_status(status: StringName) -> StatusEffect:
 	return _statuses.get(str(status)) as StatusEffect

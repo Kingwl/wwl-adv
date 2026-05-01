@@ -5,11 +5,13 @@ signal reroll_requested
 signal skip_requested
 
 @onready var _panel: PanelContainer = $PanelContainer
+@onready var _root_vbox: VBoxContainer = $PanelContainer/VBoxContainer
 @onready var _options_container: HBoxContainer = $PanelContainer/VBoxContainer/OptionsContainer
 @onready var _reroll_button: Button = $PanelContainer/VBoxContainer/ActionsContainer/RerollButton
 @onready var _skip_button: Button = $PanelContainer/VBoxContainer/ActionsContainer/SkipButton
 
 var _card_style_base: StyleBoxFlat
+var _resonance_panel: PanelContainer
 
 func _ready() -> void:
 	add_to_group("upgrade_select")
@@ -22,6 +24,7 @@ func _ready() -> void:
 	_card_style_base.corner_radius_bottom_right = 6
 	_setup_panel_style()
 	_setup_button_styles()
+	_setup_resonance_panel()
 
 func _setup_panel_style() -> void:
 	var style := StyleBoxTexture.new()
@@ -53,8 +56,9 @@ func _style_button(btn: Button) -> void:
 	pressed.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
 	btn.add_theme_stylebox_override("pressed", pressed)
 
-func show_options(options: Array) -> void:
+func show_options(options: Array, resonance_state: Dictionary = {}) -> void:
 	visible = true
+	_update_resonance_panel(resonance_state)
 	for child in _options_container.get_children():
 		child.queue_free()
 
@@ -64,7 +68,7 @@ func show_options(options: Array) -> void:
 
 func _create_option_card(option: UpgradeData) -> PanelContainer:
 	var card := PanelContainer.new()
-	card.custom_minimum_size = Vector2(220, 200)
+	card.custom_minimum_size = Vector2(220, 220)
 	card.mouse_filter = Control.MOUSE_FILTER_STOP
 	card.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -141,11 +145,21 @@ func _create_option_card(option: UpgradeData) -> PanelContainer:
 		detail_label.add_theme_font_size_override("font_size", 12)
 		detail_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.85, 1))
 
+	var resonance_label := Label.new()
+	if not option.resonance_preview.is_empty():
+		resonance_label.text = "共鸣：%s" % option.resonance_preview
+		resonance_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		resonance_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		resonance_label.add_theme_font_size_override("font_size", 12)
+		resonance_label.add_theme_color_override("font_color", Color(0.82, 0.93, 1.0, 1))
+
 	vbox.add_child(tag_label)
 	if cat_label:
 		vbox.add_child(cat_label)
 	if build_tags_row:
 		vbox.add_child(build_tags_row)
+	if not option.resonance_preview.is_empty():
+		vbox.add_child(resonance_label)
 	vbox.add_child(name_label)
 	vbox.add_child(desc_label)
 	if not detail.is_empty():
@@ -154,12 +168,136 @@ func _create_option_card(option: UpgradeData) -> PanelContainer:
 	card.add_child(vbox)
 	return card
 
+func _setup_resonance_panel() -> void:
+	_resonance_panel = PanelContainer.new()
+	_resonance_panel.name = "BuildResonancePanel"
+	_resonance_panel.visible = false
+	_resonance_panel.custom_minimum_size = Vector2(720, 54)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.04, 0.055, 0.08, 0.82)
+	style.border_width_left = 1
+	style.border_width_top = 1
+	style.border_width_right = 1
+	style.border_width_bottom = 1
+	style.border_color = Color(0.25, 0.34, 0.48, 0.9)
+	style.corner_radius_top_left = 5
+	style.corner_radius_top_right = 5
+	style.corner_radius_bottom_left = 5
+	style.corner_radius_bottom_right = 5
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	_resonance_panel.add_theme_stylebox_override("panel", style)
+	_root_vbox.add_child(_resonance_panel)
+	_root_vbox.move_child(_resonance_panel, 1)
+
+func _update_resonance_panel(resonance_state: Dictionary) -> void:
+	if not _resonance_panel:
+		return
+	_clear_children(_resonance_panel)
+	if resonance_state.is_empty():
+		_resonance_panel.visible = false
+		return
+	var entries: Array = resonance_state.get("top", [])
+	if entries.is_empty():
+		_resonance_panel.visible = false
+		return
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 8)
+
+	var title := Label.new()
+	title.text = "构筑共鸣"
+	title.add_theme_font_size_override("font_size", 13)
+	title.add_theme_color_override("font_color", Color(0.86, 0.9, 0.98, 1))
+	row.add_child(title)
+
+	var shown := 0
+	for entry in entries:
+		if shown >= 4:
+			break
+		var resonance_entry: Dictionary = entry
+		row.add_child(_create_resonance_chip(resonance_entry))
+		shown += 1
+
+	var active_entries: Array = resonance_state.get("active", [])
+	var active_text := _format_active_resonance(active_entries)
+	if not active_text.is_empty():
+		var active_label := Label.new()
+		active_label.text = active_text
+		active_label.add_theme_font_size_override("font_size", 11)
+		active_label.add_theme_color_override("font_color", Color(0.9, 0.8, 0.52, 1))
+		row.add_child(active_label)
+
+	_resonance_panel.add_child(row)
+	_resonance_panel.visible = true
+
+func _create_resonance_chip(entry: Dictionary) -> PanelContainer:
+	var tag := str(entry.get("tag", ""))
+	var chip := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = _get_build_tag_color(tag)
+	style.corner_radius_top_left = 4
+	style.corner_radius_top_right = 4
+	style.corner_radius_bottom_left = 4
+	style.corner_radius_bottom_right = 4
+	style.content_margin_left = 7
+	style.content_margin_right = 7
+	style.content_margin_top = 2
+	style.content_margin_bottom = 2
+	chip.add_theme_stylebox_override("panel", style)
+
+	var label := Label.new()
+	label.text = _format_resonance_chip(entry)
+	label.add_theme_font_size_override("font_size", 10)
+	label.add_theme_color_override("font_color", Color(0.98, 0.98, 0.98, 1))
+	chip.add_child(label)
+	return chip
+
+func _format_resonance_chip(entry: Dictionary) -> String:
+	var tag := str(entry.get("tag", ""))
+	var score := float(entry.get("score", 0.0))
+	var tier := int(entry.get("tier", 0))
+	var tier_name := str(entry.get("tier_name", ""))
+	if tier > 0:
+		return "%s %s %s" % [tag, _format_resonance_score(score), tier_name]
+	var next_threshold := float(entry.get("next_threshold", 2.0))
+	return "%s %s/%s" % [tag, _format_resonance_score(score), _format_resonance_score(next_threshold)]
+
+func _format_resonance_score(value: float) -> String:
+	var one_decimal := roundf(value * 10.0) / 10.0
+	if absf(value - one_decimal) < 0.001:
+		return "%.1f" % value
+	return "%.2f" % value
+
+func _format_active_resonance(active_entries: Array) -> String:
+	if active_entries.is_empty():
+		return ""
+	var labels: Array[String] = []
+	for i in range(mini(2, active_entries.size())):
+		var entry: Dictionary = active_entries[i]
+		labels.append("%s %s" % [str(entry.get("tag", "")), str(entry.get("tier_name", ""))])
+	return "已激活：%s（奖励占位）" % "、".join(labels)
+
+func _clear_children(node: Node) -> void:
+	for child in node.get_children():
+		child.queue_free()
+
 func _create_build_tags_row(option: UpgradeData) -> Control:
 	if option.build_tags.is_empty():
 		return null
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 4)
+
+	var prefix_label := Label.new()
+	prefix_label.text = "路线" if option.upgrade_type in [UpgradeData.UpgradeType.WEAPON_PATH, UpgradeData.UpgradeType.WEAPON_LEVEL] else "构筑"
+	prefix_label.add_theme_font_size_override("font_size", 10)
+	prefix_label.add_theme_color_override("font_color", Color(0.76, 0.78, 0.84, 1))
+	row.add_child(prefix_label)
+
 	for tag in option.build_tags:
 		var chip := PanelContainer.new()
 		var style := StyleBoxFlat.new()

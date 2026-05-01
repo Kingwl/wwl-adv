@@ -18,11 +18,22 @@ signal pause_requested
 var _slot_style_normal: StyleBoxFlat
 var _slot_style_max: StyleBoxFlat
 const COOLDOWN_VISIBLE_THRESHOLD := 0.01
+const LOCAL_DEBUG_KEY_SEQUENCE: Array[int] = [KEY_I, KEY_D, KEY_D, KEY_Q, KEY_D]
+const LOCAL_DEBUG_TAP_REQUIRED := 7
+const LOCAL_DEBUG_TAP_WINDOW_MSEC := 2000
+const LOCAL_DEBUG_TOAST_DURATION_MSEC := 1600
+
+var _local_debug_key_index := 0
+var _local_debug_tap_count := 0
+var _local_debug_first_tap_msec := 0
+var _local_debug_toast: Label
+var _local_debug_toast_until_msec := 0
 
 func _ready() -> void:
 	_setup_bar_styles()
 	_add_gold_icon()
 	_add_heart_icon()
+	_setup_local_debug_toast()
 	_init_weapon_slots()
 	_init_enhancement_slots()
 	_speed_button.pressed.connect(_on_speed_pressed)
@@ -34,6 +45,7 @@ func _ready() -> void:
 	GameState.game_speed_changed.connect(_on_game_speed_changed)
 	GameState.weapons_changed.connect(_on_weapons_changed)
 	GameState.run_started.connect(_on_run_started)
+	GameState.local_debug_mode_changed.connect(_on_local_debug_mode_changed)
 	_on_run_started()
 	_on_game_speed_changed(GameState.game_speed_multiplier)
 
@@ -42,6 +54,13 @@ func _process(_delta: float) -> void:
 	_kill_label.text = "击杀: %d" % GameState.run.kills
 	_update_weapon_bar()
 	_update_enhancement_bar()
+	_update_local_debug_toast()
+
+func _input(event: InputEvent) -> void:
+	if not GameState.is_local_debug_available():
+		return
+	_handle_local_debug_key(event)
+	_handle_local_debug_tap(event)
 
 func _init_weapon_slots() -> void:
 	_slot_style_normal = StyleBoxFlat.new()
@@ -223,6 +242,91 @@ func _add_heart_icon() -> void:
 	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	icon.position = Vector2(-28, 2)
 	_hp_bar.add_sibling(icon)
+
+func _setup_local_debug_toast() -> void:
+	_local_debug_toast = Label.new()
+	_local_debug_toast.name = "LocalDebugToast"
+	_local_debug_toast.visible = false
+	_local_debug_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_local_debug_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_local_debug_toast.add_theme_font_size_override("font_size", 16)
+	_local_debug_toast.add_theme_color_override("font_color", Color(0.55, 0.92, 1.0, 0.95))
+	_local_debug_toast.anchor_left = 0.5
+	_local_debug_toast.anchor_right = 0.5
+	_local_debug_toast.anchor_top = 0.0
+	_local_debug_toast.anchor_bottom = 0.0
+	_local_debug_toast.offset_left = -160.0
+	_local_debug_toast.offset_right = 160.0
+	_local_debug_toast.offset_top = 64.0
+	_local_debug_toast.offset_bottom = 88.0
+	add_child(_local_debug_toast)
+
+func _handle_local_debug_key(event: InputEvent) -> void:
+	if not (event is InputEventKey):
+		return
+	var key_event := event as InputEventKey
+	if not key_event.pressed or key_event.echo:
+		return
+	var keycode := key_event.keycode
+	if keycode == 0:
+		keycode = key_event.physical_keycode
+	if keycode == LOCAL_DEBUG_KEY_SEQUENCE[_local_debug_key_index]:
+		_local_debug_key_index += 1
+		if _local_debug_key_index >= LOCAL_DEBUG_KEY_SEQUENCE.size():
+			_local_debug_key_index = 0
+			_toggle_local_debug_mode()
+		return
+	_local_debug_key_index = 1 if keycode == LOCAL_DEBUG_KEY_SEQUENCE[0] else 0
+
+func _handle_local_debug_tap(event: InputEvent) -> void:
+	var position := Vector2.INF
+	if event is InputEventScreenTouch:
+		var touch := event as InputEventScreenTouch
+		if not touch.pressed:
+			return
+		position = touch.position
+	elif event is InputEventMouseButton:
+		var mouse_button := event as InputEventMouseButton
+		if not mouse_button.pressed or mouse_button.button_index != MOUSE_BUTTON_LEFT:
+			return
+		position = mouse_button.position
+	else:
+		return
+	if not _is_local_debug_tap_position(position):
+		return
+	var now := Time.get_ticks_msec()
+	if _local_debug_first_tap_msec == 0 or now - _local_debug_first_tap_msec > LOCAL_DEBUG_TAP_WINDOW_MSEC:
+		_local_debug_first_tap_msec = now
+		_local_debug_tap_count = 0
+	_local_debug_tap_count += 1
+	if _local_debug_tap_count >= LOCAL_DEBUG_TAP_REQUIRED:
+		_local_debug_tap_count = 0
+		_local_debug_first_tap_msec = 0
+		_toggle_local_debug_mode()
+
+func _is_local_debug_tap_position(position: Vector2) -> bool:
+	return _hp_bar.get_global_rect().grow(12.0).has_point(position)
+
+func _toggle_local_debug_mode() -> void:
+	if not GameState.is_local_debug_available():
+		return
+	GameState.toggle_local_debug_mode()
+
+func _on_local_debug_mode_changed(enabled: bool) -> void:
+	_show_local_debug_toast("本地调试护身：%s" % ("开" if enabled else "关"))
+
+func _show_local_debug_toast(message: String) -> void:
+	if not _local_debug_toast:
+		return
+	_local_debug_toast.text = message
+	_local_debug_toast.visible = true
+	_local_debug_toast_until_msec = Time.get_ticks_msec() + LOCAL_DEBUG_TOAST_DURATION_MSEC
+
+func _update_local_debug_toast() -> void:
+	if not _local_debug_toast or not _local_debug_toast.visible:
+		return
+	if Time.get_ticks_msec() >= _local_debug_toast_until_msec:
+		_local_debug_toast.visible = false
 
 func _on_run_started() -> void:
 	_on_hp_changed(GameState.run.hp, GameState.run.max_hp)

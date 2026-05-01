@@ -34,6 +34,26 @@ const ICON_FIELD_DURATION := preload("res://assets/art/upgrades/icons/field_dura
 const ICON_TENACITY := preload("res://assets/art/upgrades/icons/tenacity.png")
 const ICON_TRAINING := preload("res://assets/art/upgrades/icons/training.png")
 
+const BUILD_RESONANCE_TAGS := ["近身", "弹幕", "场地", "控制", "爆发", "生存"]
+const BUILD_RESONANCE_THRESHOLDS := [2.0, 4.0, 6.0]
+const BUILD_PRIMARY_TAG_SCORE := 1.0
+const BUILD_SECONDARY_TAG_SCORE := 0.5
+const BUILD_PATH_CHOICE_SCORE := 0.5
+const BUILD_LEVEL_SCORE := 0.25
+const BUILD_PASSIVE_LEVEL_SCORE := 0.2
+const PASSIVE_BUILD_TAGS := {
+	"speed_up": ["场地", "生存"],
+	"hp_up": ["生存", "近身"],
+	"pickup_up": ["场地"],
+	"regen": ["生存", "近身"],
+	"might": ["爆发", "近身"],
+	"focus": ["弹幕", "控制"],
+	"expansion": ["场地", "控制"],
+	"field_duration": ["场地"],
+	"tenacity": ["生存", "近身"],
+	"training": ["弹幕"],
+}
+
 func _ready() -> void:
 	GameState.level_up.connect(_on_level_up)
 
@@ -45,7 +65,7 @@ func _show_generated_options() -> void:
 	var upgrade_select := _get_upgrade_select()
 	if upgrade_select:
 		_connect_upgrade_select(upgrade_select)
-		upgrade_select.show_options(_generate_options())
+		upgrade_select.show_options(_generate_options(), get_build_resonance_state())
 
 func _get_upgrade_select() -> Node:
 	var upgrade_select := get_tree().get_first_node_in_group("upgrade_select")
@@ -205,6 +225,7 @@ func _apply_upgrade(upgrade: UpgradeData) -> void:
 		_:
 			applied = false
 	if applied:
+		_sync_build_resonance_rewards()
 		GameState.record_upgrade_selected(upgrade)
 
 func _get_weapon_count() -> int:
@@ -395,6 +416,299 @@ func _get_player_weapons(player: Node) -> Array[WeaponBase]:
 			result.append(w)
 	return result
 
+# === Build resonance ===
+
+func get_build_resonance_state(extra_weapon_data: WeaponData = null) -> Dictionary:
+	var scores := _calculate_build_resonance_scores(extra_weapon_data)
+	var tiers: Dictionary = {}
+	var top_entries: Array[Dictionary] = []
+	var active_entries: Array[Dictionary] = []
+	for tag in BUILD_RESONANCE_TAGS:
+		var score := float(scores.get(tag, 0.0))
+		var tier := _get_build_resonance_tier(score)
+		var entry := {
+			"tag": tag,
+			"score": score,
+			"tier": tier,
+			"tier_name": _get_build_resonance_tier_name(tier),
+			"next_threshold": _get_next_build_resonance_threshold(score),
+			"reward_name": _get_build_resonance_reward_name(tag, tier),
+		}
+		tiers[tag] = tier
+		if score > 0.0:
+			top_entries.append(entry)
+		if tier > 0:
+			active_entries.append(entry)
+	top_entries.sort_custom(Callable(self, "_sort_build_resonance_entries"))
+	active_entries.sort_custom(Callable(self, "_sort_build_resonance_entries"))
+	return {
+		"scores": scores,
+		"tiers": tiers,
+		"top": top_entries,
+		"active": active_entries,
+		"thresholds": BUILD_RESONANCE_THRESHOLDS.duplicate(),
+	}
+
+func _calculate_build_resonance_scores(extra_weapon_data: WeaponData = null) -> Dictionary:
+	var scores: Dictionary = {}
+	for tag in BUILD_RESONANCE_TAGS:
+		scores[tag] = 0.0
+	var player := get_tree().get_first_node_in_group("player")
+	if player:
+		for weapon in _get_player_weapons(player):
+			_add_weapon_build_resonance_score(scores, weapon.weapon_data, weapon.level, not weapon.current_path_id.is_empty())
+	_add_passive_build_resonance_scores(scores)
+	if extra_weapon_data:
+		_add_weapon_build_resonance_score(scores, extra_weapon_data)
+	return scores
+
+func _add_weapon_build_resonance_score(scores: Dictionary, weapon_data: WeaponData, level: int = 1, has_path: bool = false) -> void:
+	if not weapon_data:
+		return
+	for i in range(weapon_data.tags.size()):
+		var tag := str(weapon_data.tags[i])
+		var score := _get_weapon_build_resonance_tag_score(i, level, has_path)
+		scores[tag] = float(scores.get(tag, 0.0)) + score
+
+func _get_weapon_build_resonance_tag_score(tag_index: int, level: int = 1, has_path: bool = false) -> float:
+	if level <= 0:
+		return 0.0
+	var tag_multiplier := 1.0
+	var base_score := BUILD_PRIMARY_TAG_SCORE
+	if tag_index > 0:
+		tag_multiplier = BUILD_SECONDARY_TAG_SCORE / BUILD_PRIMARY_TAG_SCORE
+		base_score = BUILD_SECONDARY_TAG_SCORE
+	var depth_score := 0.0
+	if has_path:
+		depth_score += BUILD_PATH_CHOICE_SCORE * tag_multiplier
+		depth_score += max(0, level - 2) * BUILD_LEVEL_SCORE * tag_multiplier
+	else:
+		depth_score += max(0, level - 1) * BUILD_LEVEL_SCORE * tag_multiplier
+	return base_score + depth_score
+
+func _add_passive_build_resonance_scores(scores: Dictionary) -> void:
+	var enhancements: Dictionary = GameState.run.get("enhancements", {})
+	for key in enhancements.keys():
+		var enhancement: Dictionary = enhancements[key]
+		var tags := _normalize_build_tags(enhancement.get("build_tags", []))
+		var level := int(enhancement.get("level", 0))
+		_add_passive_build_resonance_score(scores, tags, level)
+
+func _add_passive_build_resonance_score(scores: Dictionary, tags: Array[String], level: int) -> void:
+	if tags.is_empty() or level <= 0:
+		return
+	for i in range(tags.size()):
+		var tag := tags[i]
+		if not BUILD_RESONANCE_TAGS.has(tag):
+			continue
+		var score := _get_passive_build_resonance_tag_score(i, level)
+		scores[tag] = float(scores.get(tag, 0.0)) + score
+
+func _get_passive_build_resonance_tag_score(tag_index: int, level: int) -> float:
+	if level <= 0:
+		return 0.0
+	var tag_multiplier := 1.0
+	if tag_index > 0:
+		tag_multiplier = BUILD_SECONDARY_TAG_SCORE / BUILD_PRIMARY_TAG_SCORE
+	return level * BUILD_PASSIVE_LEVEL_SCORE * tag_multiplier
+
+func _get_build_resonance_tier(score: float) -> int:
+	var tier := 0
+	for i in range(BUILD_RESONANCE_THRESHOLDS.size()):
+		if score >= float(BUILD_RESONANCE_THRESHOLDS[i]):
+			tier = i + 1
+	return tier
+
+func _get_next_build_resonance_threshold(score: float) -> float:
+	for threshold in BUILD_RESONANCE_THRESHOLDS:
+		var value := float(threshold)
+		if score < value:
+			return value
+	return 0.0
+
+func _get_build_resonance_tier_name(tier: int) -> String:
+	match tier:
+		1:
+			return "I"
+		2:
+			return "II"
+		3:
+			return "III"
+	return ""
+
+func _get_build_resonance_reward_name(tag: String, tier: int) -> String:
+	if tier <= 0:
+		return ""
+	return "%s共鸣%s（奖励占位）" % [tag, _get_build_resonance_tier_name(tier)]
+
+func _sort_build_resonance_entries(a: Dictionary, b: Dictionary) -> bool:
+	var score_a := float(a.get("score", 0.0))
+	var score_b := float(b.get("score", 0.0))
+	if not is_equal_approx(score_a, score_b):
+		return score_a > score_b
+	var tier_a := int(a.get("tier", 0))
+	var tier_b := int(b.get("tier", 0))
+	if tier_a != tier_b:
+		return tier_a > tier_b
+	var order_a := BUILD_RESONANCE_TAGS.find(str(a.get("tag", "")))
+	var order_b := BUILD_RESONANCE_TAGS.find(str(b.get("tag", "")))
+	if order_a < 0:
+		order_a = 999
+	if order_b < 0:
+		order_b = 999
+	return order_a < order_b
+
+func _sync_build_resonance_rewards() -> void:
+	var state := get_build_resonance_state()
+	var active_entries: Array = state.get("active", [])
+	for entry in active_entries:
+		var tag := str(entry.get("tag", ""))
+		var tier := int(entry.get("tier", 0))
+		for reward_tier in range(1, tier + 1):
+			GameState.record_build_resonance_reward(
+				tag,
+				reward_tier,
+				_get_build_resonance_reward_name(tag, reward_tier)
+			)
+
+func _get_weapon_build_tags(weapon_data: WeaponData) -> Array[String]:
+	var result: Array[String] = []
+	if not weapon_data:
+		return result
+	for tag in weapon_data.tags:
+		result.append(str(tag))
+	return result
+
+func _normalize_build_tags(value) -> Array[String]:
+	var result: Array[String] = []
+	if not (value is Array):
+		return result
+	for tag in value:
+		var tag_name := str(tag)
+		if not tag_name.is_empty():
+			result.append(tag_name)
+	return result
+
+func _get_passive_build_tags(passive_id: StringName) -> Array[String]:
+	return _normalize_build_tags(PASSIVE_BUILD_TAGS.get(str(passive_id), []))
+
+func _get_build_resonance_preview_for_weapon(weapon_data: WeaponData) -> String:
+	if not weapon_data or weapon_data.tags.is_empty():
+		return ""
+	return _get_build_resonance_preview_for_weapon_change(weapon_data, 0, false, 1, false)
+
+func _get_build_resonance_preview_for_weapon_change(
+	weapon_data: WeaponData,
+	before_level: int,
+	before_has_path: bool,
+	after_level: int,
+	after_has_path: bool
+) -> String:
+	if not weapon_data or weapon_data.tags.is_empty():
+		return ""
+	var before_scores := _calculate_build_resonance_scores()
+	var parts: Array[String] = []
+	var weapon_tags := _get_weapon_build_tags(weapon_data)
+	for i in range(weapon_tags.size()):
+		var tag_name := weapon_tags[i]
+		var before_contribution := _get_weapon_build_resonance_tag_score(i, before_level, before_has_path)
+		var after_contribution := _get_weapon_build_resonance_tag_score(i, after_level, after_has_path)
+		var delta_score := after_contribution - before_contribution
+		if delta_score <= 0.0:
+			continue
+		var before_score := float(before_scores.get(tag_name, 0.0))
+		var after_score := before_score + delta_score
+		var before_tier := _get_build_resonance_tier(before_score)
+		var after_tier := _get_build_resonance_tier(after_score)
+		if after_tier > before_tier:
+			parts.append("%s +%s 解锁%s" % [
+				tag_name,
+				_format_build_resonance_score(delta_score),
+				_get_build_resonance_tier_name(after_tier),
+			])
+		else:
+			var next_threshold := _get_next_build_resonance_threshold(after_score)
+			if next_threshold > 0.0:
+				parts.append("%s +%s %s/%s" % [
+					tag_name,
+					_format_build_resonance_score(delta_score),
+					_format_build_resonance_score(after_score),
+					_format_build_resonance_score(next_threshold),
+				])
+			else:
+				parts.append("%s +%s 满" % [
+					tag_name,
+					_format_build_resonance_score(delta_score),
+				])
+	return "\n".join(parts.slice(0, 2))
+
+func _get_build_resonance_preview_for_path_choice(weapon: WeaponBase) -> String:
+	if not weapon or not weapon.weapon_data:
+		return ""
+	return _get_build_resonance_preview_for_weapon_change(weapon.weapon_data, weapon.level, not weapon.current_path_id.is_empty(), max(2, weapon.level + 1), true)
+
+func _get_build_resonance_preview_for_weapon_level(weapon: WeaponBase) -> String:
+	if not weapon or not weapon.weapon_data:
+		return ""
+	return _get_build_resonance_preview_for_weapon_change(weapon.weapon_data, weapon.level, not weapon.current_path_id.is_empty(), weapon.level + 1, not weapon.current_path_id.is_empty())
+
+func _get_build_resonance_preview_for_passive(upgrade: UpgradeData) -> String:
+	if not upgrade or upgrade.build_tags.is_empty():
+		return ""
+	var current_level := GameState.get_enhancement_level(upgrade.id)
+	return _get_build_resonance_preview_for_passive_change(upgrade.build_tags, current_level, current_level + 1)
+
+func _get_build_resonance_preview_for_passive_change(tags: Array[String], before_level: int, after_level: int) -> String:
+	if tags.is_empty():
+		return ""
+	var before_scores := _calculate_build_resonance_scores()
+	var parts: Array[String] = []
+	for i in range(tags.size()):
+		var tag_name := tags[i]
+		if not BUILD_RESONANCE_TAGS.has(tag_name):
+			continue
+		var before_contribution := _get_passive_build_resonance_tag_score(i, before_level)
+		var after_contribution := _get_passive_build_resonance_tag_score(i, after_level)
+		var delta_score := after_contribution - before_contribution
+		if delta_score <= 0.0:
+			continue
+		var before_score := float(before_scores.get(tag_name, 0.0))
+		var after_score := before_score + delta_score
+		var before_tier := _get_build_resonance_tier(before_score)
+		var after_tier := _get_build_resonance_tier(after_score)
+		if after_tier > before_tier:
+			parts.append("%s +%s 解锁%s" % [
+				tag_name,
+				_format_build_resonance_score(delta_score),
+				_get_build_resonance_tier_name(after_tier),
+			])
+		else:
+			var next_threshold := _get_next_build_resonance_threshold(after_score)
+			if next_threshold > 0.0:
+				parts.append("%s +%s %s/%s" % [
+					tag_name,
+					_format_build_resonance_score(delta_score),
+					_format_build_resonance_score(after_score),
+					_format_build_resonance_score(next_threshold),
+				])
+			else:
+				parts.append("%s +%s 满" % [
+					tag_name,
+					_format_build_resonance_score(delta_score),
+				])
+	return "\n".join(parts.slice(0, 2))
+
+func _finish_passive_option(upgrade: UpgradeData) -> UpgradeData:
+	upgrade.build_tags = _get_passive_build_tags(upgrade.id)
+	upgrade.resonance_preview = _get_build_resonance_preview_for_passive(upgrade)
+	return upgrade
+
+func _format_build_resonance_score(value: float) -> String:
+	var one_decimal := roundf(value * 10.0) / 10.0
+	if absf(value - one_decimal) < 0.001:
+		return "%.1f" % value
+	return "%.2f" % value
+
 # === Helper methods for option generation ===
 
 func _make_speed_up() -> UpgradeData:
@@ -405,7 +719,7 @@ func _make_speed_up() -> UpgradeData:
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.speed_bonus = 25.0
 	d.icon = ICON_SPEED_UP
-	return d
+	return _finish_passive_option(d)
 
 func _make_hp_up() -> UpgradeData:
 	var d := UpgradeData.new()
@@ -416,7 +730,7 @@ func _make_hp_up() -> UpgradeData:
 	d.max_hp_bonus = 30
 	d.hp_bonus = 30
 	d.icon = ICON_HP_UP
-	return d
+	return _finish_passive_option(d)
 
 func _make_pickup_up() -> UpgradeData:
 	var d := UpgradeData.new()
@@ -426,7 +740,7 @@ func _make_pickup_up() -> UpgradeData:
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.pickup_radius_bonus = 30.0
 	d.icon = ICON_PICKUP_UP
-	return d
+	return _finish_passive_option(d)
 
 func _make_regen_up() -> UpgradeData:
 	var d := UpgradeData.new()
@@ -436,7 +750,7 @@ func _make_regen_up() -> UpgradeData:
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.hp_bonus = GameState.REGEN_BASE_HEAL
 	d.icon = ICON_REGEN
-	return d
+	return _finish_passive_option(d)
 
 func _make_might_up() -> UpgradeData:
 	var d := UpgradeData.new()
@@ -446,7 +760,7 @@ func _make_might_up() -> UpgradeData:
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.damage_multiplier_bonus = 0.08
 	d.icon = ICON_MIGHT
-	return d
+	return _finish_passive_option(d)
 
 func _make_focus_up() -> UpgradeData:
 	var d := UpgradeData.new()
@@ -456,7 +770,7 @@ func _make_focus_up() -> UpgradeData:
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.cooldown_multiplier_bonus = -0.06
 	d.icon = ICON_FOCUS
-	return d
+	return _finish_passive_option(d)
 
 func _make_expansion_up() -> UpgradeData:
 	var d := UpgradeData.new()
@@ -466,7 +780,7 @@ func _make_expansion_up() -> UpgradeData:
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.area_multiplier_bonus = 0.08
 	d.icon = ICON_EXPANSION
-	return d
+	return _finish_passive_option(d)
 
 func _make_duration_up() -> UpgradeData:
 	var d := UpgradeData.new()
@@ -476,7 +790,7 @@ func _make_duration_up() -> UpgradeData:
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.field_lifetime_multiplier_bonus = 0.12
 	d.icon = ICON_FIELD_DURATION
-	return d
+	return _finish_passive_option(d)
 
 func _make_tenacity_up() -> UpgradeData:
 	var d := UpgradeData.new()
@@ -486,7 +800,7 @@ func _make_tenacity_up() -> UpgradeData:
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.incoming_damage_multiplier_bonus = -0.08
 	d.icon = ICON_TENACITY
-	return d
+	return _finish_passive_option(d)
 
 func _make_training_up() -> UpgradeData:
 	var d := UpgradeData.new()
@@ -496,7 +810,7 @@ func _make_training_up() -> UpgradeData:
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.exp_gain_multiplier_bonus = 0.10
 	d.icon = ICON_TRAINING
-	return d
+	return _finish_passive_option(d)
 
 func _make_unlock(weapon_id: StringName) -> UpgradeData:
 	var d := UpgradeData.new()
@@ -511,6 +825,8 @@ func _make_unlock(weapon_id: StringName) -> UpgradeData:
 			d.display_name = wdata.display_name
 			d.description = "解锁%s：%s" % [wdata.display_name, wdata.description]
 			d.icon = wdata.icon
+			d.build_tags = _get_weapon_build_tags(wdata)
+			d.resonance_preview = _get_build_resonance_preview_for_weapon(wdata)
 	else:
 		d.display_name = str(weapon_id)
 		d.description = "解锁新武器"
@@ -526,6 +842,7 @@ func _make_path_option(weapon: WeaponBase, path: WeaponPath) -> UpgradeData:
 	d.path_id = path.path_id
 	d.icon = path.icon if path.icon else weapon.weapon_data.icon
 	d.build_tags = _get_path_build_tags(path)
+	d.resonance_preview = _get_build_resonance_preview_for_path_choice(weapon)
 	var first_effect := path.get_level_effect(2)
 	if first_effect:
 		var effect_desc := _describe_path_effect(weapon, first_effect)
@@ -554,6 +871,7 @@ func _make_level_from_path(weapon: WeaponBase, path: WeaponPath, effect: WeaponP
 	d.icon = weapon.weapon_data.icon
 	if path:
 		d.build_tags = _get_path_build_tags(path)
+		d.resonance_preview = _get_build_resonance_preview_for_weapon_level(weapon)
 	return d
 
 func _describe_path_effect(weapon: WeaponBase, effect: WeaponPathLevel) -> String:

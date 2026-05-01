@@ -122,9 +122,9 @@ Enemy._physics_process()
 
 | 类名 | 基类 | 用途 |
 |------|------|------|
-| `WeaponData` | Resource | 武器属性、分类、图标、等级上限、流派列表 |
+| `WeaponData` | Resource | 武器属性、分类、图标、构筑标签、机制标签、等级上限、流派列表 |
 | `CharacterData` | Resource | 角色基础属性、初始武器、战斗修正和被动描述 |
-| `WeaponPath` | Resource | 武器流派名称、描述、图标、每级效果 |
+| `WeaponPath` | Resource | 武器流派名称、描述、路线主轴标签、图标、每级效果 |
 | `WeaponPathLevel` | Resource | 某一级的伤害 / 冷却 / 范围 bonus 和 `special_tag` |
 | `EnemyData` | Resource | 敌人 HP、速度、伤害、掉落、体型、颜色、动画条带、行为、远程弹体、生成权重、时间窗口和小队数量 |
 | `UpgradeData` | Resource | 升级选项类型、关联武器、bonus 数值 |

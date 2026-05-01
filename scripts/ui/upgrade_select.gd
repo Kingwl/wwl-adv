@@ -237,18 +237,30 @@ func _get_weapon_category_color(weapon_id: StringName) -> Color:
 
 func _get_build_tag_color(tag: String) -> Color:
 	match tag:
-		"输出":
+		"强击":
 			return Color(0.78, 0.24, 0.18, 0.92)
-		"范围":
+		"扩散":
 			return Color(0.22, 0.42, 0.74, 0.92)
 		"控制":
 			return Color(0.19, 0.58, 0.72, 0.92)
-		"频率":
+		"疾速":
 			return Color(0.72, 0.56, 0.18, 0.92)
-		"生存":
+		"守护":
 			return Color(0.22, 0.58, 0.32, 0.92)
 		"穿透":
 			return Color(0.55, 0.35, 0.78, 0.92)
+		"持续":
+			return Color(0.45, 0.32, 0.72, 0.92)
+		"近身":
+			return Color(0.65, 0.34, 0.24, 0.92)
+		"弹幕":
+			return Color(0.28, 0.48, 0.78, 0.92)
+		"场地":
+			return Color(0.42, 0.54, 0.26, 0.92)
+		"爆发":
+			return Color(0.82, 0.42, 0.18, 0.92)
+		"生存":
+			return Color(0.24, 0.58, 0.34, 0.92)
 	return Color(0.42, 0.44, 0.5, 0.92)
 
 func _format_detail(option: UpgradeData) -> String:

@@ -9,7 +9,7 @@ enum UpgradeType { WEAPON_UNLOCK, WEAPON_LEVEL, WEAPON_PATH, PLAYER_STAT }
 @export_multiline var description: String
 @export var upgrade_type: UpgradeType = UpgradeType.WEAPON_LEVEL
 @export var icon: Texture2D
-## 构筑方向标签。主要用于武器流派卡，例如：输出、范围、控制。
+## 路线方向标签。主要用于武器流派卡，例如：强击、扩散、疾速、控制。
 @export var build_tags: Array[String] = []
 
 @export_group("效果")

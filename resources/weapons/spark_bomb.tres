@@ -48,6 +48,8 @@ script = ExtResource("3_path")
 path_id = &"blast"
 display_name = "爆裂"
 description = "追求高爆发和大爆炸"
+primary_build_tag = &"强击"
+build_tags = Array[StringName]([&"强击", &"扩散"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_spark_blast_l2"), SubResource("Resource_spark_blast_l3"), SubResource("Resource_spark_blast_l4"), SubResource("Resource_spark_blast_l5"), SubResource("Resource_spark_blast_l6"), SubResource("Resource_spark_blast_l7"), SubResource("Resource_spark_blast_l8")])
 
 [sub_resource type="Resource" id="Resource_spark_scatter_l2"]
@@ -93,6 +95,8 @@ script = ExtResource("3_path")
 path_id = &"scatter"
 display_name = "散射"
 description = "追求多发和频率"
+primary_build_tag = &"扩散"
+build_tags = Array[StringName]([&"扩散", &"疾速"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_spark_scatter_l2"), SubResource("Resource_spark_scatter_l3"), SubResource("Resource_spark_scatter_l4"), SubResource("Resource_spark_scatter_l5"), SubResource("Resource_spark_scatter_l6"), SubResource("Resource_spark_scatter_l7"), SubResource("Resource_spark_scatter_l8")])
 
 [sub_resource type="Resource" id="Resource_spark_elec_l2"]
@@ -138,6 +142,8 @@ script = ExtResource("3_path")
 path_id = &"electro_spark"
 display_name = "电火花"
 description = "追求控制和弹速"
+primary_build_tag = &"控制"
+build_tags = Array[StringName]([&"控制", &"疾速"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_spark_elec_l2"), SubResource("Resource_spark_elec_l3"), SubResource("Resource_spark_elec_l4"), SubResource("Resource_spark_elec_l5"), SubResource("Resource_spark_elec_l6"), SubResource("Resource_spark_elec_l7"), SubResource("Resource_spark_elec_l8")])
 
 [resource]
@@ -158,7 +164,8 @@ orbit_count = 0
 reflect_percent = 0.0
 field_radius = 70.0
 acquire_range = 0.0
-tags = Array[StringName]([&"弹体", &"爆炸"])
+tags = Array[StringName]([&"爆发", &"弹幕"])
+mechanism_tags = Array[StringName]([&"爆炸弹体"])
 icon = ExtResource("2_icon")
 max_level = 8
 paths = Array[ExtResource("3_path")]([SubResource("Resource_spark_path_blast"), SubResource("Resource_spark_path_scatter"), SubResource("Resource_spark_path_elec")])

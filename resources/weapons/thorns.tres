@@ -73,6 +73,8 @@ script = ExtResource("90_path")
 path_id = &"spikes"
 display_name = "尖刺"
 description = "追求反弹比例"
+primary_build_tag = &"强击"
+build_tags = Array[StringName]([&"强击", &"守护"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_thor_p0_l2"), SubResource("Resource_thor_p0_l3"), SubResource("Resource_thor_p0_l4"), SubResource("Resource_thor_p0_l5"), SubResource("Resource_thor_p0_l6"), SubResource("Resource_thor_p0_l7"), SubResource("Resource_thor_p0_l8")])
 
 [sub_resource type="Resource" id="Resource_thor_p1_l2"]
@@ -143,6 +145,8 @@ script = ExtResource("90_path")
 path_id = &"barbs"
 display_name = "倒钩"
 description = "追求范围与额外伤害"
+primary_build_tag = &"扩散"
+build_tags = Array[StringName]([&"扩散", &"强击"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_thor_p1_l2"), SubResource("Resource_thor_p1_l3"), SubResource("Resource_thor_p1_l4"), SubResource("Resource_thor_p1_l5"), SubResource("Resource_thor_p1_l6"), SubResource("Resource_thor_p1_l7"), SubResource("Resource_thor_p1_l8")])
 
 [sub_resource type="Resource" id="Resource_thor_p2_l2"]
@@ -213,6 +217,8 @@ script = ExtResource("90_path")
 path_id = &"vengeance"
 display_name = "复仇"
 description = "追求反击恢复"
+primary_build_tag = &"守护"
+build_tags = Array[StringName]([&"守护"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_thor_p2_l2"), SubResource("Resource_thor_p2_l3"), SubResource("Resource_thor_p2_l4"), SubResource("Resource_thor_p2_l5"), SubResource("Resource_thor_p2_l6"), SubResource("Resource_thor_p2_l7"), SubResource("Resource_thor_p2_l8")])
 
 [resource]
@@ -231,7 +237,8 @@ pierce = 0
 heal_amount = 0
 orbit_count = 0
 reflect_percent = 0.5
-tags = Array[StringName]([&"防御", &"反击"])
+tags = Array[StringName]([&"生存", &"近身"])
+mechanism_tags = Array[StringName]([&"反击", &"受击触发"])
 icon = ExtResource("2_icon")
 max_level = 8
 paths = Array[ExtResource("90_path")]([SubResource("Resource_thor_path0"), SubResource("Resource_thor_path1"), SubResource("Resource_thor_path2")])

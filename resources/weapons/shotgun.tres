@@ -66,6 +66,8 @@ script = ExtResource("90_path")
 path_id = &"cannon"
 display_name = "重炮"
 description = "追求单发高伤害"
+primary_build_tag = &"强击"
+build_tags = Array[StringName]([&"强击"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_shot_p0_l2"), SubResource("Resource_shot_p0_l3"), SubResource("Resource_shot_p0_l4"), SubResource("Resource_shot_p0_l5"), SubResource("Resource_shot_p0_l6"), SubResource("Resource_shot_p0_l7"), SubResource("Resource_shot_p0_l8")])
 [sub_resource type="Resource" id="Resource_shot_p1_l2"]
 script = ExtResource("91_level")
@@ -128,6 +130,8 @@ script = ExtResource("90_path")
 path_id = &"barrage"
 display_name = "弹幕"
 description = "追求极致弹丸数量"
+primary_build_tag = &"扩散"
+build_tags = Array[StringName]([&"扩散", &"疾速"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_shot_p1_l2"), SubResource("Resource_shot_p1_l3"), SubResource("Resource_shot_p1_l4"), SubResource("Resource_shot_p1_l5"), SubResource("Resource_shot_p1_l6"), SubResource("Resource_shot_p1_l7"), SubResource("Resource_shot_p1_l8")])
 [sub_resource type="Resource" id="Resource_shot_p2_l2"]
 script = ExtResource("91_level")
@@ -190,6 +194,8 @@ script = ExtResource("90_path")
 path_id = &"armor"
 display_name = "穿甲"
 description = "追求穿透与推进"
+primary_build_tag = &"穿透"
+build_tags = Array[StringName]([&"穿透", &"强击"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_shot_p2_l2"), SubResource("Resource_shot_p2_l3"), SubResource("Resource_shot_p2_l4"), SubResource("Resource_shot_p2_l5"), SubResource("Resource_shot_p2_l6"), SubResource("Resource_shot_p2_l7"), SubResource("Resource_shot_p2_l8")])
 [resource]
 script = ExtResource("1_shotgun")
@@ -208,6 +214,7 @@ heal_amount = 0
 orbit_count = 0
 reflect_percent = 0.0
 tags = Array[StringName]([&"弹幕", &"爆发"])
+mechanism_tags = Array[StringName]([&"散射", &"弹体"])
 icon = ExtResource("2_icon")
 max_level = 8
 paths = Array[ExtResource("90_path")]([SubResource("Resource_shot_path0"), SubResource("Resource_shot_path1"), SubResource("Resource_shot_path2")])

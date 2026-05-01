@@ -26,7 +26,7 @@
 | 激光笔 | 光束发射 | `assets/audio/sfx/weapons/laser_pen.wav` |
 | 回旋镖 | 找到目标并掷出 | `assets/audio/sfx/weapons/boomerang.wav` |
 | 电磁链 | 首次命中并开始连锁 | `assets/audio/sfx/weapons/electromagnetic_chain.wav` |
-| 锯片陷阱 | 生成 / 重建锯片 | `assets/audio/sfx/weapons/saw_blade.wav` |
+| 锯片陷阱 | 部署 / 重建锯片 | `assets/audio/sfx/weapons/saw_blade.wav` |
 | 火箭背包 | 移动中喷焰生成火场 | `assets/audio/sfx/weapons/rocket_pack.wav` |
 | 旋风斩 | 旋风斩特效展开 | `assets/audio/sfx/weapons/whirlwind.wav` |
 | 投掷斧 | 找到目标并掷出 | `assets/audio/sfx/weapons/throwing_axe.wav` |

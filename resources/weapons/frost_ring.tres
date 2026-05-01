@@ -66,6 +66,8 @@ script = ExtResource("90_path")
 path_id = &"extreme_cold"
 display_name = "极寒"
 description = "追求极致伤害"
+primary_build_tag = &"强击"
+build_tags = Array[StringName]([&"强击"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_fros_p0_l2"), SubResource("Resource_fros_p0_l3"), SubResource("Resource_fros_p0_l4"), SubResource("Resource_fros_p0_l5"), SubResource("Resource_fros_p0_l6"), SubResource("Resource_fros_p0_l7"), SubResource("Resource_fros_p0_l8")])
 [sub_resource type="Resource" id="Resource_fros_p1_l2"]
 script = ExtResource("91_level")
@@ -128,6 +130,8 @@ script = ExtResource("90_path")
 path_id = &"frozen"
 display_name = "冰封"
 description = "追求强减速"
+primary_build_tag = &"控制"
+build_tags = Array[StringName]([&"控制"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_fros_p1_l2"), SubResource("Resource_fros_p1_l3"), SubResource("Resource_fros_p1_l4"), SubResource("Resource_fros_p1_l5"), SubResource("Resource_fros_p1_l6"), SubResource("Resource_fros_p1_l7"), SubResource("Resource_fros_p1_l8")])
 [sub_resource type="Resource" id="Resource_fros_p2_l2"]
 script = ExtResource("91_level")
@@ -190,6 +194,8 @@ script = ExtResource("90_path")
 path_id = &"snowstorm"
 display_name = "雪暴"
 description = "追求大范围"
+primary_build_tag = &"扩散"
+build_tags = Array[StringName]([&"扩散", &"控制"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_fros_p2_l2"), SubResource("Resource_fros_p2_l3"), SubResource("Resource_fros_p2_l4"), SubResource("Resource_fros_p2_l5"), SubResource("Resource_fros_p2_l6"), SubResource("Resource_fros_p2_l7"), SubResource("Resource_fros_p2_l8")])
 [resource]
 script = ExtResource("1_frost")
@@ -207,7 +213,8 @@ pierce = 0
 heal_amount = 0
 orbit_count = 0
 reflect_percent = 0.0
-tags = Array[StringName]([&"控制", &"范围"])
+tags = Array[StringName]([&"控制", &"近身"])
+mechanism_tags = Array[StringName]([&"冰霜", &"环形"])
 icon = ExtResource("2_icon")
 max_level = 8
 paths = Array[ExtResource("90_path")]([SubResource("Resource_fros_path0"), SubResource("Resource_fros_path1"), SubResource("Resource_fros_path2")])

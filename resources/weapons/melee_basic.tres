@@ -55,6 +55,8 @@ script = ExtResource("2_path")
 path_id = &"berserker"
 display_name = "狂战士"
 description = "追求极致伤害与攻击范围"
+primary_build_tag = &"强击"
+build_tags = Array[StringName]([&"强击", &"扩散"])
 levels = Array[ExtResource("3_level")]([SubResource("Resource_b1"), SubResource("Resource_b2"), SubResource("Resource_b3"), SubResource("Resource_b4"), SubResource("Resource_b5"), SubResource("Resource_b6"), SubResource("Resource_b7")])
 
 [sub_resource type="Resource" id="Resource_s1"]
@@ -106,6 +108,8 @@ script = ExtResource("2_path")
 path_id = &"swiftblade"
 display_name = "迅捷剑"
 description = "追求极致攻速与连击"
+primary_build_tag = &"疾速"
+build_tags = Array[StringName]([&"疾速"])
 levels = Array[ExtResource("3_level")]([SubResource("Resource_s1"), SubResource("Resource_s2"), SubResource("Resource_s3"), SubResource("Resource_s4"), SubResource("Resource_s5"), SubResource("Resource_s6"), SubResource("Resource_s7")])
 
 [sub_resource type="Resource" id="Resource_g1"]
@@ -158,6 +162,8 @@ script = ExtResource("2_path")
 path_id = &"guardian"
 display_name = "守护剑"
 description = "追求范围控制与生存能力"
+primary_build_tag = &"守护"
+build_tags = Array[StringName]([&"守护", &"控制"])
 levels = Array[ExtResource("3_level")]([SubResource("Resource_g1"), SubResource("Resource_g2"), SubResource("Resource_g3"), SubResource("Resource_g4"), SubResource("Resource_g5"), SubResource("Resource_g6"), SubResource("Resource_g7")])
 
 [resource]
@@ -167,5 +173,6 @@ display_name = "基础利刃"
 description = "近战斩击，对范围内敌人造成伤害"
 icon = ExtResource("4_icon")
 range = 80.0
-tags = Array[StringName]([&"斩击"])
+tags = Array[StringName]([&"近身"])
+mechanism_tags = Array[StringName]([&"斩击"])
 paths = Array[ExtResource("2_path")]([SubResource("Resource_path_b"), SubResource("Resource_path_s"), SubResource("Resource_path_g")])

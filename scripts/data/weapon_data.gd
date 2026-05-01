@@ -27,7 +27,11 @@ enum Category { DAMAGE, DEFENSE, BUFF }
 @export var field_radius: float = 0.0
 @export var acquire_range: float = 0.0
 
+## 构筑标签，用于构筑奖励、推荐和结算归类。
+## 统一取值：近身 / 弹幕 / 场地 / 控制 / 爆发 / 生存。
 @export var tags: Array[StringName] = []
+## 机制标签，用于说明武器差异，不直接作为构筑奖励门槛。
+@export var mechanism_tags: Array[StringName] = []
 
 @export_group("升级")
 @export var max_level: int = 8

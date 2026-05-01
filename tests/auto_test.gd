@@ -487,6 +487,13 @@ func _phase_weapon_usage() -> void:
 				has_anim = true
 				break
 		_assert(has_anim, "Saw blade uses AnimatedSprite2D")
+		saw._clear_saws()
+		saw._deploy_saws()
+		var saw_anchor: Vector2 = saw._saws[0].get_meta("anchor")
+		player.global_position += Vector2.RIGHT * 40.0
+		await _wait(0.1)
+		var current_anchor: Vector2 = saw._saws[0].get_meta("anchor")
+		_assert(current_anchor.distance_to(saw_anchor) < 0.01, "Saw blade keeps deployed trap anchor on small player movement")
 
 	var projectile := _find_weapon(&"projectile_basic")
 	if projectile:
@@ -823,28 +830,42 @@ func _phase_path_system() -> void:
 	var path_option: UpgradeData = upgrade_system._make_path_option(melee, berserker_path)
 	_assert(path_option.description.contains("立即获得"), "Path choice card describes immediate Lv.2 upgrade")
 	_assert(path_option.damage_bonus == 5, "Path choice carries first path damage bonus for display")
-	_assert(path_option.build_tags.has("输出"), "Path choice carries build direction tag")
-	var allowed_build_tags := ["输出", "范围", "控制", "频率", "生存", "穿透"]
+	_assert(path_option.build_tags.has("强击"), "Path choice carries build direction tag")
+	var allowed_weapon_build_tags := ["近身", "弹幕", "场地", "控制", "爆发", "生存"]
+	var allowed_build_tags := ["强击", "扩散", "疾速", "穿透", "控制", "守护", "持续"]
+	var missing_weapon_build_tags: Array[String] = []
+	var invalid_weapon_build_tags: Array[String] = []
+	var missing_mechanism_tags: Array[String] = []
 	var missing_build_tags: Array[String] = []
 	var invalid_build_tags: Array[String] = []
 	for weapon_data in DataManager.all_weapons():
+		if weapon_data.tags.is_empty():
+			missing_weapon_build_tags.append(str(weapon_data.id))
+		for tag in weapon_data.tags:
+			if not allowed_weapon_build_tags.has(str(tag)):
+				invalid_weapon_build_tags.append("%s/%s" % [str(weapon_data.id), str(tag)])
+		if weapon_data.mechanism_tags.is_empty():
+			missing_mechanism_tags.append(str(weapon_data.id))
 		if not ("paths" in weapon_data):
 			continue
 		for path in weapon_data.paths:
-			var inferred_tags: Array[String] = upgrade_system._infer_path_build_tags(path)
+			var inferred_tags: Array[String] = upgrade_system._get_path_build_tags(path)
 			if inferred_tags.is_empty():
 				missing_build_tags.append("%s/%s" % [str(weapon_data.id), str(path.path_id)])
 			for tag in inferred_tags:
 				if not allowed_build_tags.has(tag):
 					invalid_build_tags.append("%s/%s/%s" % [str(weapon_data.id), str(path.path_id), tag])
-	_assert(missing_build_tags.is_empty(), "All weapon paths infer build direction tags")
-	_assert(invalid_build_tags.is_empty(), "Build direction tags use player-facing labels")
+	_assert(missing_weapon_build_tags.is_empty(), "All weapons carry build tags")
+	_assert(invalid_weapon_build_tags.is_empty(), "Weapon build tags use unified labels")
+	_assert(missing_mechanism_tags.is_empty(), "All weapons carry mechanism tags")
+	_assert(missing_build_tags.is_empty(), "All weapon paths carry route tags")
+	_assert(invalid_build_tags.is_empty(), "Route tags use player-facing labels")
 	var fire_spread := DataManager.get_weapon("fire_bottle").paths[1] as WeaponPath
-	_assert(upgrade_system._infer_path_build_tags(fire_spread).has("范围"), "Range-oriented path uses range build tag")
+	_assert(upgrade_system._get_path_build_tags(fire_spread).has("持续"), "Field-oriented path uses sustained route tag")
 	var upgrade_select: Node = _game.get_node_or_null("UpgradeSelect")
 	if upgrade_select:
 		var preview_card: Node = upgrade_select._create_option_card(path_option)
-		_assert(_node_tree_contains_label_text(preview_card, "输出"), "Path choice card displays build direction tag")
+		_assert(_node_tree_contains_label_text(preview_card, "强击"), "Path choice card displays build direction tag")
 		preview_card.free()
 	upgrade_system._apply_upgrade(path_option)
 	_assert(melee.current_path_id == &"berserker", "Berserker path set correctly")

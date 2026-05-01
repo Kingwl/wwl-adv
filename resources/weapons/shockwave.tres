@@ -47,6 +47,8 @@ script = ExtResource("3_path")
 path_id = &"fracture"
 display_name = "裂地"
 description = "追求高伤害和大冲击"
+primary_build_tag = &"强击"
+build_tags = Array[StringName]([&"强击", &"扩散"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_shock_frac_l2"), SubResource("Resource_shock_frac_l3"), SubResource("Resource_shock_frac_l4"), SubResource("Resource_shock_frac_l5"), SubResource("Resource_shock_frac_l6"), SubResource("Resource_shock_frac_l7"), SubResource("Resource_shock_frac_l8")])
 
 [sub_resource type="Resource" id="Resource_shock_pulse_l2"]
@@ -92,6 +94,8 @@ script = ExtResource("3_path")
 path_id = &"pulse"
 display_name = "脉冲"
 description = "追求多段判定和频率"
+primary_build_tag = &"疾速"
+build_tags = Array[StringName]([&"疾速", &"扩散"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_shock_pulse_l2"), SubResource("Resource_shock_pulse_l3"), SubResource("Resource_shock_pulse_l4"), SubResource("Resource_shock_pulse_l5"), SubResource("Resource_shock_pulse_l6"), SubResource("Resource_shock_pulse_l7"), SubResource("Resource_shock_pulse_l8")])
 
 [sub_resource type="Resource" id="Resource_shock_lock_l2"]
@@ -137,6 +141,8 @@ script = ExtResource("3_path")
 path_id = &"lockdown"
 display_name = "震慑"
 description = "追求控制和防线稳定"
+primary_build_tag = &"控制"
+build_tags = Array[StringName]([&"控制", &"扩散"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_shock_lock_l2"), SubResource("Resource_shock_lock_l3"), SubResource("Resource_shock_lock_l4"), SubResource("Resource_shock_lock_l5"), SubResource("Resource_shock_lock_l6"), SubResource("Resource_shock_lock_l7"), SubResource("Resource_shock_lock_l8")])
 
 [resource]
@@ -157,7 +163,8 @@ orbit_count = 0
 reflect_percent = 0.0
 field_radius = 0.0
 acquire_range = 0.0
-tags = Array[StringName]([&"控制", &"范围"])
+tags = Array[StringName]([&"控制", &"近身"])
+mechanism_tags = Array[StringName]([&"震荡", &"环形"])
 icon = ExtResource("2_icon")
 max_level = 8
 paths = Array[ExtResource("3_path")]([SubResource("Resource_shock_path_frac"), SubResource("Resource_shock_path_pulse"), SubResource("Resource_shock_path_lock")])

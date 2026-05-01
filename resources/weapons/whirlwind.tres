@@ -48,6 +48,8 @@ script = ExtResource("3_path")
 path_id = &"rending"
 display_name = "割裂"
 description = "追求近身高伤害"
+primary_build_tag = &"强击"
+build_tags = Array[StringName]([&"强击"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_whirl_rend_l2"), SubResource("Resource_whirl_rend_l3"), SubResource("Resource_whirl_rend_l4"), SubResource("Resource_whirl_rend_l5"), SubResource("Resource_whirl_rend_l6"), SubResource("Resource_whirl_rend_l7"), SubResource("Resource_whirl_rend_l8")])
 
 [sub_resource type="Resource" id="Resource_whirl_cycl_l2"]
@@ -93,6 +95,8 @@ script = ExtResource("3_path")
 path_id = &"cyclone"
 display_name = "疾旋"
 description = "追求高频率和稳定范围"
+primary_build_tag = &"疾速"
+build_tags = Array[StringName]([&"疾速", &"扩散"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_whirl_cycl_l2"), SubResource("Resource_whirl_cycl_l3"), SubResource("Resource_whirl_cycl_l4"), SubResource("Resource_whirl_cycl_l5"), SubResource("Resource_whirl_cycl_l6"), SubResource("Resource_whirl_cycl_l7"), SubResource("Resource_whirl_cycl_l8")])
 
 [sub_resource type="Resource" id="Resource_whirl_wall_l2"]
@@ -138,6 +142,8 @@ script = ExtResource("3_path")
 path_id = &"wind_wall"
 display_name = "风墙"
 description = "追求范围控制和自保"
+primary_build_tag = &"控制"
+build_tags = Array[StringName]([&"控制", &"守护"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_whirl_wall_l2"), SubResource("Resource_whirl_wall_l3"), SubResource("Resource_whirl_wall_l4"), SubResource("Resource_whirl_wall_l5"), SubResource("Resource_whirl_wall_l6"), SubResource("Resource_whirl_wall_l7"), SubResource("Resource_whirl_wall_l8")])
 
 [resource]
@@ -158,7 +164,8 @@ orbit_count = 0
 reflect_percent = 0.0
 field_radius = 0.0
 acquire_range = 0.0
-tags = Array[StringName]([&"近战", &"范围"])
+tags = Array[StringName]([&"近身", &"控制"])
+mechanism_tags = Array[StringName]([&"环身", &"斩击"])
 icon = ExtResource("2_icon")
 max_level = 8
 paths = Array[ExtResource("3_path")]([SubResource("Resource_whirl_path_rend"), SubResource("Resource_whirl_path_cycl"), SubResource("Resource_whirl_path_wall")])

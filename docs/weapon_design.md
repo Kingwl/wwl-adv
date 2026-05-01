@@ -110,7 +110,7 @@ enum Category { DAMAGE, DEFENSE, BUFF }
 | `laser_pen` | 激光笔 | 攻击 | 直线穿透光束 |
 | `boomerang` | 回旋镖 | 攻击 | 往返弹体 |
 | `electromagnetic_chain` | 电磁链 | 攻击 | 多目标连锁弹跳 |
-| `saw_blade` | 锯片陷阱 | 攻击 | 持续旋转锯片 |
+| `saw_blade` | 锯片陷阱 | 攻击 | 自动投放轨道锯片 |
 | `rocket_pack` | 火箭背包 | 攻击 | 移动时留下火焰轨迹 |
 | `whirlwind` | 旋风斩 | 攻击 | 周期性环身斩击 |
 | `throwing_axe` | 投掷斧 | 攻击 | 旋转飞斧，穿透少量敌人 |
@@ -127,7 +127,7 @@ enum Category { DAMAGE, DEFENSE, BUFF }
 2. 未持有武器：从 `WEAPON_SCENES` 生成解锁选项，并从 `resources/weapons/{id}.tres` 读取名称、描述、图标
 3. 已持有武器：
    - 若武器有路径、等级为 1 且尚未选流派，提供流派选择；卡片会展示选择后立即获得的 Lv.2 路径效果
-   - 流派卡会根据路径效果推断并展示构筑方向标签，如输出、范围、控制、频率、生存、穿透
+   - 流派卡优先读取 `WeaponPath.build_tags` 并展示路线方向标签，如强击、扩散、疾速、穿透、控制、守护、持续；未配置时才回退到文本推断
    - 若武器已选流派，提供下一等级的 `WeaponPathLevel` 效果
    - 若未来新增无路径武器，仍可回退到硬编码强化选项
 4. 外部升级：追加 `DataManager.all_upgrades()`

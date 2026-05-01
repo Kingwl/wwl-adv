@@ -21,7 +21,7 @@ damage_bonus = 2
 cooldown_bonus = 0.0
 range_bonus = 5
 special_tag = &""
-description = "伤害+2，轨道半径+5"
+description = "伤害+2，轨道长度+5"
 
 [sub_resource type="Resource" id="Resource_sawb_p0_l4"]
 script = ExtResource("91_level")
@@ -73,6 +73,8 @@ script = ExtResource("90_path")
 path_id = &"ripper"
 display_name = "撕裂"
 description = "追求伤害与转速"
+primary_build_tag = &"强击"
+build_tags = Array[StringName]([&"强击", &"疾速"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_sawb_p0_l2"), SubResource("Resource_sawb_p0_l3"), SubResource("Resource_sawb_p0_l4"), SubResource("Resource_sawb_p0_l5"), SubResource("Resource_sawb_p0_l6"), SubResource("Resource_sawb_p0_l7"), SubResource("Resource_sawb_p0_l8")])
 
 [sub_resource type="Resource" id="Resource_sawb_p1_l2"]
@@ -109,7 +111,7 @@ damage_bonus = 0
 cooldown_bonus = 0.0
 range_bonus = 5
 special_tag = &""
-description = "轨道半径+5"
+description = "轨道长度+5"
 
 [sub_resource type="Resource" id="Resource_sawb_p1_l6"]
 script = ExtResource("91_level")
@@ -127,7 +129,7 @@ damage_bonus = 0
 cooldown_bonus = 0.0
 range_bonus = 5
 special_tag = &""
-description = "轨道半径+5"
+description = "轨道长度+5"
 
 [sub_resource type="Resource" id="Resource_sawb_p1_l8"]
 script = ExtResource("91_level")
@@ -136,13 +138,15 @@ damage_bonus = 3
 cooldown_bonus = 0.0
 range_bonus = 5
 special_tag = &"saw_swarm"
-description = "伤害+3，轨道半径+5"
+description = "伤害+3，轨道长度+5"
 
 [sub_resource type="Resource" id="Resource_sawb_path1"]
 script = ExtResource("90_path")
 path_id = &"dual"
 display_name = "双刃"
 description = "追求锯片数量"
+primary_build_tag = &"扩散"
+build_tags = Array[StringName]([&"扩散"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_sawb_p1_l2"), SubResource("Resource_sawb_p1_l3"), SubResource("Resource_sawb_p1_l4"), SubResource("Resource_sawb_p1_l5"), SubResource("Resource_sawb_p1_l6"), SubResource("Resource_sawb_p1_l7"), SubResource("Resource_sawb_p1_l8")])
 
 [sub_resource type="Resource" id="Resource_sawb_p2_l2"]
@@ -152,7 +156,7 @@ damage_bonus = 1
 cooldown_bonus = 0.0
 range_bonus = 5
 special_tag = &""
-description = "伤害+1，轨道半径+5"
+description = "伤害+1，轨道长度+5"
 
 [sub_resource type="Resource" id="Resource_sawb_p2_l3"]
 script = ExtResource("91_level")
@@ -179,7 +183,7 @@ damage_bonus = 2
 cooldown_bonus = 0.0
 range_bonus = 5
 special_tag = &""
-description = "伤害+2，轨道半径+5"
+description = "伤害+2，轨道长度+5"
 
 [sub_resource type="Resource" id="Resource_sawb_p2_l6"]
 script = ExtResource("91_level")
@@ -206,24 +210,26 @@ damage_bonus = 3
 cooldown_bonus = 0.0
 range_bonus = 10
 special_tag = &"massive_saw"
-description = "伤害+3，轨道半径+10，锯片尺寸+30%"
+description = "伤害+3，轨道长度+10，锯片尺寸+30%"
 
 [sub_resource type="Resource" id="Resource_sawb_path2"]
 script = ExtResource("90_path")
 path_id = &"buzzsaw"
 display_name = "圆锯"
 description = "追求大范围"
+primary_build_tag = &"扩散"
+build_tags = Array[StringName]([&"扩散", &"强击"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_sawb_p2_l2"), SubResource("Resource_sawb_p2_l3"), SubResource("Resource_sawb_p2_l4"), SubResource("Resource_sawb_p2_l5"), SubResource("Resource_sawb_p2_l6"), SubResource("Resource_sawb_p2_l7"), SubResource("Resource_sawb_p2_l8")])
 
 [resource]
 script = ExtResource("1_saw_blade")
 id = &"saw_blade"
 display_name = "锯片陷阱"
-description = "锯片沿玩家周围短轨道来回切割"
+description = "自动向敌群投放锯片陷阱，短时间沿轨道往返切割"
 weapon_type = 0
 category = 0
 damage = 8
-cooldown = 0.0
+cooldown = 1.2
 range = 55.0
 projectile_speed = 0.0
 projectile_count = 0
@@ -231,7 +237,9 @@ pierce = 0
 heal_amount = 0
 orbit_count = 0
 reflect_percent = 0.0
-tags = Array[StringName]([&"近身", &"持续"])
+acquire_range = 360.0
+tags = Array[StringName]([&"场地"])
+mechanism_tags = Array[StringName]([&"部署", &"轨道", &"持续"])
 icon = ExtResource("2_icon")
 max_level = 8
 paths = Array[ExtResource("90_path")]([SubResource("Resource_sawb_path0"), SubResource("Resource_sawb_path1"), SubResource("Resource_sawb_path2")])

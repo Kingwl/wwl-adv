@@ -49,6 +49,8 @@ script = ExtResource("3_path")
 path_id = &"cleaver"
 display_name = "断首"
 description = "追求高伤害和穿透"
+primary_build_tag = &"强击"
+build_tags = Array[StringName]([&"强击", &"穿透"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_axe_cleave_l2"), SubResource("Resource_axe_cleave_l3"), SubResource("Resource_axe_cleave_l4"), SubResource("Resource_axe_cleave_l5"), SubResource("Resource_axe_cleave_l6"), SubResource("Resource_axe_cleave_l7"), SubResource("Resource_axe_cleave_l8")])
 
 [sub_resource type="Resource" id="Resource_axe_twin_l2"]
@@ -95,6 +97,8 @@ script = ExtResource("3_path")
 path_id = &"twin_axes"
 display_name = "双斧"
 description = "追求多发散射"
+primary_build_tag = &"扩散"
+build_tags = Array[StringName]([&"扩散", &"疾速"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_axe_twin_l2"), SubResource("Resource_axe_twin_l3"), SubResource("Resource_axe_twin_l4"), SubResource("Resource_axe_twin_l5"), SubResource("Resource_axe_twin_l6"), SubResource("Resource_axe_twin_l7"), SubResource("Resource_axe_twin_l8")])
 
 [sub_resource type="Resource" id="Resource_axe_return_l2"]
@@ -141,6 +145,8 @@ script = ExtResource("3_path")
 path_id = &"returning"
 display_name = "回旋"
 description = "追求往返命中和射程"
+primary_build_tag = &"穿透"
+build_tags = Array[StringName]([&"穿透", &"疾速"])
 levels = Array[ExtResource("4_level")]([SubResource("Resource_axe_return_l2"), SubResource("Resource_axe_return_l3"), SubResource("Resource_axe_return_l4"), SubResource("Resource_axe_return_l5"), SubResource("Resource_axe_return_l6"), SubResource("Resource_axe_return_l7"), SubResource("Resource_axe_return_l8")])
 
 [resource]
@@ -161,7 +167,8 @@ orbit_count = 0
 reflect_percent = 0.0
 field_radius = 0.0
 acquire_range = 0.0
-tags = Array[StringName]([&"弹体", &"斩击"])
+tags = Array[StringName]([&"弹幕", &"爆发"])
+mechanism_tags = Array[StringName]([&"重型弹体", &"穿透"])
 icon = ExtResource("2_icon")
 max_level = 8
 paths = Array[ExtResource("3_path")]([SubResource("Resource_axe_path_cleave"), SubResource("Resource_axe_path_twin"), SubResource("Resource_axe_path_return")])

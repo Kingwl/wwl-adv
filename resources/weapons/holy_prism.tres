@@ -66,6 +66,8 @@ script = ExtResource("90_path")
 path_id = &"holy_light"
 display_name = "圣光"
 description = "追求极致伤害"
+primary_build_tag = &"强击"
+build_tags = Array[StringName]([&"强击"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_holy_p0_l2"), SubResource("Resource_holy_p0_l3"), SubResource("Resource_holy_p0_l4"), SubResource("Resource_holy_p0_l5"), SubResource("Resource_holy_p0_l6"), SubResource("Resource_holy_p0_l7"), SubResource("Resource_holy_p0_l8")])
 [sub_resource type="Resource" id="Resource_holy_p1_l2"]
 script = ExtResource("91_level")
@@ -128,6 +130,8 @@ script = ExtResource("90_path")
 path_id = &"cure"
 display_name = "治愈"
 description = "追求强治疗"
+primary_build_tag = &"守护"
+build_tags = Array[StringName]([&"守护"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_holy_p1_l2"), SubResource("Resource_holy_p1_l3"), SubResource("Resource_holy_p1_l4"), SubResource("Resource_holy_p1_l5"), SubResource("Resource_holy_p1_l6"), SubResource("Resource_holy_p1_l7"), SubResource("Resource_holy_p1_l8")])
 [sub_resource type="Resource" id="Resource_holy_p2_l2"]
 script = ExtResource("91_level")
@@ -190,6 +194,8 @@ script = ExtResource("90_path")
 path_id = &"blessing"
 display_name = "祝福"
 description = "追求攻防一体"
+primary_build_tag = &"守护"
+build_tags = Array[StringName]([&"守护", &"强击"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_holy_p2_l2"), SubResource("Resource_holy_p2_l3"), SubResource("Resource_holy_p2_l4"), SubResource("Resource_holy_p2_l5"), SubResource("Resource_holy_p2_l6"), SubResource("Resource_holy_p2_l7"), SubResource("Resource_holy_p2_l8")])
 [resource]
 script = ExtResource("1_prism")
@@ -207,7 +213,8 @@ pierce = 0
 heal_amount = 3
 orbit_count = 0
 reflect_percent = 0.0
-tags = Array[StringName]([&"范围", &"恢复"])
+tags = Array[StringName]([&"生存", &"爆发"])
+mechanism_tags = Array[StringName]([&"恢复", &"圣光"])
 icon = ExtResource("2_icon")
 max_level = 8
 paths = Array[ExtResource("90_path")]([SubResource("Resource_holy_path0"), SubResource("Resource_holy_path1"), SubResource("Resource_holy_path2")])

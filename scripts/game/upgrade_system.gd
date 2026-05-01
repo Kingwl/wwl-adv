@@ -525,7 +525,7 @@ func _make_path_option(weapon: WeaponBase, path: WeaponPath) -> UpgradeData:
 	d.weapon_id = weapon.weapon_data.id
 	d.path_id = path.path_id
 	d.icon = path.icon if path.icon else weapon.weapon_data.icon
-	d.build_tags = _infer_path_build_tags(path)
+	d.build_tags = _get_path_build_tags(path)
 	var first_effect := path.get_level_effect(2)
 	if first_effect:
 		var effect_desc := _describe_path_effect(weapon, first_effect)
@@ -553,7 +553,7 @@ func _make_level_from_path(weapon: WeaponBase, path: WeaponPath, effect: WeaponP
 	d.range_bonus = effect.range_bonus
 	d.icon = weapon.weapon_data.icon
 	if path:
-		d.build_tags = _infer_path_build_tags(path)
+		d.build_tags = _get_path_build_tags(path)
 	return d
 
 func _describe_path_effect(weapon: WeaponBase, effect: WeaponPathLevel) -> String:
@@ -572,29 +572,40 @@ func _describe_path_effect(weapon: WeaponBase, effect: WeaponPathLevel) -> Strin
 		parts.append("%s强化" % weapon.weapon_data.display_name)
 	return "  |  ".join(parts)
 
+func _get_path_build_tags(path: WeaponPath) -> Array[String]:
+	if not path:
+		return []
+	if not path.build_tags.is_empty():
+		var explicit_tags: Array[String] = []
+		for tag in path.build_tags:
+			explicit_tags.append(str(tag))
+		return explicit_tags
+	return _infer_path_build_tags(path)
+
 func _infer_path_build_tags(path: WeaponPath) -> Array[String]:
 	if not path:
 		return []
 	var scores: Dictionary = {
-		"输出": 0,
-		"范围": 0,
+		"强击": 0,
+		"扩散": 0,
 		"控制": 0,
-		"频率": 0,
-		"生存": 0,
+		"疾速": 0,
+		"守护": 0,
 		"穿透": 0,
+		"持续": 0,
 	}
 	var text := "%s %s" % [path.display_name, path.description]
 	for effect in path.levels:
 		if effect.damage_bonus != 0:
-			scores["输出"] += 2
+			scores["强击"] += 2
 		if effect.cooldown_bonus != 0.0:
-			scores["频率"] += 2
+			scores["疾速"] += 2
 		if effect.range_bonus != 0:
-			scores["范围"] += 2
+			scores["扩散"] += 2
 		text += " %s %s" % [effect.description, str(effect.special_tag)]
 	_score_path_keywords(text.to_lower(), scores)
 
-	var priority := ["输出", "范围", "控制", "频率", "生存", "穿透"]
+	var priority := ["强击", "扩散", "疾速", "穿透", "控制", "守护", "持续"]
 	var tags: Array[String] = []
 	for tag in priority:
 		if int(scores.get(tag, 0)) > 0:
@@ -609,29 +620,32 @@ func _infer_path_build_tags(path: WeaponPath) -> Array[String]:
 	return tags.slice(0, 3)
 
 func _score_path_keywords(text: String, scores: Dictionary) -> void:
-	_add_keyword_score(text, scores, "输出", [
+	_add_keyword_score(text, scores, "强击", [
 		"伤害", "暴击", "燃烧", "毒素", "火焰", "高压",
 		"damage", "crit", "heavy", "slug", "burn", "poison", "inferno", "overload", "rend", "fracture", "cleaver",
 	])
-	_add_keyword_score(text, scores, "范围", [
-		"范围", "射程", "持续", "蔓延", "连锁", "弹丸", "数量", "轨道", "散射",
+	_add_keyword_score(text, scores, "扩散", [
+		"范围", "射程", "蔓延", "连锁", "弹丸", "数量", "轨道", "散射",
 		"range", "wide", "wider", "longer", "eternal", "extra", "more", "triple", "quad", "volley", "swarm", "deluge", "chain", "split", "storm", "wall",
 	])
 	_add_keyword_score(text, scores, "控制", [
 		"控制", "减速", "眩晕", "击退", "冰封", "震慑",
 		"slow", "stun", "freeze", "frozen", "knockback", "paralyze", "lockdown",
 	])
-	_add_keyword_score(text, scores, "频率", [
+	_add_keyword_score(text, scores, "疾速", [
 		"冷却", "速度", "转速", "快速", "连发",
 		"cooldown", "rapid", "faster", "fast", "speed", "double", "dual",
 	])
-	_add_keyword_score(text, scores, "生存", [
+	_add_keyword_score(text, scores, "守护", [
 		"治疗", "恢复", "反伤", "防御", "守护", "复仇",
 		"heal", "reflect", "thorns", "guardian", "vengeance", "cure",
 	])
 	_add_keyword_score(text, scores, "穿透", [
 		"穿透", "穿甲",
 		"pierce", "sniper", "armor",
+	])
+	_add_keyword_score(text, scores, "持续", [
+		"持续", "燃烧时间", "毒雾持续", "尾焰", "longer", "eternal", "afterburn",
 	])
 
 func _add_keyword_score(text: String, scores: Dictionary, tag: String, keywords: Array[String]) -> void:

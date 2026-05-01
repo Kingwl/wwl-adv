@@ -73,6 +73,8 @@ script = ExtResource("90_path")
 path_id = &"demolition"
 display_name = "爆破"
 description = "追求爆炸伤害与范围"
+primary_build_tag = &"强击"
+build_tags = Array[StringName]([&"强击", &"扩散"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_mine_p0_l2"), SubResource("Resource_mine_p0_l3"), SubResource("Resource_mine_p0_l4"), SubResource("Resource_mine_p0_l5"), SubResource("Resource_mine_p0_l6"), SubResource("Resource_mine_p0_l7"), SubResource("Resource_mine_p0_l8")])
 
 [sub_resource type="Resource" id="Resource_mine_p1_l2"]
@@ -143,6 +145,8 @@ script = ExtResource("90_path")
 path_id = &"trapmaster"
 display_name = "陷阱"
 description = "追求布置数量"
+primary_build_tag = &"扩散"
+build_tags = Array[StringName]([&"扩散", &"疾速"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_mine_p1_l2"), SubResource("Resource_mine_p1_l3"), SubResource("Resource_mine_p1_l4"), SubResource("Resource_mine_p1_l5"), SubResource("Resource_mine_p1_l6"), SubResource("Resource_mine_p1_l7"), SubResource("Resource_mine_p1_l8")])
 
 [sub_resource type="Resource" id="Resource_mine_p2_l2"]
@@ -213,6 +217,8 @@ script = ExtResource("90_path")
 path_id = &"cluster"
 display_name = "集束"
 description = "追求连锁杀伤"
+primary_build_tag = &"扩散"
+build_tags = Array[StringName]([&"扩散", &"强击"])
 levels = Array[ExtResource("91_level")]([SubResource("Resource_mine_p2_l2"), SubResource("Resource_mine_p2_l3"), SubResource("Resource_mine_p2_l4"), SubResource("Resource_mine_p2_l5"), SubResource("Resource_mine_p2_l6"), SubResource("Resource_mine_p2_l7"), SubResource("Resource_mine_p2_l8")])
 
 [resource]
@@ -231,7 +237,8 @@ pierce = 0
 heal_amount = 0
 orbit_count = 0
 reflect_percent = 0.0
-tags = Array[StringName]([&"范围", &"爆发"])
+tags = Array[StringName]([&"场地", &"爆发"])
+mechanism_tags = Array[StringName]([&"陷阱"])
 icon = ExtResource("2_icon")
 max_level = 8
 paths = Array[ExtResource("90_path")]([SubResource("Resource_mine_path0"), SubResource("Resource_mine_path1"), SubResource("Resource_mine_path2")])

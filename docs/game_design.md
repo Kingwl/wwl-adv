@@ -51,7 +51,7 @@
 
 ### 敌人
 
-当前敌人已通过 `resources/enemies/*.tres` 内容化，共 8 种原型：
+当前敌人已通过 `resources/enemies/*.tres` 内容化，共 11 种资源；当前局内时间线使用 7 种普通 / 精英敌人 + 2 波小 Boss + 1 波最终 Boss。
 
 | 敌人 | 定位 | 出现时间 | HP | 速度 | 接触伤害 | 小队 |
 |------|------|----------|----|------|----------|------|
@@ -62,14 +62,17 @@
 | 突袭者 | 短前摇冲刺 | 180s | 18 | 54 | 7 | 1 |
 | 精英蛮兵 | 精英肉盾 | 260s | 120 | 42 | 12 | 1 |
 | 精英秘法师 | 精英远程 | 360s | 70 | 44 | 10 | 1 |
-| 北境督军 | 首领战 | 300s 事件生成 | 420 | 34 | 10 | 1 |
+| 北境督军 | 第一波小 Boss | 300s 事件生成 | 420 | 34 | 10 | 1 |
+| 北境霜卫 | 第二波双 Boss | 510s 同时生成 | 360 | 36 | 10 | 1 |
+| 北境符文先知 | 第二波双 Boss | 510s 同时生成 | 440 | 42 | 11 | 1 |
+| 冰冠霸主 | 最终 Boss | 720s 事件生成 | 760 | 38 | 13 | 1 |
 
 - 行为：追踪型持续接近玩家；突袭者会按冷却进入前摇、冲刺、恢复三个阶段；远程型会保持距离并向玩家发射弹体
 - 精英：通过更高 HP / 伤害 / 掉落、更大体型和颜色区分，暂不引入复杂技能
-- Boss：北境督军在 5:00 事件生成一次，不进入普通权重池；使用专属 6 帧 Boss 条带和 4 帧熔火符文弹体，保持中距离压迫玩家并周期性发射 8 向弹幕，击败后以胜利结算
+- Boss：当前时间线为 5:00 北境督军、8:30 同时生成北境霜卫 + 北境符文先知、12:00 冰冠霸主；Boss 均不进入普通权重池，使用专属 6 帧 Boss 条带和 4 帧弹体条带。前两波小 Boss 击败后继续游戏，只有带 `final_boss` 标签的冰冠霸主死亡才胜利结算。
 - 状态：通过 `StatusEffect` 支持 `slow` 和 `stun`，并预留刷新策略、堆叠和 tick 伤害
-- 生成：从玩家周围可视区外的视口半对角线 + 80~300 像素环形区域随机生成，按 `spawn_weight`、时间窗口和 `pack_size` 选择
-- 难度曲线：生成间隔随时间缩短，但不低于 0.55s；HP / 伤害按 210 秒周期线性成长，速度按 360 秒周期成长并封顶到 1.55 倍；存活敌人上限 150
+- 生成：从玩家周围可视区外的视口半对角线 + 80~300 像素环形区域随机生成，按 `spawn_weight`、时间窗口和 `pack_size` 选择；同一小队内成员按约 72~160 像素的环形偏移分散落点，避免 3 只怪重叠生成
+- 难度曲线：生成间隔随时间缩短，但不低于 0.55s；HP / 伤害按 210 秒周期线性成长，速度按 360 秒周期成长并封顶到 1.55 倍；存活敌人上限 150；510s 后进入后段权重，降低小鬼占比并提高突袭、远程和精英出现率
 - 奖励曲线：敌人 EXP 会按难度成长获得部分补偿，金币获得较弱补偿，避免中后期只增加压力不增加成长资源
 - 资源化：`EnemyData` 记录属性、体型、行为、专属动画条带、生成权重、出现时间和小队数量
 - 美术：7 种敌人均有独立 6 帧 64×64 条带，运行时拆成 walk / hit / death 动画
@@ -155,7 +158,8 @@
 经验公式：
 
 ```text
-exp_required = 15 * 1.2^(level - 1)
+level <= 20: exp_required = 15 * 1.2^(level - 1)
+level > 20:  exp_required = 15 * 1.2^19 * 1.1^(level - 20)
 ```
 
 当前升级类型：
@@ -177,7 +181,7 @@ exp_required = 15 * 1.2^(level - 1)
 | 疾风步 | 移动速度 +25 |
 | 生命强化 | 最大 HP +30，当前 HP +30 |
 | 磁力增幅 | 拾取范围 +30 |
-| 生命源泉 | 立即恢复 5 HP；之后每 5 秒自动恢复生命，治疗量随强化等级提升 |
+| 生命源泉 | 立即恢复 5 HP；之后按 `5s * 全局冷却倍率` 自动恢复生命，治疗量随强化等级提升 |
 | 强攻 | 所有武器伤害 +8% |
 | 专注 | 所有武器冷却 -6% |
 | 扩张 | 所有武器范围 +8% |
@@ -226,13 +230,15 @@ exp_required = 15 * 1.2^(level - 1)
 | 初始 HP | `autoload/game_state.gd` | `STARTING_HP = 100` |
 | 当前角色 | `resources/characters/*.tres` | 冒险者 / 游侠 / 守卫 / 炼金术士 |
 | 初始经验阈值 | `autoload/game_state.gd` | `STARTING_EXP_TO_LEVEL = 15` |
-| 经验增长倍率 | `autoload/game_state.gd` | `pow(1.2, level - 1)` |
+| 经验增长倍率 | `autoload/game_state.gd` | 20 级前 `1.2x`，20 级后 `1.1x` |
 | 玩家移速 | `resources/characters/*.tres` / `scripts/player/player.gd` | 默认 `170.0`，按角色覆盖 |
-| 敌人基础 HP | `resources/enemies/*.tres` | 小鬼 10 / 疾行者 8 / 邪教射手 14 / 蛮兵 46 / 突袭者 18 / 精英蛮兵 120 / 精英秘法师 70 / 北境督军 420 |
-| 敌人基础速度 | `resources/enemies/*.tres` | 小鬼 58 / 疾行者 92 / 邪教射手 48 / 蛮兵 38 / 突袭者 54 / 精英蛮兵 42 / 精英秘法师 44 / 北境督军 34 |
-| 敌人基础伤害 | `resources/enemies/*.tres` | 小鬼 4 / 疾行者 3 / 邪教射手 5 / 蛮兵 8 / 突袭者 7 / 精英蛮兵 12 / 精英秘法师 10 / 北境督军 10 |
-| Boss 生成 | `scripts/enemy/enemy_spawner.gd` | `boss_spawn_time = 300`，`boss_enemy_id = boss_warlord` |
+| 敌人基础 HP | `resources/enemies/*.tres` | 小鬼 10 / 疾行者 8 / 邪教射手 14 / 蛮兵 46 / 突袭者 18 / 精英蛮兵 120 / 精英秘法师 70 / 北境督军 420 / 北境霜卫 360 / 北境符文先知 440 / 冰冠霸主 760 |
+| 敌人基础速度 | `resources/enemies/*.tres` | 小鬼 58 / 疾行者 92 / 邪教射手 48 / 蛮兵 38 / 突袭者 54 / 精英蛮兵 42 / 精英秘法师 44 / 北境督军 34 / 北境霜卫 36 / 北境符文先知 42 / 冰冠霸主 38 |
+| 敌人基础伤害 | `resources/enemies/*.tres` | 小鬼 4 / 疾行者 3 / 邪教射手 5 / 蛮兵 8 / 突袭者 7 / 精英蛮兵 12 / 精英秘法师 10 / 北境督军 10 / 北境霜卫 10 / 北境符文先知 11 / 冰冠霸主 13 |
+| Boss 生成 | `scripts/enemy/enemy_spawner.gd` | `boss_spawn_events`: 300s 北境督军 / 510s 北境霜卫 + 北境符文先知 / 720s 冰冠霸主 |
 | 敌人生成间隔 | `scripts/enemy/enemy_spawner.gd` | `base_spawn_interval = 2.4`，最低 `0.55` |
+| 小队生成分散 | `scripts/enemy/enemy_spawner.gd` | 首只锚定生成点，其余按 `pack_spawn_min_spacing = 72` 到 `pack_spawn_spread = 160` 环形分散 |
+| 第二波后权重 | `scripts/enemy/enemy_spawner.gd` | 510s 后：小鬼 `0.35x`，突袭 `2.0x`，远程 `1.8x`，精英 `2.4x`；精英远程同时吃远程和精英加成 |
 | 敌人 HP / 伤害成长 | `scripts/enemy/enemy_spawner.gd` | `1 + elapsed_time / 210` |
 | 敌人速度成长 | `scripts/enemy/enemy_spawner.gd` | `1 + elapsed_time / 360`，封顶 `1.55x` |
 | 敌人奖励成长 | `scripts/enemy/enemy_spawner.gd` | EXP 随 stat scale 50% 补偿，最高 `3x`；金币 25% 补偿，最高 `2x` |
@@ -242,7 +248,7 @@ exp_required = 15 * 1.2^(level - 1)
 | 电磁链首次索敌 | `resources/weapons/electromagnetic_chain.tres` | `acquire_range = 280`，跳跃距离 `range = 120` |
 | 经验球磁力距离 | `scripts/drops/exp_orb.gd` | `magnet_distance = 120` + 拾取 bonus |
 | 金币磁力距离 | `scripts/drops/gold_pickup.gd` | `magnet_distance = 120` + 拾取 bonus |
-| 生命源泉恢复 | `autoload/game_state.gd` / `scripts/game/game.gd` | 首次获得立即恢复 `5`，之后每 `5s` 恢复 `5 + (level - 1) * 2` |
+| 生命源泉恢复 | `autoload/game_state.gd` / `scripts/game/game.gd` | 首次获得立即恢复 `5`，之后每 `5s * 全局冷却倍率` 恢复 `5 + (level - 1) * 2` |
 
 ## 待实现 / 未来规划
 
@@ -254,7 +260,7 @@ exp_required = 15 * 1.2^(level - 1)
 
 ### 中期
 
-- [ ] 更多 Boss / 阶段目标
+- [x] 更多 Boss / 阶段目标：两波北境小 Boss + 12:00 最终 Boss
 - [ ] 武器组合 / 联动系统
 - [ ] 更多地图机制和环境危险
 - [ ] 局外设置页和配置持久化（设计见 [`save_system_design.md`](./save_system_design.md)）

@@ -12,6 +12,9 @@ var _current_cooldown: float = 1.0
 var _current_range: float = 50.0
 var _cooldown_timer: float = 0.0
 
+const RECENT_TARGET_CLAIM_MSEC := 700
+static var _recent_target_claims: Dictionary = {}
+
 func _ready() -> void:
 	_recalc_stats()
 	_cooldown_timer = _current_cooldown
@@ -126,3 +129,53 @@ func _deal_damage_to(
 	event.status_duration = status_duration
 	event.status_value = status_value
 	return DamageCalculator.deal_damage(target, event)
+
+func _claim_nearest_enemy_target(from_pos: Vector2) -> Node2D:
+	_purge_expired_target_claims()
+	var candidates := _get_valid_enemy_targets()
+	if candidates.is_empty():
+		return null
+
+	var unclaimed: Array[Node2D] = []
+	for enemy in candidates:
+		if not _recent_target_claims.has(enemy.get_instance_id()):
+			unclaimed.append(enemy)
+
+	var target := _find_nearest_enemy_in_targets(from_pos, unclaimed)
+	if not target:
+		target = _find_nearest_enemy_in_targets(from_pos, candidates)
+	if target:
+		_recent_target_claims[target.get_instance_id()] = Time.get_ticks_msec() + RECENT_TARGET_CLAIM_MSEC
+	return target
+
+func _get_valid_enemy_targets() -> Array[Node2D]:
+	var result: Array[Node2D] = []
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if _is_valid_enemy_target(enemy):
+			result.append(enemy as Node2D)
+	return result
+
+func _is_valid_enemy_target(enemy: Node) -> bool:
+	if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+		return false
+	if not (enemy is Node2D):
+		return false
+	if "_dead" in enemy and bool(enemy._dead):
+		return false
+	return true
+
+func _find_nearest_enemy_in_targets(from_pos: Vector2, targets: Array[Node2D]) -> Node2D:
+	var nearest: Node2D = null
+	var min_dist := INF
+	for enemy in targets:
+		var dist := from_pos.distance_squared_to(enemy.global_position)
+		if dist < min_dist:
+			min_dist = dist
+			nearest = enemy
+	return nearest
+
+func _purge_expired_target_claims() -> void:
+	var now := Time.get_ticks_msec()
+	for enemy_id in _recent_target_claims.keys():
+		if int(_recent_target_claims[enemy_id]) <= now:
+			_recent_target_claims.erase(enemy_id)

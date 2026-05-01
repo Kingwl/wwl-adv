@@ -51,6 +51,12 @@ custom_minimum_size = Vector2(48, 28)
 text = "属性"
 theme_override_font_sizes/font_size = 14
 
+[node name="MenuButton" type="Button" parent="TopBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(52, 28)
+text = "菜单"
+theme_override_font_sizes/font_size = 14
+
 [node name="HPPanel" type="Control" parent="."]
 anchors_preset = 2
 anchor_top = 1.0

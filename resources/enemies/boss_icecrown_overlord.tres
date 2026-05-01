@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_enemy"]
+[ext_resource type="Texture2D" path="res://assets/art/characters/enemies/boss_icecrown_overlord_sheet.png" id="2_sheet"]
+[ext_resource type="Texture2D" path="res://assets/art/weapons/projectiles/boss_icecrown_overlord_orb_sheet.png" id="3_orb"]
+
+[resource]
+script = ExtResource("1_enemy")
+id = &"boss_icecrown_overlord"
+display_name = "冰冠霸主"
+max_hp = 760
+speed = 38.0
+damage = 13
+exp_reward = 320
+gold_reward = 80
+animation_sheet = ExtResource("2_sheet")
+animation_frame_size = Vector2i(64, 64)
+animation_columns = 6
+contact_damage_cooldown = 1.0
+collision_radius = 32.0
+visual_scale = 1.95
+visual_modulate = Color(1.0, 1.0, 1.0, 1.0)
+tags = Array[StringName]([&"boss", &"elite", &"tank", &"final_boss"])
+behavior_id = &"boss"
+preferred_range = 245.0
+retreat_range = 135.0
+attack_range = 600.0
+attack_cooldown = 1.95
+projectile_damage = 12
+projectile_speed = 320.0
+projectile_range = 760.0
+projectile_radius = 9.0
+projectile_modulate = Color(1.0, 1.0, 1.0, 1.0)
+projectile_animation_sheet = ExtResource("3_orb")
+projectile_animation_frame_size = Vector2i(32, 32)
+projectile_animation_columns = 4
+projectile_animation_frame_count = 4
+projectile_animation_speed = 12.0
+projectile_visual_rotation_offset = 0.0
+boss_projectile_count = 12
+spawn_weight = 0.0
+min_spawn_time = 720.0
+max_spawn_time = -1.0
+pack_size = 1

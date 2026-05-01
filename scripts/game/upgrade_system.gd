@@ -432,7 +432,7 @@ func _make_regen_up() -> UpgradeData:
 	var d := UpgradeData.new()
 	d.id = GameState.REGEN_ENHANCEMENT_ID
 	d.display_name = "生命源泉"
-	d.description = "立即恢复 5 点生命；之后每 5 秒自动恢复生命，等级越高治疗量越高"
+	d.description = "立即恢复 5 点生命；之后定时自动恢复生命，受全局冷却影响，等级越高治疗量越高"
 	d.upgrade_type = UpgradeData.UpgradeType.PLAYER_STAT
 	d.hp_bonus = GameState.REGEN_BASE_HEAL
 	d.icon = ICON_REGEN

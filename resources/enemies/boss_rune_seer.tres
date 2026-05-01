@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1_enemy"]
+[ext_resource type="Texture2D" path="res://assets/art/characters/enemies/boss_rune_seer_sheet.png" id="2_sheet"]
+[ext_resource type="Texture2D" path="res://assets/art/weapons/projectiles/boss_rune_seer_orb_sheet.png" id="3_orb"]
+
+[resource]
+script = ExtResource("1_enemy")
+id = &"boss_rune_seer"
+display_name = "北境符文先知"
+max_hp = 440
+speed = 42.0
+damage = 11
+exp_reward = 220
+gold_reward = 45
+animation_sheet = ExtResource("2_sheet")
+animation_frame_size = Vector2i(64, 64)
+animation_columns = 6
+contact_damage_cooldown = 1.08
+collision_radius = 27.0
+visual_scale = 1.6
+visual_modulate = Color(1.0, 1.0, 1.0, 1.0)
+tags = Array[StringName]([&"boss", &"elite", &"ranged", &"mini_boss"])
+behavior_id = &"boss"
+preferred_range = 285.0
+retreat_range = 165.0
+attack_range = 560.0
+attack_cooldown = 2.15
+projectile_damage = 10
+projectile_speed = 290.0
+projectile_range = 700.0
+projectile_radius = 8.0
+projectile_modulate = Color(1.0, 1.0, 1.0, 1.0)
+projectile_animation_sheet = ExtResource("3_orb")
+projectile_animation_frame_size = Vector2i(32, 32)
+projectile_animation_columns = 4
+projectile_animation_frame_count = 4
+projectile_animation_speed = 12.0
+projectile_visual_rotation_offset = 0.0
+boss_projectile_count = 10
+spawn_weight = 0.0
+min_spawn_time = 510.0
+max_spawn_time = -1.0
+pack_size = 1

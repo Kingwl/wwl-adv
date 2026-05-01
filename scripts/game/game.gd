@@ -12,6 +12,7 @@ func _ready() -> void:
 	$GameOver.restart_pressed.connect(_on_restart)
 	$GameOver.quit_to_menu_pressed.connect(_on_quit_to_menu)
 	$PauseMenu.quit_to_menu_pressed.connect(_on_quit_to_menu)
+	$HUD.pause_requested.connect(_on_hud_pause_requested)
 
 func _process(delta: float) -> void:
 	if _run_finished:
@@ -27,7 +28,7 @@ func _process_passive_enhancements(delta: float) -> void:
 		return
 	if _regen_last_level == 0:
 		_regen_last_level = regen_level
-		_regen_timer = GameState.REGEN_INTERVAL
+		_regen_timer = GameState.get_regen_interval()
 		return
 	_regen_last_level = regen_level
 	_regen_timer -= delta
@@ -37,7 +38,7 @@ func _process_passive_enhancements(delta: float) -> void:
 	if heal_amount > 0:
 		GameState.heal(heal_amount)
 		_show_regen_visual()
-	_regen_timer += GameState.REGEN_INTERVAL
+	_regen_timer += GameState.get_regen_interval()
 
 func _show_regen_visual() -> void:
 	var player := get_tree().get_first_node_in_group("player")
@@ -78,3 +79,10 @@ func _on_quit_to_menu() -> void:
 	GameState.reset_game_speed()
 	get_tree().paused = false
 	get_tree().call_deferred("change_scene_to_file", "res://scenes/ui/main_menu.tscn")
+
+func _on_hud_pause_requested() -> void:
+	if _run_finished or $GameOver.visible or $PauseMenu.visible:
+		return
+	if get_tree().paused:
+		return
+	$PauseMenu.show_pause()

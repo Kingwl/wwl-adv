@@ -13,6 +13,9 @@ signal weapons_changed
 const STARTING_HP := 100
 const STARTING_GOLD := 0
 const STARTING_EXP_TO_LEVEL := 15
+const EXP_CURVE_SOFTEN_LEVEL := 20
+const EXP_EARLY_GROWTH := 1.2
+const EXP_LATE_GROWTH := 1.1
 const MAX_WEAPON_SLOTS := 6
 const MAX_ENHANCEMENT_SLOTS := 6
 const MAX_ENHANCEMENT_LEVEL := 5
@@ -388,6 +391,9 @@ func get_regen_heal_amount() -> int:
 		return 0
 	return REGEN_BASE_HEAL + (level - 1) * REGEN_HEAL_PER_LEVEL
 
+func get_regen_interval() -> float:
+	return maxf(0.1, REGEN_INTERVAL * get_character_cooldown_multiplier())
+
 func get_character_damage_multiplier() -> float:
 	return maxf(0.05, float(run.get("damage_multiplier", 1.0)))
 
@@ -428,7 +434,10 @@ func reset_game_speed() -> void:
 	set_game_speed(float(GAME_SPEED_OPTIONS[0]))
 
 func _calc_exp_required(level: int) -> int:
-	return int(STARTING_EXP_TO_LEVEL * pow(1.2, level - 1))
+	if level <= EXP_CURVE_SOFTEN_LEVEL:
+		return int(STARTING_EXP_TO_LEVEL * pow(EXP_EARLY_GROWTH, level - 1))
+	var pivot := STARTING_EXP_TO_LEVEL * pow(EXP_EARLY_GROWTH, EXP_CURVE_SOFTEN_LEVEL - 1)
+	return int(pivot * pow(EXP_LATE_GROWTH, level - EXP_CURVE_SOFTEN_LEVEL))
 
 func _normalize_game_speed(multiplier: float) -> float:
 	for option in GAME_SPEED_OPTIONS:

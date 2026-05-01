@@ -86,6 +86,9 @@ func _phase_load() -> void:
 	# Verify HUD has icon elements
 	var hud: Node = _game.get_node_or_null("HUD")
 	if hud:
+		_assert(hud.has_signal("pause_requested"), "HUD exposes pause request signal")
+		var menu_button: Button = hud.get_node_or_null("TopBar/MenuButton")
+		_assert(menu_button != null and menu_button.text == "菜单", "HUD has mobile menu button")
 		var has_gold_icon := false
 		var has_heart_icon := false
 		for child in hud.get_children():
@@ -205,6 +208,14 @@ func _phase_level_up() -> void:
 
 	var upgrade_system: Node = _game.get_node_or_null("UpgradeSystem")
 	_assert(upgrade_system != null, "UpgradeSystem node found")
+
+	var level_20_exp := GameState._calc_exp_required(GameState.EXP_CURVE_SOFTEN_LEVEL)
+	var level_21_exp := GameState._calc_exp_required(GameState.EXP_CURVE_SOFTEN_LEVEL + 1)
+	var level_22_exp := GameState._calc_exp_required(GameState.EXP_CURVE_SOFTEN_LEVEL + 2)
+	var level_20_pivot := GameState.STARTING_EXP_TO_LEVEL * pow(GameState.EXP_EARLY_GROWTH, GameState.EXP_CURVE_SOFTEN_LEVEL - 1)
+	_assert(level_20_exp == int(GameState.STARTING_EXP_TO_LEVEL * pow(GameState.EXP_EARLY_GROWTH, GameState.EXP_CURVE_SOFTEN_LEVEL - 1)), "EXP curve keeps early growth through level 20")
+	_assert(level_21_exp == int(level_20_pivot * GameState.EXP_LATE_GROWTH), "EXP curve softens after level 20")
+	_assert(level_22_exp < int(level_21_exp * GameState.EXP_EARLY_GROWTH), "Late EXP curve grows slower than early curve")
 
 	# Disconnect automatic pause so test can keep running
 	if GameState.level_up.is_connected(upgrade_system._on_level_up):
@@ -516,7 +527,27 @@ func _phase_pause() -> void:
 				game_quit_signal_connections += 1
 		_assert(game_quit_signal_connections == 1, "PauseMenu quit signal is connected to Game once")
 
-		pause_menu._show_pause()
+		var hud: Node = _game.get_node_or_null("HUD")
+		var menu_button: Button = hud.get_node_or_null("TopBar/MenuButton") if hud else null
+		var hud_pause_connections := 0
+		if hud:
+			for connection in hud.get_signal_connection_list(&"pause_requested"):
+				var callable: Callable = connection.get("callable")
+				if callable.get_object() == _game and callable.get_method() == &"_on_hud_pause_requested":
+					hud_pause_connections += 1
+		_assert(hud_pause_connections == 1, "HUD menu signal is connected to Game once")
+		_assert(menu_button != null, "HUD menu button exists for mobile pause")
+		get_tree().paused = false
+		pause_menu.visible = false
+		if menu_button:
+			menu_button.pressed.emit()
+			await _wait(0.1)
+			_assert(pause_menu.visible, "HUD menu button opens PauseMenu")
+			_assert(get_tree().paused, "HUD menu button pauses game")
+			pause_menu._resume()
+			await _wait(0.1)
+
+		pause_menu.show_pause()
 		await _wait(0.3)
 		_assert(pause_menu.visible, "PauseMenu is visible")
 
@@ -931,6 +962,13 @@ func _phase_enemy_damage() -> void:
 	_assert(fire_result.event.damage_type == DamageEvent.DAMAGE_TYPE_FIRE, "DamageEvent carries damage type")
 	_assert(enemy._hp == event_hp_before - 4, "DamageCalculator reduces enemy HP")
 	_assert(int((GameState.run.get("weapon_damage", {}) as Dictionary).get("test_fire", 0)) >= 4, "DamageCalculator records weapon damage")
+
+	var stale_owner := Node.new()
+	stale_owner.free()
+	var stale_event := DamageEvent.from_amount(2, stale_owner, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_DIRECT)
+	stale_event.owner = stale_owner
+	stale_event.target = stale_owner
+	_assert(stale_event.source == null and stale_event.owner == null and stale_event.target == null, "DamageEvent ignores freed node references")
 
 	var status_event := DamageEvent.from_amount(1, player, DamageEvent.DAMAGE_TYPE_FROST, DamageEvent.DELIVERY_AREA)
 	status_event.status_id = &"slow"
@@ -1776,7 +1814,47 @@ func _phase_weapon_path_tags() -> void:
 		spark._apply_path_effects()
 		_assert(spark._get_explosion_status() == &"stun", "electro_spark Lv.8 applies stun on explosion")
 
+	await _assert_throwing_aoe_target_diversity()
 	await _wait(0.2)
+
+func _assert_throwing_aoe_target_diversity() -> void:
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	var enemies_parent := _game.get_node_or_null("Enemies")
+	var fire := _find_weapon(&"fire_bottle")
+	var poison := _find_weapon(&"poison_vial")
+	var spark := _find_weapon(&"spark_bomb")
+	_assert(player != null and enemies_parent != null and fire != null and poison != null and spark != null, "Throwing AOE target diversity setup exists")
+	if not player or not enemies_parent or not fire or not poison or not spark:
+		return
+
+	_clear_container_children(enemies_parent)
+	WeaponBase._recent_target_claims.clear()
+	await _wait(0.05)
+
+	var targets: Array[Node2D] = []
+	for i in range(3):
+		var enemy := Node2D.new()
+		enemy.name = "ThrowTarget%d" % i
+		enemy.add_to_group("enemies")
+		enemy.global_position = player.global_position + Vector2.RIGHT * (80.0 + float(i) * 20.0)
+		enemies_parent.add_child(enemy)
+		targets.append(enemy)
+	await _wait(0.05)
+
+	var fire_target := fire._claim_nearest_enemy_target(player.global_position)
+	var poison_target := poison._claim_nearest_enemy_target(player.global_position)
+	var spark_target := spark._claim_nearest_enemy_target(player.global_position)
+	var unique_targets := {}
+	for target in [fire_target, poison_target, spark_target]:
+		if target:
+			unique_targets[target.get_instance_id()] = true
+	_assert(fire_target != null and poison_target != null and spark_target != null, "Throwing AOE weapons acquire targets")
+	_assert(unique_targets.size() == 3, "Throwing AOE weapons prefer separate recent targets")
+
+	WeaponBase._recent_target_claims.clear()
+	for target in targets:
+		target.queue_free()
+	await _wait(0.05)
 
 func _assert_weapon_path_value_mix() -> void:
 	var offenders: Array[String] = []
@@ -2705,6 +2783,9 @@ func _phase_enemy_spawner() -> void:
 	var elite_brute_data := DataManager.get_enemy("elite_brute") as EnemyData
 	var elite_arcanist_data := DataManager.get_enemy("elite_arcanist") as EnemyData
 	var boss_data := DataManager.get_enemy("boss_warlord") as EnemyData
+	var frost_boss_data := DataManager.get_enemy("boss_frost_guardian") as EnemyData
+	var rune_boss_data := DataManager.get_enemy("boss_rune_seer") as EnemyData
+	var final_boss_data := DataManager.get_enemy("boss_icecrown_overlord") as EnemyData
 	_assert(
 		imp_data != null
 		and runner_data != null
@@ -2716,7 +2797,8 @@ func _phase_enemy_spawner() -> void:
 		and boss_data != null,
 		"Core enemy archetypes and first boss are registered"
 	)
-	for data in [imp_data, runner_data, brute_data, dasher_data, cultist_data, elite_brute_data, elite_arcanist_data, boss_data]:
+	_assert(frost_boss_data != null and rune_boss_data != null and final_boss_data != null, "Extended boss timeline resources are registered")
+	for data in [imp_data, runner_data, brute_data, dasher_data, cultist_data, elite_brute_data, elite_arcanist_data, boss_data, frost_boss_data, rune_boss_data, final_boss_data]:
 		var enemy_data := data as EnemyData
 		if enemy_data:
 			_assert(enemy_data.animation_sheet != null, "Enemy %s has dedicated animation sheet" % enemy_data.id)
@@ -2744,6 +2826,15 @@ func _phase_enemy_spawner() -> void:
 		_assert(boss_data.tags.has(&"boss") and boss_data.behavior_id == EnemyData.BEHAVIOR_BOSS, "Boss warlord uses boss archetype")
 		_assert(boss_data.spawn_weight <= 0.0 and boss_data.boss_projectile_count >= 6, "Boss is event-spawned and has volley config")
 		_assert(boss_data.projectile_animation_sheet != null and boss_data.projectile_animation_frame_count == 4, "Boss has dedicated animated projectile sheet")
+	for data in [boss_data, frost_boss_data, rune_boss_data]:
+		var mini_boss_data := data as EnemyData
+		if mini_boss_data:
+			_assert(mini_boss_data.tags.has(&"boss") and mini_boss_data.tags.has(&"mini_boss"), "Mini boss %s is tagged as a boss wave" % mini_boss_data.id)
+			_assert(not mini_boss_data.tags.has(&"final_boss"), "Mini boss %s does not trigger victory" % mini_boss_data.id)
+			_assert(mini_boss_data.spawn_weight <= 0.0 and mini_boss_data.projectile_animation_frame_count == 4, "Mini boss %s is event-spawned with animated projectiles" % mini_boss_data.id)
+	if final_boss_data:
+		_assert(final_boss_data.tags.has(&"boss") and final_boss_data.tags.has(&"final_boss"), "Final boss is tagged for victory")
+		_assert(final_boss_data.spawn_weight <= 0.0 and final_boss_data.boss_projectile_count >= 10, "Final boss is event-spawned with a denser volley")
 
 	# Test spawn interval scaling with elapsed time
 	spawner._elapsed_time = 0.0
@@ -2778,6 +2869,8 @@ func _phase_enemy_spawner() -> void:
 	_assert(speed_factor_120 <= 1.4 and abs(expected_speed - base_speed * speed_factor_120) < 0.1, "Difficulty speed scaling remains controlled at 120s")
 	spawner._elapsed_time = spawner.speed_scale_period * 2.0
 	_assert(abs(spawner._get_speed_scale() - spawner.max_speed_scale) < 0.01, "Difficulty speed scaling has cap")
+	_assert(spawner.pack_spawn_min_spacing > 0.0, "Pack spawn min spacing is configured")
+	_assert(spawner.pack_spawn_spread >= spawner.pack_spawn_min_spacing, "Pack spawn spread is wider than min spacing")
 
 	# Test weighted pick favors higher weights
 	var test_enemies: Array = []
@@ -2816,8 +2909,23 @@ func _phase_enemy_spawner() -> void:
 	_assert(elite_brute_data == null or elite_pool.has(elite_brute_data), "Elite spawn pool includes elite brute")
 	_assert(elite_arcanist_data == null or elite_pool.has(elite_arcanist_data), "Elite spawn pool includes elite arcanist")
 	_assert(boss_data == null or not elite_pool.has(boss_data), "Normal spawn pool excludes boss after event time")
+	if imp_data and cultist_data and dasher_data and elite_brute_data and elite_arcanist_data:
+		spawner._elapsed_time = spawner.late_weight_start_time - 1.0
+		_assert(abs(spawner._get_enemy_spawn_weight(imp_data) - imp_data.spawn_weight) < 0.001, "Enemy weight uses resource weight before late phase")
+		spawner._elapsed_time = spawner.late_weight_start_time
+		_assert(abs(spawner._get_enemy_spawn_weight(imp_data) - imp_data.spawn_weight * spawner.late_imp_weight_multiplier) < 0.001, "Late phase lowers imp weight")
+		_assert(abs(spawner._get_enemy_spawn_weight(dasher_data) - dasher_data.spawn_weight * spawner.late_dash_weight_multiplier) < 0.001, "Late phase raises dash enemy weight")
+		_assert(abs(spawner._get_enemy_spawn_weight(cultist_data) - cultist_data.spawn_weight * spawner.late_ranged_weight_multiplier) < 0.001, "Late phase raises ranged enemy weight")
+		_assert(abs(spawner._get_enemy_spawn_weight(elite_brute_data) - elite_brute_data.spawn_weight * spawner.late_elite_weight_multiplier) < 0.001, "Late phase raises elite enemy weight")
+		_assert(abs(spawner._get_enemy_spawn_weight(elite_arcanist_data) - elite_arcanist_data.spawn_weight * spawner.late_elite_weight_multiplier * spawner.late_ranged_weight_multiplier) < 0.001, "Late phase stacks elite and ranged weight bonuses")
 	if imp_data:
 		_assert(spawner._get_pack_size(imp_data) == imp_data.pack_size, "Spawner uses enemy pack size")
+		var pack_origin_offset: Vector2 = spawner._get_pack_member_offset(0, imp_data.pack_size, 0.0)
+		var pack_offset_a: Vector2 = spawner._get_pack_member_offset(1, imp_data.pack_size, 0.0)
+		var pack_offset_b: Vector2 = spawner._get_pack_member_offset(2, imp_data.pack_size, 0.0)
+		_assert(pack_origin_offset == Vector2.ZERO, "First pack member anchors the pack")
+		_assert(pack_offset_a.length() >= spawner.pack_spawn_min_spacing and pack_offset_b.length() >= spawner.pack_spawn_min_spacing, "Additional pack members respect min spawn spacing")
+		_assert(pack_offset_a.distance_to(pack_offset_b) >= spawner.pack_spawn_min_spacing, "Pack members are spread apart from each other")
 
 	if player and enemies_parent and brute_data:
 		spawner._elapsed_time = 0.0
@@ -2862,18 +2970,28 @@ func _phase_enemy_spawner() -> void:
 			scaled_imp.queue_free()
 			await _wait(0.05)
 
-	if player and enemies_parent and projectiles_parent and boss_data:
+	if player and enemies_parent and projectiles_parent and boss_data and frost_boss_data and rune_boss_data and final_boss_data:
 		for child in projectiles_parent.get_children():
 			child.queue_free()
 		await _wait(0.05)
-		spawner._boss_spawned = false
-		spawner._elapsed_time = spawner.boss_spawn_time - 0.1
-		_assert(spawner._try_spawn_boss() == null, "Boss does not spawn before boss time")
-		spawner._elapsed_time = spawner.boss_spawn_time
-		var boss: CharacterBody2D = spawner._try_spawn_boss()
-		_assert(boss != null and boss.enemy_data == boss_data, "Boss spawns once at boss time")
+		spawner._spawned_boss_events.clear()
+		_assert(spawner.boss_spawn_events.size() == 3, "Boss timeline has two mini bosses and one final boss")
+		var first_event: Dictionary = spawner.boss_spawn_events[0]
+		var second_event: Dictionary = spawner.boss_spawn_events[1]
+		var final_event: Dictionary = spawner.boss_spawn_events[2]
+		var second_event_ids: Array[StringName] = spawner._get_boss_event_enemy_ids(second_event)
+		_assert(spawner._get_boss_event_enemy_id(first_event) == boss_data.id, "First boss event uses old warlord")
+		_assert(second_event_ids.size() == 2 and second_event_ids.has(frost_boss_data.id) and second_event_ids.has(rune_boss_data.id), "Second boss event uses both generated mini bosses")
+		_assert(spawner._get_boss_event_enemy_id(final_event) == final_boss_data.id, "Final boss event uses icecrown overlord")
+		spawner._elapsed_time = float(first_event.get("time", 0.0)) - 0.1
+		_assert(spawner._try_spawn_boss() == null, "Boss does not spawn before first boss time")
+		spawner._elapsed_time = float(first_event.get("time", 0.0))
+		var first_wave: Array[CharacterBody2D] = spawner._try_spawn_boss_event()
+		var boss: CharacterBody2D = first_wave[0] if not first_wave.is_empty() else null
+		_assert(first_wave.size() == 1 and boss != null and boss.enemy_data == boss_data, "First wave spawns old warlord at first boss time")
 		if boss:
 			_assert(boss.is_in_group("bosses"), "Boss joins bosses group")
+			_assert(not boss._is_final_boss(), "First wave boss does not count as final boss")
 			_assert(boss._hp == int(boss_data.max_hp * spawner._get_stat_scale()), "Boss HP scales with difficulty")
 			var volley: Array = boss._fire_boss_volley(Vector2.LEFT)
 			await _wait(0.05)
@@ -2886,6 +3004,27 @@ func _phase_enemy_spawner() -> void:
 				if is_instance_valid(projectile):
 					projectile.queue_free()
 			boss.queue_free()
+			await _wait(0.05)
+		_assert(spawner._try_spawn_boss() == null, "First boss event does not spawn twice")
+		spawner._elapsed_time = float(second_event.get("time", 0.0))
+		var second_wave: Array[CharacterBody2D] = spawner._try_spawn_boss_event()
+		var second_wave_ids: Array[StringName] = []
+		for second_boss in second_wave:
+			if second_boss and second_boss.enemy_data:
+				second_wave_ids.append(second_boss.enemy_data.id)
+		_assert(second_wave.size() == 2 and second_wave_ids.has(frost_boss_data.id) and second_wave_ids.has(rune_boss_data.id), "Second wave spawns both generated mini bosses simultaneously")
+		for second_boss in second_wave:
+			if second_boss:
+				_assert(second_boss.is_in_group("bosses"), "Second wave boss joins bosses group")
+				_assert(not second_boss._is_final_boss(), "Second wave boss does not count as final boss")
+				second_boss.queue_free()
+		await _wait(0.05)
+		spawner._elapsed_time = float(final_event.get("time", 0.0))
+		var final_boss: CharacterBody2D = spawner._try_spawn_boss()
+		_assert(final_boss != null and final_boss.enemy_data == final_boss_data, "Final boss spawns at final boss time")
+		if final_boss:
+			_assert(final_boss._is_final_boss(), "Final boss triggers victory on death")
+			final_boss.queue_free()
 			await _wait(0.05)
 
 	if player and enemies_parent and dasher_data:
@@ -2938,7 +3077,7 @@ func _phase_enemy_spawner() -> void:
 
 	# Reset spawner state
 	spawner._elapsed_time = 0.0
-	spawner._boss_spawned = false
+	spawner._spawned_boss_events.clear()
 	spawner._spawn_timer = spawner._get_spawn_interval()
 	spawner.set_process(previous_spawner_process)
 	e1.queue_free()
@@ -3202,6 +3341,14 @@ func _phase_passive_regen_thorns() -> void:
 	_assert(_find_weapon(GameState.REGEN_ENHANCEMENT_ID) == null, "Regen does not unlock as weapon")
 	_assert(GameState.get_enhancement_level(GameState.REGEN_ENHANCEMENT_ID) == 1, "Regen is tracked as enhancement")
 	_assert(GameState.run.hp == 15, "Regen enhancement heals immediately on pickup")
+
+	var saved_cooldown_multiplier: float = float(GameState.run.get("cooldown_multiplier", 1.0))
+	var saved_projectile_cooldown_multiplier: float = float(GameState.run.get("projectile_cooldown_multiplier", 1.0))
+	GameState.run.cooldown_multiplier = 0.8
+	GameState.run.projectile_cooldown_multiplier = 0.5
+	_assert(abs(GameState.get_regen_interval() - GameState.REGEN_INTERVAL * 0.8) < 0.001, "Passive regen interval scales with global cooldown")
+	GameState.run.cooldown_multiplier = saved_cooldown_multiplier
+	GameState.run.projectile_cooldown_multiplier = saved_projectile_cooldown_multiplier
 
 	GameState.run.hp = 10
 	_game.set("_regen_last_level", 1)

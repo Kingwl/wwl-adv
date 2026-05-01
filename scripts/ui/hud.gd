@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+signal pause_requested
+
 @onready var _time_label: Label = $TopBar/TimeLabel
 @onready var _kill_label: Label = $TopBar/KillLabel
 @onready var _gold_label: Label = $TopBar/GoldLabel
@@ -11,6 +13,7 @@ extends CanvasLayer
 @onready var _enhancement_bar: HBoxContainer = $EnhancementBar
 @onready var _speed_button: Button = $TopBar/SpeedButton
 @onready var _stats_button: Button = $TopBar/StatsButton
+@onready var _menu_button: Button = $TopBar/MenuButton
 
 var _slot_style_normal: StyleBoxFlat
 var _slot_style_max: StyleBoxFlat
@@ -24,6 +27,7 @@ func _ready() -> void:
 	_init_enhancement_slots()
 	_speed_button.pressed.connect(_on_speed_pressed)
 	_stats_button.pressed.connect(_on_stats_pressed)
+	_menu_button.pressed.connect(_on_menu_pressed)
 	GameState.hp_changed.connect(_on_hp_changed)
 	GameState.exp_changed.connect(_on_exp_changed)
 	GameState.gold_changed.connect(_on_gold_changed)
@@ -252,3 +256,6 @@ func _on_stats_pressed() -> void:
 	var stats_panel := get_tree().current_scene.get_node_or_null("StatsPanel")
 	if stats_panel:
 		stats_panel.toggle()
+
+func _on_menu_pressed() -> void:
+	pause_requested.emit()

@@ -5,7 +5,7 @@ func _activate() -> void:
 	if not player:
 		return
 
-	var target := _find_nearest_enemy(player.global_position)
+	var target := _claim_nearest_enemy_target(player.global_position)
 	if not target:
 		return
 
@@ -57,17 +57,6 @@ func _get_field_radius(default_radius: float) -> float:
 	if weapon_data:
 		r += get_range() - weapon_data.range
 	return max(1.0, r)
-
-func _find_nearest_enemy(from_pos: Vector2) -> Node2D:
-	var enemies := get_tree().get_nodes_in_group("enemies")
-	var nearest: Node2D = null
-	var min_dist := INF
-	for enemy in enemies:
-		var dist := from_pos.distance_to(enemy.global_position)
-		if dist < min_dist:
-			min_dist = dist
-			nearest = enemy
-	return nearest
 
 func _show_throw_visual(from_pos: Vector2, to_pos: Vector2) -> void:
 	VFXHelper.spawn_animated_trail(

@@ -10,7 +10,7 @@ func _activate() -> void:
 	if not player:
 		return
 
-	var target := _find_nearest_enemy(player.global_position)
+	var target := _claim_nearest_enemy_target(player.global_position)
 	if not target:
 		return
 
@@ -107,13 +107,3 @@ func _get_projectiles_parent() -> Node:
 	if not projectiles:
 		projectiles = current.find_child("Projectiles", true, false)
 	return projectiles
-
-func _find_nearest_enemy(from_pos: Vector2) -> Node2D:
-	var nearest: Node2D = null
-	var min_dist := INF
-	for enemy in get_tree().get_nodes_in_group("enemies"):
-		var dist := from_pos.distance_to(enemy.global_position)
-		if dist < min_dist:
-			min_dist = dist
-			nearest = enemy
-	return nearest

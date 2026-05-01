@@ -48,7 +48,10 @@ func _input(event: InputEvent) -> void:
 		if visible:
 			_resume()
 		elif not get_tree().paused:
-			_show_pause()
+			show_pause()
+
+func show_pause() -> void:
+	_show_pause()
 
 func _show_pause() -> void:
 	visible = true

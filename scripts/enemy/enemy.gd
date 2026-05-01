@@ -500,7 +500,7 @@ func _die() -> void:
 		return
 	_dead = true
 	GameState.add_kill()
-	if _is_boss():
+	if _is_final_boss():
 		GameState.run["victory"] = true
 		GameState.run_ended.emit(true)
 	call_deferred("_spawn_drop")
@@ -539,3 +539,6 @@ func _start_damage_cooldown() -> void:
 
 func _is_boss() -> bool:
 	return enemy_data != null and enemy_data.tags.has(&"boss")
+
+func _is_final_boss() -> bool:
+	return _is_boss() and enemy_data.tags.has(&"final_boss")

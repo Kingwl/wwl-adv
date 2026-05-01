@@ -20,9 +20,21 @@ const DELIVERY_CONTACT := &"contact"
 const DELIVERY_REFLECT := &"reflect"
 
 var amount: int = 0
-var source: Node = null
-var owner: Node = null
-var target: Node = null
+var source = null:
+	set(value):
+		source = node_or_null(value)
+	get:
+		return node_or_null(source)
+var owner = null:
+	set(value):
+		owner = node_or_null(value)
+	get:
+		return node_or_null(owner)
+var target = null:
+	set(value):
+		target = node_or_null(value)
+	get:
+		return node_or_null(target)
 var weapon_id: StringName = &""
 var damage_type: StringName = DAMAGE_TYPE_PHYSICAL
 var delivery_type: StringName = DELIVERY_DIRECT
@@ -37,39 +49,55 @@ var status_value: float = 0.0
 
 static func from_amount(
 	base_amount: int,
-	source_node: Node = null,
+	source_node = null,
 	type: StringName = DAMAGE_TYPE_PHYSICAL,
 	delivery: StringName = DELIVERY_DIRECT
 ) -> DamageEvent:
 	var event := DamageEvent.new()
+	var valid_source := node_or_null(source_node)
 	event.amount = base_amount
-	event.source = source_node
-	event.owner = source_node
+	event.source = valid_source
+	event.owner = valid_source
 	event.damage_type = type
 	event.delivery_type = delivery
-	if source_node is Node2D:
-		event.position = (source_node as Node2D).global_position
+	if valid_source is Node2D:
+		event.position = (valid_source as Node2D).global_position
 	return event
 
 static func weapon_hit(
 	base_amount: int,
-	source_weapon: Node,
+	source_weapon,
 	type: StringName = DAMAGE_TYPE_PHYSICAL,
 	delivery: StringName = DELIVERY_DIRECT,
-	target_node: Node = null
+	target_node = null
 ) -> DamageEvent:
-	var event := from_amount(base_amount, source_weapon, type, delivery)
+	var valid_source := node_or_null(source_weapon)
+	var event := from_amount(base_amount, valid_source, type, delivery)
 	event.target = target_node
-	if source_weapon:
-		var data = source_weapon.get("weapon_data")
+	if valid_source:
+		var data = valid_source.get("weapon_data")
 		if data is WeaponData:
 			event.weapon_id = (data as WeaponData).id
-		var parent := source_weapon.get_parent()
+		var parent := valid_source.get_parent()
 		if parent:
 			event.owner = parent.get_parent()
 	return event
 
-func duplicate_for_target(target_node: Node) -> DamageEvent:
+static func node_or_null(value) -> Node:
+	if value == null:
+		return null
+	if not (value is Object):
+		return null
+	if not is_instance_valid(value):
+		return null
+	if not (value is Node):
+		return null
+	var node := value as Node
+	if node.is_queued_for_deletion():
+		return null
+	return node
+
+func duplicate_for_target(target_node) -> DamageEvent:
 	var event := DamageEvent.new()
 	event.amount = amount
 	event.source = source

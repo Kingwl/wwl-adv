@@ -9,25 +9,34 @@ extends Node
 @export var speed_scale_period: float = 360.0
 @export var max_speed_scale: float = 1.55
 @export var max_alive_enemies: int = 150
-@export var pack_spawn_spread: float = 48.0
+@export var pack_spawn_min_spacing: float = 72.0
+@export var pack_spawn_spread: float = 160.0
 @export var exp_reward_scale_strength: float = 0.5
 @export var max_exp_reward_scale: float = 3.0
 @export var gold_reward_scale_strength: float = 0.25
 @export var max_gold_reward_scale: float = 2.0
-@export var boss_spawn_time: float = 300.0
-@export var boss_enemy_id: StringName = &"boss_warlord"
+@export var late_weight_start_time: float = 510.0
+@export var late_imp_weight_multiplier: float = 0.35
+@export var late_dash_weight_multiplier: float = 2.0
+@export var late_ranged_weight_multiplier: float = 1.8
+@export var late_elite_weight_multiplier: float = 2.4
+@export var boss_spawn_events: Array[Dictionary] = [
+	{"time": 300.0, "enemy_id": &"boss_warlord"},
+	{"time": 510.0, "enemy_ids": [&"boss_frost_guardian", &"boss_rune_seer"]},
+	{"time": 720.0, "enemy_id": &"boss_icecrown_overlord"},
+]
 
 var _player: Node2D
 var _elapsed_time: float = 0.0
 var _spawn_timer: float = 0.0
-var _boss_spawned: bool = false
+var _spawned_boss_events: Array[int] = []
 
 func _ready() -> void:
 	_player = get_tree().get_first_node_in_group("player")
 
 func _process(delta: float) -> void:
 	_elapsed_time += delta
-	if _try_spawn_boss():
+	if not _try_spawn_boss_event().is_empty():
 		_spawn_timer = maxf(_spawn_timer, base_spawn_interval)
 		return
 	_spawn_timer -= delta
@@ -44,19 +53,70 @@ func _spawn_enemy() -> void:
 	var data := _pick_enemy_data()
 	_spawn_enemy_pack(data)
 
-func _try_spawn_boss() -> CharacterBody2D:
-	if _boss_spawned or boss_spawn_time < 0.0 or _elapsed_time < boss_spawn_time:
-		return null
+func _try_spawn_boss_event() -> Array[CharacterBody2D]:
+	var spawned: Array[CharacterBody2D] = []
 	if not _player:
+		return spawned
+	for event_index in range(boss_spawn_events.size()):
+		if _spawned_boss_events.has(event_index):
+			continue
+		var event: Dictionary = boss_spawn_events[event_index]
+		var spawn_time := float(event.get("time", -1.0))
+		if spawn_time < 0.0 or _elapsed_time < spawn_time:
+			continue
+		spawned = _spawn_bosses(_get_boss_event_enemy_ids(event))
+		if not spawned.is_empty():
+			_spawned_boss_events.append(event_index)
+		return spawned
+	return spawned
+
+func _try_spawn_boss() -> CharacterBody2D:
+	var spawned := _try_spawn_boss_event()
+	if spawned.is_empty():
 		return null
-	var boss_data := DataManager.get_enemy(str(boss_enemy_id)) as EnemyData
+	return spawned[0]
+
+func _spawn_bosses(enemy_ids: Array[StringName]) -> Array[CharacterBody2D]:
+	var spawned: Array[CharacterBody2D] = []
+	for enemy_id in enemy_ids:
+		var boss := _spawn_boss(enemy_id)
+		if boss:
+			spawned.append(boss)
+	return spawned
+
+func _spawn_boss(enemy_id: StringName) -> CharacterBody2D:
+	if enemy_id.is_empty():
+		return null
+	var boss_data := DataManager.get_enemy(str(enemy_id)) as EnemyData
 	if not boss_data:
-		push_warning("EnemySpawner: boss enemy data not found: %s" % boss_enemy_id)
+		push_warning("EnemySpawner: boss enemy data not found: %s" % enemy_id)
 		return null
 	var boss := _spawn_single_enemy(boss_data, _get_spawn_position())
-	if boss:
-		_boss_spawned = true
 	return boss
+
+func _get_boss_event_enemy_ids(event: Dictionary) -> Array[StringName]:
+	var result: Array[StringName] = []
+	var values = event.get("enemy_ids", [])
+	if values is Array:
+		for value in values:
+			var enemy_id := _normalize_boss_enemy_id(value)
+			if not enemy_id.is_empty():
+				result.append(enemy_id)
+	var single_id := _normalize_boss_enemy_id(event.get("enemy_id", &""))
+	if not single_id.is_empty() and not result.has(single_id):
+		result.append(single_id)
+	return result
+
+func _get_boss_event_enemy_id(event: Dictionary) -> StringName:
+	var ids := _get_boss_event_enemy_ids(event)
+	if ids.is_empty():
+		return &""
+	return ids[0]
+
+func _normalize_boss_enemy_id(value) -> StringName:
+	if value is StringName:
+		return value
+	return StringName(str(value))
 
 func _spawn_enemy_pack(data: EnemyData = null) -> Array[CharacterBody2D]:
 	var spawned: Array[CharacterBody2D] = []
@@ -65,12 +125,11 @@ func _spawn_enemy_pack(data: EnemyData = null) -> Array[CharacterBody2D]:
 
 	var pack_size := _get_pack_size(data)
 	var base_pos := _get_spawn_position()
+	var base_angle := randf() * TAU
 	for i in range(pack_size):
 		if _get_alive_enemy_count() >= max_alive_enemies:
 			break
-		var offset := Vector2.ZERO
-		if i > 0:
-			offset = Vector2.RIGHT.rotated(randf() * TAU) * randf_range(8.0, pack_spawn_spread)
+		var offset := _get_pack_member_offset(i, pack_size, base_angle)
 		var enemy := _spawn_single_enemy(data, base_pos + offset)
 		if enemy:
 			spawned.append(enemy)
@@ -113,7 +172,7 @@ func _pick_enemy_data() -> EnemyData:
 func _get_valid_enemy_data() -> Array:
 	var enemy_data_list := DataManager.all_enemies()
 	return enemy_data_list.filter(func(d: EnemyData) -> bool:
-		if d.spawn_weight <= 0.0:
+		if _get_enemy_spawn_weight(d) <= 0.0:
 			return false
 		if _elapsed_time < d.min_spawn_time:
 			return false
@@ -124,6 +183,16 @@ func _get_pack_size(data: EnemyData) -> int:
 	if not data:
 		return 1
 	return maxi(data.pack_size, 1)
+
+func _get_pack_member_offset(index: int, pack_size: int, base_angle: float = 0.0) -> Vector2:
+	if index <= 0 or pack_size <= 1:
+		return Vector2.ZERO
+	var max_radius := maxf(pack_spawn_spread, pack_spawn_min_spacing)
+	var min_radius := minf(pack_spawn_min_spacing, max_radius)
+	var angle_step := TAU / float(maxi(pack_size, 2))
+	var jitter := randf_range(-angle_step * 0.2, angle_step * 0.2)
+	var radius := randf_range(min_radius, max_radius)
+	return Vector2.RIGHT.rotated(base_angle + angle_step * float(index) + jitter) * radius
 
 func _get_alive_enemy_count() -> int:
 	var enemies_parent := _get_enemies_parent()
@@ -167,6 +236,26 @@ func _scale_enemy_rewards(enemy: CharacterBody2D, stat_factor: float) -> void:
 func _get_reward_scale(stat_factor: float, strength: float, max_scale: float) -> float:
 	return clampf(1.0 + maxf(0.0, stat_factor - 1.0) * strength, 1.0, max_scale)
 
+func _get_enemy_spawn_weight(data: EnemyData) -> float:
+	if not data or data.spawn_weight <= 0.0:
+		return 0.0
+	var multiplier := 1.0
+	if _elapsed_time >= late_weight_start_time:
+		multiplier *= _get_late_spawn_weight_multiplier(data)
+	return maxf(0.0, data.spawn_weight * multiplier)
+
+func _get_late_spawn_weight_multiplier(data: EnemyData) -> float:
+	var multiplier := 1.0
+	if data.id == &"imp":
+		multiplier *= late_imp_weight_multiplier
+	if data.tags.has(&"dash") or data.behavior_id == EnemyData.BEHAVIOR_DASH:
+		multiplier *= late_dash_weight_multiplier
+	if data.tags.has(&"ranged") or data.behavior_id == EnemyData.BEHAVIOR_RANGED:
+		multiplier *= late_ranged_weight_multiplier
+	if data.tags.has(&"elite"):
+		multiplier *= late_elite_weight_multiplier
+	return multiplier
+
 func _get_spawn_radius_bounds() -> Vector2:
 	var view_radius := _get_view_radius()
 	var min_radius := view_radius + spawn_view_margin_min
@@ -185,12 +274,14 @@ func _get_view_radius() -> float:
 func _weighted_pick(enemies: Array) -> EnemyData:
 	var total_weight := 0.0
 	for e in enemies:
-		total_weight += e.spawn_weight
+		total_weight += _get_enemy_spawn_weight(e)
+	if total_weight <= 0.0:
+		return null
 
 	var pick := randf() * total_weight
 	var current := 0.0
 	for e in enemies:
-		current += e.spawn_weight
+		current += _get_enemy_spawn_weight(e)
 		if pick <= current:
 			return e
 	return enemies[0]

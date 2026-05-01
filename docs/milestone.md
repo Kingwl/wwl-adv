@@ -175,7 +175,7 @@
 | 角色数量 | 4（全部默认可选） |
 | 敌人类型 | 11（含远程 / 精英 / 多阶段 Boss 资源） |
 | UI 场景 | 8 |
-| 自动化测试 | 856 passed, 0 failed |
+| 自动化测试 | 857 passed, 0 failed |
 | HUD 冷却遮罩 | 高度连续变化 |
 | 引擎版本 | Godot 4.x（最近测试 4.6.2，GL Compatibility） |
 | 目标平台 | Web / Android / iOS |

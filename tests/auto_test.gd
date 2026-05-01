@@ -114,6 +114,8 @@ func _phase_load() -> void:
 	var optional_resources := {}
 	DataManager._load_resources("res://resources/__optional_missing__", optional_resources, false)
 	_assert(optional_resources.is_empty(), "Optional missing resource directories are ignored")
+	var menu_title: Label = main_menu.get_node_or_null("CenterContainer/VBoxContainer/Title")
+	_assert(menu_title != null and menu_title.text == "WWL 大冒险", "Main menu title is localized")
 	var menu_bg: Node = main_menu.get_node_or_null("Background")
 	_assert(menu_bg is ColorRect, "Main menu background exists")
 	var ground_tile: Node = menu_bg.get_node_or_null("GroundTileBackground") if menu_bg else null

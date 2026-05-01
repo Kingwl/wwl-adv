@@ -35,7 +35,7 @@ theme_override_constants/separation = 24
 [node name="Title" type="Label" parent="CenterContainer/VBoxContainer" unique_id=2047403875]
 layout_mode = 2
 theme_override_font_sizes/font_size = 64
-text = "WWL Adventure"
+text = "WWL 大冒险"
 horizontal_alignment = 1
 
 [node name="Subtitle" type="Label" parent="CenterContainer/VBoxContainer" unique_id=2075580226]

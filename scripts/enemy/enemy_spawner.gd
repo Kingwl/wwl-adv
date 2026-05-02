@@ -64,7 +64,7 @@ func _try_spawn_boss_event() -> Array[CharacterBody2D]:
 		var spawn_time := float(event.get("time", -1.0))
 		if spawn_time < 0.0 or _elapsed_time < spawn_time:
 			continue
-		spawned = _spawn_bosses(_get_boss_event_enemy_ids(event))
+		spawned = _spawn_bosses(_get_boss_event_enemy_ids(event), event_index)
 		if not spawned.is_empty():
 			_spawned_boss_events.append(event_index)
 		return spawned
@@ -76,11 +76,13 @@ func _try_spawn_boss() -> CharacterBody2D:
 		return null
 	return spawned[0]
 
-func _spawn_bosses(enemy_ids: Array[StringName]) -> Array[CharacterBody2D]:
+func _spawn_bosses(enemy_ids: Array[StringName], event_index: int = -1) -> Array[CharacterBody2D]:
 	var spawned: Array[CharacterBody2D] = []
 	for enemy_id in enemy_ids:
 		var boss := _spawn_boss(enemy_id)
 		if boss:
+			if event_index >= 0 and "boss_drop_key" in boss:
+				boss.boss_drop_key = StringName("boss_event_%d" % event_index)
 			spawned.append(boss)
 	return spawned
 

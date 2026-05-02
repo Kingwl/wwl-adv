@@ -99,6 +99,7 @@ var run := {
 	"survival_echo_until": 0.0,
 	"survival_echo_next_trigger_time": 0.0,
 	"survival_echo_absorbed_damage": 0,
+	"boss_vacuum_drop_claims": {},
 }
 var game_speed_multiplier := 1.0
 var local_debug_mode_enabled := false
@@ -180,6 +181,7 @@ func start_new_run(rng_seed: int = 0, character_id: StringName = &"") -> void:
 		"survival_echo_until": 0.0,
 		"survival_echo_next_trigger_time": 0.0,
 		"survival_echo_absorbed_damage": 0,
+		"boss_vacuum_drop_claims": {},
 	}
 	run_started.emit()
 
@@ -415,6 +417,17 @@ func add_control_resonance_energy(amount: float, max_energy: float) -> bool:
 		return true
 	run["control_resonance_energy"] = next
 	return false
+
+func claim_boss_vacuum_drop(drop_key: StringName) -> bool:
+	if drop_key.is_empty():
+		return false
+	var claims: Dictionary = run.get("boss_vacuum_drop_claims", {})
+	var key := str(drop_key)
+	if claims.has(key):
+		return false
+	claims[key] = true
+	run["boss_vacuum_drop_claims"] = claims
+	return true
 
 func is_survival_echo_active() -> bool:
 	if get_build_resonance_reward_tier(SURVIVAL_RESONANCE_TAG) < 3:

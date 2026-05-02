@@ -733,6 +733,15 @@ func _clear_container_children(container: Node) -> void:
 	for child in container.get_children():
 		child.queue_free()
 
+func _count_named_children(container: Node, child_name: String) -> int:
+	if not container:
+		return 0
+	var count := 0
+	for child in container.get_children():
+		if is_instance_valid(child) and not child.is_queued_for_deletion() and child.name == child_name:
+			count += 1
+	return count
+
 func _reset_runtime_modifiers_for_tests() -> void:
 	GameState.run.pickup_radius_bonus = 0.0
 	GameState.run.exp_gain_multiplier = 1.0
@@ -2859,6 +2868,33 @@ func _phase_drop_pickups() -> void:
 	_assert(not is_instance_valid(distant_orb), "Pickup radius bonus attracts distant drops")
 	GameState.run.pickup_radius_bonus = prev_bonus
 
+	# Test boss vacuum pickup attracts every ground EXP/gold drop.
+	var saved_level := int(GameState.run.level)
+	var saved_exp := int(GameState.run.exp)
+	var saved_exp_to_next := int(GameState.run.exp_to_next_level)
+	GameState.run.level = 1
+	GameState.run.exp = 0
+	GameState.run.exp_to_next_level = 1000
+	var vacuum_exp := preload("res://scenes/drops/exp_orb.tscn").instantiate()
+	vacuum_exp.global_position = player.global_position + Vector2.RIGHT * 260.0
+	vacuum_exp.exp_value = 7
+	drops_parent.add_child(vacuum_exp)
+	var vacuum_gold := preload("res://scenes/drops/gold_pickup.tscn").instantiate()
+	vacuum_gold.global_position = player.global_position + Vector2.LEFT * 240.0
+	vacuum_gold.gold_value = 4
+	drops_parent.add_child(vacuum_gold)
+	var vacuum := preload("res://scenes/drops/boss_vacuum_pickup.tscn").instantiate()
+	vacuum.global_position = player.global_position
+	var gold_before_vacuum: int = GameState.run.gold
+	drops_parent.add_child(vacuum)
+	await _wait(0.7)
+	_assert(not is_instance_valid(vacuum), "Boss vacuum pickup is consumed on contact")
+	_assert(not is_instance_valid(vacuum_exp) and GameState.run.exp == 7, "Boss vacuum pickup collects ground EXP")
+	_assert(not is_instance_valid(vacuum_gold) and GameState.run.gold == gold_before_vacuum + 4, "Boss vacuum pickup collects ground gold")
+	GameState.run.level = saved_level
+	GameState.run.exp = saved_exp
+	GameState.run.exp_to_next_level = saved_exp_to_next
+
 	await _wait(0.2)
 
 func _phase_enemy_collision() -> void:
@@ -3438,12 +3474,26 @@ func _phase_enemy_spawner() -> void:
 			if second_boss and second_boss.enemy_data:
 				second_wave_ids.append(second_boss.enemy_data.id)
 		_assert(second_wave.size() == 2 and second_wave_ids.has(frost_boss_data.id) and second_wave_ids.has(rune_boss_data.id), "Second wave spawns both generated mini bosses simultaneously")
+		var drops_parent := _game.get_node_or_null("Drops")
+		if drops_parent:
+			_clear_container_children(drops_parent)
+			GameState.run["boss_vacuum_drop_claims"] = {}
 		for second_boss in second_wave:
 			if second_boss:
 				_assert(second_boss.is_in_group("bosses"), "Second wave boss joins bosses group")
 				_assert(not second_boss._is_final_boss(), "Second wave boss does not count as final boss")
-				second_boss.queue_free()
+				_assert(second_boss.boss_drop_key == &"boss_event_1", "Second wave bosses share one boss drop key")
+				second_boss.set_physics_process(false)
+				second_boss._hp = 1
+				if second_boss.has_method("_setup_health_bar"):
+					second_boss._setup_health_bar()
+				second_boss.take_damage(999)
 		await _wait(0.05)
+		if drops_parent:
+			_assert(_count_named_children(drops_parent, "BossVacuumPickup") == 1, "Boss wave drops exactly one vacuum pickup")
+		for second_boss in second_wave:
+			if is_instance_valid(second_boss):
+				second_boss.queue_free()
 		spawner._elapsed_time = float(final_event.get("time", 0.0))
 		var final_boss: CharacterBody2D = spawner._try_spawn_boss()
 		_assert(final_boss != null and final_boss.enemy_data == final_boss_data, "Final boss spawns at final boss time")

@@ -1,6 +1,7 @@
 extends CharacterBody2D
 
 @export var enemy_data: EnemyData
+var boss_drop_key: StringName = &""
 
 const CONTACT_DAMAGE_PADDING := 2.0
 const DEFAULT_CONTACT_RADIUS := 16.0
@@ -610,6 +611,25 @@ func _spawn_drop() -> void:
 		gold.global_position = global_position + Vector2(randf_range(-20, 20), randf_range(-20, 20))
 		gold.gold_value = _gold_reward
 		drops_parent.add_child(gold)
+
+	_spawn_boss_vacuum_drop_if_needed(drops_parent)
+
+func _spawn_boss_vacuum_drop_if_needed(drops_parent: Node) -> void:
+	if not _is_boss() or not drops_parent:
+		return
+	var drop_key := _get_boss_vacuum_drop_key()
+	if drop_key.is_empty() or not GameState.claim_boss_vacuum_drop(drop_key):
+		return
+	var vacuum := preload("res://scenes/drops/boss_vacuum_pickup.tscn").instantiate()
+	vacuum.global_position = global_position + Vector2(randf_range(-18, 18), randf_range(-18, 18))
+	drops_parent.add_child(vacuum)
+
+func _get_boss_vacuum_drop_key() -> StringName:
+	if not boss_drop_key.is_empty():
+		return boss_drop_key
+	if enemy_data:
+		return enemy_data.id
+	return &""
 
 func _start_damage_cooldown() -> void:
 	_can_damage = false

@@ -6,6 +6,8 @@ extends Area2D
 
 var _player: Node2D
 var _magnetized: bool = false
+var _collected: bool = false
+var _suppress_collect_fx: bool = false
 @onready var _anim: AnimatedSprite2D = $Visual
 
 func _ready() -> void:
@@ -37,11 +39,41 @@ func _process(delta: float) -> void:
 		_magnetized = true
 
 	if _magnetized:
-		var dir := (_player.global_position - global_position).normalized()
-		global_position += dir * magnet_speed * delta
+		_move_to_player(delta)
+
+func force_magnetize_to_player(player: Node2D, speed: float = 1200.0, suppress_collect_fx: bool = false) -> void:
+	if _collected:
+		return
+	if player:
+		_player = player
+	magnet_speed = maxf(magnet_speed, speed)
+	_magnetized = _player != null
+	_suppress_collect_fx = _suppress_collect_fx or suppress_collect_fx
+
+func _move_to_player(delta: float) -> void:
+	var offset := _player.global_position - global_position
+	var dist := offset.length()
+	if dist <= 4.0:
+		_collect()
+		return
+	var step := magnet_speed * delta
+	if step >= dist:
+		global_position = _player.global_position
+		_collect()
+		return
+	global_position += offset / dist * step
 
 func _on_body_entered(body: Node2D) -> void:
 	if body.is_in_group("player"):
+		_collect()
+
+func _collect() -> void:
+	if _collected:
+		return
+	_collected = true
+	if is_queued_for_deletion():
+		return
+	if is_inside_tree() and not _suppress_collect_fx:
 		VFXHelper.spawn_animated_one_shot(
 			get_tree().current_scene,
 			"res://assets/art/effects/by_type/fx_pickup_glow",
@@ -50,5 +82,5 @@ func _on_body_entered(body: Node2D) -> void:
 			global_position,
 			8.0
 		)
-		GameState.add_gold(gold_value)
-		queue_free()
+	GameState.add_gold(gold_value)
+	queue_free()

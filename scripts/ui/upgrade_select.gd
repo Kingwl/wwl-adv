@@ -253,7 +253,15 @@ func _create_resonance_chip(entry: Dictionary) -> PanelContainer:
 	label.text = _format_resonance_chip(entry)
 	label.add_theme_font_size_override("font_size", 10)
 	label.add_theme_color_override("font_color", Color(0.98, 0.98, 0.98, 1))
-	chip.add_child(label)
+
+	var content := HBoxContainer.new()
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.add_theme_constant_override("separation", 4)
+	var icon := _create_build_tag_icon(tag, Vector2(14, 14))
+	if icon:
+		content.add_child(icon)
+	content.add_child(label)
+	chip.add_child(content)
 	return chip
 
 func _format_resonance_chip(entry: Dictionary) -> String:
@@ -279,7 +287,7 @@ func _format_active_resonance(active_entries: Array) -> String:
 	for i in range(mini(2, active_entries.size())):
 		var entry: Dictionary = active_entries[i]
 		labels.append("%s %s" % [str(entry.get("tag", "")), str(entry.get("tier_name", ""))])
-	return "已激活：%s（奖励占位）" % "、".join(labels)
+	return "已激活：%s" % "、".join(labels)
 
 func _clear_children(node: Node) -> void:
 	for child in node.get_children():
@@ -312,14 +320,36 @@ func _create_build_tags_row(option: UpgradeData) -> Control:
 		style.content_margin_bottom = 2
 		chip.add_theme_stylebox_override("panel", style)
 
+		var chip_content := HBoxContainer.new()
+		chip_content.alignment = BoxContainer.ALIGNMENT_CENTER
+		chip_content.add_theme_constant_override("separation", 3)
+		var icon := _create_build_tag_icon(tag, Vector2(12, 12))
+		if icon:
+			chip_content.add_child(icon)
+
 		var label := Label.new()
 		label.text = tag
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.add_theme_font_size_override("font_size", 10)
 		label.add_theme_color_override("font_color", Color(0.98, 0.98, 0.98, 1))
-		chip.add_child(label)
+		chip_content.add_child(label)
+		chip.add_child(chip_content)
 		row.add_child(chip)
 	return row
+
+func _create_build_tag_icon(tag: String, min_size: Vector2) -> TextureRect:
+	var icon_tex := _get_build_tag_icon(tag)
+	if not icon_tex:
+		return null
+	var icon := TextureRect.new()
+	icon.name = "ResonanceIcon"
+	icon.texture = icon_tex
+	icon.custom_minimum_size = min_size
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return icon
 
 func _get_type_color(t: UpgradeData.UpgradeType) -> Color:
 	match t:
@@ -400,6 +430,22 @@ func _get_build_tag_color(tag: String) -> Color:
 		"生存":
 			return Color(0.24, 0.58, 0.34, 0.92)
 	return Color(0.42, 0.44, 0.5, 0.92)
+
+func _get_build_tag_icon(tag: String) -> Texture2D:
+	match tag:
+		"近身":
+			return VFXHelper.load_texture("res://assets/art/ui/resonance/icon_melee.png")
+		"弹幕":
+			return VFXHelper.load_texture("res://assets/art/ui/resonance/icon_barrage.png")
+		"场地":
+			return VFXHelper.load_texture("res://assets/art/ui/resonance/icon_field.png")
+		"控制":
+			return VFXHelper.load_texture("res://assets/art/ui/resonance/icon_control.png")
+		"爆发":
+			return VFXHelper.load_texture("res://assets/art/ui/resonance/icon_burst.png")
+		"生存":
+			return VFXHelper.load_texture("res://assets/art/ui/resonance/icon_survival.png")
+	return null
 
 func _format_detail(option: UpgradeData) -> String:
 	var parts: Array[String] = []

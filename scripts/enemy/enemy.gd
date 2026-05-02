@@ -10,6 +10,8 @@ const DASH_STATE_COOLDOWN := &"cooldown"
 const DASH_STATE_WINDUP := &"windup"
 const DASH_STATE_DASHING := &"dashing"
 const DASH_STATE_RECOVER := &"recover"
+const FIELD_SUPPRESSION_MAX_STACKS := 3
+const CONTROL_THREAT_REDUCTION_STATUS := &"control_threat_reduction"
 
 var _hp: int = 12
 var _base_speed: float = 60.0
@@ -52,6 +54,9 @@ var _damage_cooldown: float = 1.0
 var _dead: bool = false
 var _knockback_velocity: Vector2 = Vector2.ZERO
 var _knockback_timer: float = 0.0
+var _field_suppression_stacks: int = 0
+var _field_suppression_expires_at: float = 0.0
+var _field_lockdown_next_trigger_time: float = 0.0
 
 # 状态系统: status_name -> StatusEffect
 var _statuses: Dictionary = {}
@@ -246,6 +251,54 @@ func apply_knockback(from_pos: Vector2, force: float, duration: float = 0.12) ->
 	velocity = _knockback_velocity
 	move_and_slide()
 
+func apply_field_suppression(duration: float) -> int:
+	if _dead or duration <= 0.0:
+		return 0
+	_expire_field_suppression_if_needed()
+	_field_suppression_stacks = mini(FIELD_SUPPRESSION_MAX_STACKS, _field_suppression_stacks + 1)
+	_field_suppression_expires_at = _get_run_time() + duration
+	return _field_suppression_stacks
+
+func get_field_suppression_stack_count() -> int:
+	_expire_field_suppression_if_needed()
+	return _field_suppression_stacks
+
+func trigger_field_lockdown(slow_value: float, duration: float, cooldown: float) -> bool:
+	if _dead or duration <= 0.0 or cooldown <= 0.0:
+		return false
+	var now := _get_run_time()
+	if now < _field_lockdown_next_trigger_time:
+		return false
+	_field_lockdown_next_trigger_time = now + cooldown
+	apply_status(&"slow", duration, slow_value)
+	return true
+
+func apply_control_threat_reduction(duration: float, damage_multiplier: float) -> StatusEffect:
+	if _dead or duration <= 0.0:
+		return null
+	return apply_status(CONTROL_THREAT_REDUCTION_STATUS, duration, clampf(damage_multiplier, 0.0, 1.0))
+
+func get_control_threat_multiplier() -> float:
+	var effect := _get_status(CONTROL_THREAT_REDUCTION_STATUS)
+	if not effect:
+		return 1.0
+	return clampf(effect.effective_value(), 0.0, 1.0)
+
+func clear_field_suppression() -> void:
+	_field_suppression_stacks = 0
+	_field_suppression_expires_at = 0.0
+	_field_lockdown_next_trigger_time = 0.0
+
+func _expire_field_suppression_if_needed() -> void:
+	if _field_suppression_stacks <= 0:
+		return
+	if _get_run_time() > _field_suppression_expires_at:
+		_field_suppression_stacks = 0
+		_field_suppression_expires_at = 0.0
+
+func _get_run_time() -> float:
+	return float(GameState.run.get("run_time", 0.0))
+
 func _get_status(status: StringName) -> StatusEffect:
 	return _statuses.get(str(status)) as StatusEffect
 
@@ -433,7 +486,7 @@ func _try_damage_player() -> void:
 		return
 	if not _is_touching_player():
 		return
-	if _player.has_method("take_damage"):
+	if _player.has_method("apply_damage"):
 		var event := DamageEvent.from_amount(_damage, self, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_CONTACT)
 		event.owner = self
 		event.target = _player
@@ -473,6 +526,8 @@ func _refresh_status_visual() -> void:
 		_sprite.modulate = Color(1.0, 0.9, 0.3, 1.0)
 	elif _has_status(&"slow"):
 		_sprite.modulate = Color(0.6, 0.8, 1.0, 1.0)
+	elif _has_status(CONTROL_THREAT_REDUCTION_STATUS):
+		_sprite.modulate = Color(0.72, 0.62, 1.0, 1.0)
 	else:
 		_sprite.modulate = _base_modulate
 
@@ -496,6 +551,7 @@ func apply_damage(event: DamageEvent) -> DamageResult:
 	if result.final_amount <= 0:
 		result.was_blocked = true
 		return result
+	var hp_before := _hp
 	_hp -= result.final_amount
 	if _health_bar:
 		_health_bar.update_health(_hp, _health_bar.max_value)
@@ -506,6 +562,7 @@ func apply_damage(event: DamageEvent) -> DamageResult:
 	_flash_white()
 	if _hp <= 0:
 		result.killed = true
+		result.overkill_amount = maxi(0, result.final_amount - hp_before)
 		_die()
 	return result
 

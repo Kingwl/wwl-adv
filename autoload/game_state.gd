@@ -1,6 +1,8 @@
 extends Node
 ## 全局游戏状态。autoload 单例，跨场景持有当前一局的进度。
 
+const CombatEffectRules := preload("res://scripts/combat/combat_effect_rules.gd")
+
 signal run_started
 signal run_ended(victory: bool)
 signal hp_changed(current: int, max_hp: int)
@@ -41,6 +43,21 @@ const GUARD_REFRACTION_DAMAGE_REDUCTION := 0.12
 const GUARD_REFRACTION_RADIUS := 180.0
 const GUARD_REFRACTION_NEAR_MULTIPLIER := 1.8
 const GUARD_REFRACTION_FAR_MULTIPLIER := 0.6
+const MELEE_RESONANCE_TAG := "近身"
+const MELEE_REPLAY_WINDOW := 5.0
+const MELEE_REPLAY_INTERVAL := 5.0
+const MELEE_REPLAY_RADIUS := 160.0
+const CONTROL_RESONANCE_TAG := "控制"
+const SURVIVAL_RESONANCE_TAG := "生存"
+const SURVIVAL_FIXED_DAMAGE_REDUCTION := 0.08
+const SURVIVAL_LOW_HP_START_RATIO := 0.70
+const SURVIVAL_LOW_HP_MAX_RATIO := 0.25
+const SURVIVAL_LOW_HP_MAX_EXTRA_REDUCTION := 0.22
+const SURVIVAL_ECHO_TRIGGER_RATIO := 0.20
+const SURVIVAL_ECHO_DURATION := 3.0
+const SURVIVAL_ECHO_COOLDOWN := 45.0
+const SURVIVAL_ECHO_RADIUS := 220.0
+const SURVIVAL_ECHO_DAMAGE_RATIO := 1.0
 
 var run := {
 	"hp": STARTING_HP,
@@ -75,6 +92,13 @@ var run := {
 	"death_reason": {},
 	"upgrade_history": [],
 	"build_resonance_rewards": {},
+	"melee_replay_history": [],
+	"melee_replay_next_time": 0.0,
+	"control_resonance_energy": 0.0,
+	"control_charge_next_by_enemy": {},
+	"survival_echo_until": 0.0,
+	"survival_echo_next_trigger_time": 0.0,
+	"survival_echo_absorbed_damage": 0,
 }
 var game_speed_multiplier := 1.0
 var local_debug_mode_enabled := false
@@ -149,6 +173,13 @@ func start_new_run(rng_seed: int = 0, character_id: StringName = &"") -> void:
 		"death_reason": {},
 		"upgrade_history": [],
 		"build_resonance_rewards": {},
+		"melee_replay_history": [],
+		"melee_replay_next_time": 0.0,
+		"control_resonance_energy": 0.0,
+		"control_charge_next_by_enemy": {},
+		"survival_echo_until": 0.0,
+		"survival_echo_next_trigger_time": 0.0,
+		"survival_echo_absorbed_damage": 0,
 	}
 	run_started.emit()
 
@@ -164,14 +195,18 @@ func apply_damage(event: DamageEvent) -> DamageResult:
 	var base_result := DamageCalculator.calculate(event)
 	if base_result.final_amount <= 0:
 		return base_result
-	var damage_info := _calculate_incoming_damage(base_result.final_amount, event)
+	var damage_info := _calculate_incoming_damage(base_result.final_amount, event, true)
 	var final_amount := int(damage_info["final_amount"])
 	var guard_prevented := int(damage_info["guard_refraction_prevented"])
 	base_result.prevented_amount += maxi(0, base_result.final_amount - final_amount)
 	base_result.final_amount = final_amount
 	base_result.was_blocked = final_amount <= 0
 	var hp_before := int(run.hp)
-	run.hp = max(0, run.hp - final_amount)
+	var survival_heal := int(damage_info["survival_echo_heal"])
+	if survival_heal > 0:
+		run.hp = mini(int(run.max_hp), int(run.hp) + survival_heal)
+	else:
+		run.hp = max(0, int(run.hp) - final_amount)
 	if final_amount > 0:
 		_record_damage_taken(event, final_amount, hp_before <= final_amount)
 	if guard_prevented > 0:
@@ -193,7 +228,7 @@ func preview_apply_damage(event: DamageEvent) -> DamageResult:
 	if is_local_debug_mode_active():
 		return DamageResult.blocked(event)
 	var base_result := DamageCalculator.calculate(event)
-	var damage_info := _calculate_incoming_damage(base_result.final_amount, event)
+	var damage_info := _calculate_incoming_damage(base_result.final_amount, event, false)
 	var final_amount := int(damage_info["final_amount"])
 	base_result.prevented_amount += maxi(0, base_result.final_amount - final_amount)
 	base_result.final_amount = final_amount
@@ -230,6 +265,8 @@ func record_damage_result(result: DamageResult) -> void:
 	if not result or not result.event or result.final_amount <= 0:
 		return
 	var event := result.event
+	if CombatEffectRules.skips_combat_stats(event):
+		return
 	if not event.target or not event.target.is_in_group("enemies"):
 		return
 	var weapon_id := _get_event_weapon_id(event)
@@ -321,6 +358,9 @@ func record_build_resonance_reward(tag: String, tier: int, reward_name: String) 
 		"time": float(run.get("run_time", 0.0)),
 	}
 	run["build_resonance_rewards"] = rewards
+	if tag == MELEE_RESONANCE_TAG and tier >= 3:
+		run["melee_replay_history"] = []
+		run["melee_replay_next_time"] = float(run.get("run_time", 0.0)) + MELEE_REPLAY_INTERVAL
 	build_resonance_changed.emit()
 	return true
 
@@ -340,6 +380,46 @@ func get_build_resonance_reward_tier(tag: String) -> int:
 			if parts.size() >= 2:
 				highest = maxi(highest, int(parts[parts.size() - 1]))
 	return highest
+
+func record_melee_replay_damage(amount: int, damage_type: StringName) -> void:
+	if amount <= 0 or get_build_resonance_reward_tier(MELEE_RESONANCE_TAG) < 3:
+		return
+	var now := float(run.get("run_time", 0.0))
+	var history := _prune_melee_replay_history(now)
+	history.append({
+		"time": now,
+		"amount": amount,
+		"damage_type": damage_type,
+	})
+	run["melee_replay_history"] = history
+
+func claim_control_resonance_charge_source(target: Node, cooldown: float) -> bool:
+	if not is_instance_valid(target) or cooldown <= 0.0:
+		return false
+	var now := float(run.get("run_time", 0.0))
+	var key := str(target.get_instance_id())
+	var next_by_enemy: Dictionary = run.get("control_charge_next_by_enemy", {})
+	if now < float(next_by_enemy.get(key, 0.0)):
+		return false
+	next_by_enemy[key] = now + cooldown
+	run["control_charge_next_by_enemy"] = next_by_enemy
+	return true
+
+func add_control_resonance_energy(amount: float, max_energy: float) -> bool:
+	if amount <= 0.0 or max_energy <= 0.0:
+		return false
+	var current := float(run.get("control_resonance_energy", 0.0))
+	var next := current + amount
+	if next >= max_energy:
+		run["control_resonance_energy"] = 0.0
+		return true
+	run["control_resonance_energy"] = next
+	return false
+
+func is_survival_echo_active() -> bool:
+	if get_build_resonance_reward_tier(SURVIVAL_RESONANCE_TAG) < 3:
+		return false
+	return float(run.get("survival_echo_until", 0.0)) > float(run.get("run_time", 0.0))
 
 func get_upgrade_history(limit: int = 8) -> Array[Dictionary]:
 	var history: Array = run.get("upgrade_history", [])
@@ -363,6 +443,8 @@ func get_damage_taken_summary(limit: int = 3) -> Array[Dictionary]:
 
 func add_run_time(delta: float) -> void:
 	run.run_time += delta
+	_trigger_melee_replay_if_ready()
+	_release_survival_echo_if_expired()
 
 func get_time_string() -> String:
 	var total_seconds := int(run.run_time)
@@ -535,13 +617,205 @@ func _apply_incoming_damage_multiplier(amount: int) -> int:
 	var multiplier := maxf(0.0, float(run.get("incoming_damage_multiplier", 1.0)))
 	return maxi(1, int(ceil(amount * multiplier)))
 
-func _calculate_incoming_damage(amount: int, event: DamageEvent = null) -> Dictionary:
+func _calculate_incoming_damage(amount: int, event: DamageEvent = null, mutate: bool = false) -> Dictionary:
+	var unmitigated_amount := maxi(0, amount)
 	var scaled_amount := amount if event and event.damage_type == DamageEvent.DAMAGE_TYPE_PURE else _apply_incoming_damage_multiplier(amount)
-	var guard_prevented := _get_guard_refraction_prevented_damage(scaled_amount)
+	var survival_prevented := _get_survival_resonance_prevented_damage(scaled_amount, event)
+	var survival_amount := maxi(0, scaled_amount - survival_prevented)
+	var control_prevented := _get_control_threat_prevented_damage(survival_amount, event)
+	var controlled_amount := maxi(0, survival_amount - control_prevented)
+	var guard_prevented := 0
+	var reflected_amount := controlled_amount
+	var survival_echo_heal := 0
+	var survival_echo_absorbed := _get_survival_echo_absorbed_damage(unmitigated_amount, event)
+	if survival_echo_absorbed > 0:
+		reflected_amount = 0
+		survival_echo_heal = survival_echo_absorbed
+		if mutate:
+			_activate_survival_echo_if_needed()
+			run["survival_echo_absorbed_damage"] = int(run.get("survival_echo_absorbed_damage", 0)) + survival_echo_absorbed
+	else:
+		guard_prevented = _get_guard_refraction_prevented_damage(controlled_amount, unmitigated_amount)
+		reflected_amount = maxi(0, controlled_amount - guard_prevented)
 	return {
-		"final_amount": maxi(0, scaled_amount - guard_prevented),
+		"final_amount": maxi(0, reflected_amount),
+		"survival_prevented": survival_prevented,
+		"control_threat_prevented": control_prevented,
 		"guard_refraction_prevented": guard_prevented,
+		"survival_echo_absorbed": survival_echo_absorbed,
+		"survival_echo_heal": survival_echo_heal,
 	}
+
+func _get_survival_resonance_prevented_damage(amount: int, event: DamageEvent = null) -> int:
+	if amount <= 1:
+		return 0
+	if not event or event.damage_type == DamageEvent.DAMAGE_TYPE_PURE:
+		return 0
+	var tier := get_build_resonance_reward_tier(SURVIVAL_RESONANCE_TAG)
+	if tier <= 0:
+		return 0
+	var reduction := SURVIVAL_FIXED_DAMAGE_REDUCTION
+	if tier >= 2:
+		reduction += _get_survival_low_hp_extra_reduction()
+	reduction = clampf(reduction, 0.0, 0.95)
+	var reduced_amount := maxi(1, int(ceil(float(amount) * (1.0 - reduction))))
+	return maxi(0, amount - reduced_amount)
+
+func _get_survival_low_hp_extra_reduction() -> float:
+	var max_hp := maxf(1.0, float(run.get("max_hp", STARTING_HP)))
+	var hp_ratio := clampf(float(run.get("hp", 0)) / max_hp, 0.0, 1.0)
+	if hp_ratio >= SURVIVAL_LOW_HP_START_RATIO:
+		return 0.0
+	if hp_ratio <= SURVIVAL_LOW_HP_MAX_RATIO:
+		return SURVIVAL_LOW_HP_MAX_EXTRA_REDUCTION
+	var span := maxf(SURVIVAL_LOW_HP_START_RATIO - SURVIVAL_LOW_HP_MAX_RATIO, 0.001)
+	var progress := (SURVIVAL_LOW_HP_START_RATIO - hp_ratio) / span
+	return progress * SURVIVAL_LOW_HP_MAX_EXTRA_REDUCTION
+
+func _get_survival_echo_absorbed_damage(amount: int, event: DamageEvent = null) -> int:
+	if amount <= 0:
+		return 0
+	if not _can_survival_echo_apply(event):
+		return 0
+	if is_survival_echo_active() or _would_trigger_survival_echo(amount):
+		return amount
+	return 0
+
+func _can_survival_echo_apply(event: DamageEvent = null) -> bool:
+	if get_build_resonance_reward_tier(SURVIVAL_RESONANCE_TAG) < 3:
+		return false
+	if not event or event.damage_type == DamageEvent.DAMAGE_TYPE_PURE:
+		return false
+	return true
+
+func _would_trigger_survival_echo(amount: int) -> bool:
+	if amount <= 0:
+		return false
+	var now := float(run.get("run_time", 0.0))
+	if now < float(run.get("survival_echo_next_trigger_time", 0.0)):
+		return false
+	var max_hp := maxf(1.0, float(run.get("max_hp", STARTING_HP)))
+	var trigger_hp := max_hp * SURVIVAL_ECHO_TRIGGER_RATIO
+	var hp := float(run.get("hp", 0))
+	return hp <= trigger_hp or hp - float(amount) <= trigger_hp
+
+func _activate_survival_echo_if_needed() -> void:
+	if is_survival_echo_active():
+		return
+	var now := float(run.get("run_time", 0.0))
+	run["survival_echo_until"] = now + SURVIVAL_ECHO_DURATION
+	run["survival_echo_next_trigger_time"] = now + SURVIVAL_ECHO_COOLDOWN
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	if player:
+		_spawn_resonance_effect(VFXHelper.EFFECT_SURVIVAL_ECHO, player.global_position, 0.0, 1.2)
+
+func _release_survival_echo_if_expired() -> void:
+	var until := float(run.get("survival_echo_until", 0.0))
+	if until <= 0.0 or float(run.get("run_time", 0.0)) < until:
+		return
+	var absorbed := int(run.get("survival_echo_absorbed_damage", 0))
+	run["survival_echo_until"] = 0.0
+	run["survival_echo_absorbed_damage"] = 0
+	_reflect_survival_echo_damage(absorbed)
+
+func _trigger_melee_replay_if_ready() -> void:
+	var now := float(run.get("run_time", 0.0))
+	if get_build_resonance_reward_tier(MELEE_RESONANCE_TAG) < 3:
+		run["melee_replay_history"] = []
+		run["melee_replay_next_time"] = 0.0
+		return
+	var next_time := float(run.get("melee_replay_next_time", 0.0))
+	if next_time <= 0.0:
+		run["melee_replay_next_time"] = now + MELEE_REPLAY_INTERVAL
+		_prune_melee_replay_history(now)
+		return
+	if now < next_time:
+		_prune_melee_replay_history(now)
+		return
+	var best_entry := _get_best_melee_replay_entry(now)
+	while next_time <= now:
+		next_time += MELEE_REPLAY_INTERVAL
+	run["melee_replay_next_time"] = next_time
+	if best_entry.is_empty():
+		return
+	_apply_melee_replay_damage(
+		int(best_entry.get("amount", 0)),
+		StringName(best_entry.get("damage_type", DamageEvent.DAMAGE_TYPE_PHYSICAL))
+	)
+
+func _prune_melee_replay_history(now: float) -> Array:
+	var history: Array = run.get("melee_replay_history", [])
+	var cutoff := now - MELEE_REPLAY_WINDOW
+	var kept: Array = []
+	for entry in history:
+		if not (entry is Dictionary):
+			continue
+		var entry_data := entry as Dictionary
+		if float(entry_data.get("time", -999999.0)) < cutoff:
+			continue
+		kept.append(entry_data)
+	run["melee_replay_history"] = kept
+	return kept
+
+func _get_best_melee_replay_entry(now: float) -> Dictionary:
+	var best_entry: Dictionary = {}
+	var best_amount := 0
+	for entry in _prune_melee_replay_history(now):
+		if not (entry is Dictionary):
+			continue
+		var entry_data := entry as Dictionary
+		var amount := int(entry_data.get("amount", 0))
+		if amount > best_amount:
+			best_amount = amount
+			best_entry = entry_data
+	return best_entry
+
+func _apply_melee_replay_damage(amount: int, damage_type: StringName) -> void:
+	if amount <= 0:
+		return
+	var target := _get_melee_replay_target()
+	if not target:
+		return
+	if target is Node2D:
+		_spawn_resonance_effect(VFXHelper.EFFECT_MELEE_REPLAY, (target as Node2D).global_position)
+	var event := DamageEvent.from_amount(amount, self, damage_type, DamageEvent.DELIVERY_REFLECT)
+	CombatEffectRules.add_tag_once(event, CombatEffectRules.MELEE_REPLAY_TAG)
+	DamageCalculator.deal_damage(target, event)
+
+func _get_melee_replay_target() -> Node:
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	if not player:
+		return null
+	var best_enemy: Node = null
+	var best_distance_sq := MELEE_REPLAY_RADIUS * MELEE_REPLAY_RADIUS
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not (enemy is Node2D) or not enemy.has_method("apply_damage"):
+			continue
+		if enemy.is_queued_for_deletion():
+			continue
+		if "_dead" in enemy and bool(enemy._dead):
+			continue
+		var distance_sq := player.global_position.distance_squared_to((enemy as Node2D).global_position)
+		if distance_sq > best_distance_sq:
+			continue
+		best_distance_sq = distance_sq
+		best_enemy = enemy
+	return best_enemy
+
+func _get_control_threat_prevented_damage(amount: int, event: DamageEvent = null) -> int:
+	if amount <= 1 or not event:
+		return 0
+	if event.damage_type == DamageEvent.DAMAGE_TYPE_PURE:
+		return 0
+	if event.delivery_type != DamageEvent.DELIVERY_CONTACT and event.delivery_type != DamageEvent.DELIVERY_PROJECTILE:
+		return 0
+	if not event.source or not event.source.has_method("get_control_threat_multiplier"):
+		return 0
+	var multiplier := clampf(float(event.source.call("get_control_threat_multiplier")), 0.0, 1.0)
+	if multiplier >= 1.0:
+		return 0
+	var reduced_amount := maxi(1, int(ceil(float(amount) * multiplier)))
+	return maxi(0, amount - reduced_amount)
 
 func _record_damage_taken(event: DamageEvent, amount: int, fatal: bool) -> void:
 	if amount <= 0:
@@ -638,13 +912,14 @@ func _upgrade_type_name(upgrade_type: int) -> String:
 			return "角色强化"
 	return "升级"
 
-func _get_guard_refraction_prevented_damage(amount: int) -> int:
+func _get_guard_refraction_prevented_damage(amount: int, basis_amount: int = -1) -> int:
 	if amount <= 1:
 		return 0
 	if StringName(run.get("passive_id", &"")) != GUARD_REFRACTION_PASSIVE_ID:
 		return 0
 	var max_prevented := amount - 1
-	var prevented := int(round(float(amount) * GUARD_REFRACTION_DAMAGE_REDUCTION))
+	var calculation_amount := amount if basis_amount <= 0 else basis_amount
+	var prevented := int(round(float(calculation_amount) * GUARD_REFRACTION_DAMAGE_REDUCTION))
 	return clampi(prevented, 1, max_prevented)
 
 func _reflect_guard_refraction_damage(prevented_damage: int) -> void:
@@ -653,9 +928,8 @@ func _reflect_guard_refraction_damage(prevented_damage: int) -> void:
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 	if not player:
 		return
-	var parent := get_tree().current_scene
 	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if not (enemy is Node2D) or not enemy.has_method("take_damage"):
+		if not (enemy is Node2D) or not enemy.has_method("apply_damage"):
 			continue
 		var distance := player.global_position.distance_to(enemy.global_position)
 		if distance > GUARD_REFRACTION_RADIUS:
@@ -664,15 +938,35 @@ func _reflect_guard_refraction_damage(prevented_damage: int) -> void:
 		var multiplier := GUARD_REFRACTION_NEAR_MULTIPLIER + (GUARD_REFRACTION_FAR_MULTIPLIER - GUARD_REFRACTION_NEAR_MULTIPLIER) * t
 		var reflected_damage := maxi(1, int(round(float(prevented_damage) * multiplier)))
 		var event := DamageEvent.from_amount(reflected_damage, self, DamageEvent.DAMAGE_TYPE_PURE, DamageEvent.DELIVERY_REFLECT)
-		event.tags.append(&"guardian_refraction")
+		CombatEffectRules.add_tag_once(event, CombatEffectRules.GUARDIAN_REFRACTION_TAG)
 		DamageCalculator.deal_damage(enemy, event)
-		if parent:
-			VFXHelper.spawn_animated_one_shot(
-				parent,
-				"res://assets/art/effects/by_type/fx_thorns",
-				"thorns",
-				4,
-				enemy.global_position,
-				8.0,
-				Vector2(0.75, 0.75)
-			)
+		_spawn_resonance_effect(VFXHelper.EFFECT_GUARDIAN_REFRACTION, enemy.global_position)
+
+func _reflect_survival_echo_damage(absorbed_damage: int) -> void:
+	if absorbed_damage <= 0:
+		return
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	if not player:
+		return
+	var targets: Array[Node] = []
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if not (enemy is Node2D) or not enemy.has_method("apply_damage"):
+			continue
+		if "_dead" in enemy and bool(enemy._dead):
+			continue
+		if player.global_position.distance_to((enemy as Node2D).global_position) > SURVIVAL_ECHO_RADIUS:
+			continue
+		targets.append(enemy)
+	if targets.is_empty():
+		return
+	_spawn_resonance_effect(VFXHelper.EFFECT_SURVIVAL_ECHO, player.global_position, 0.0, 1.35)
+	var damage_per_target := maxi(1, int(round(float(absorbed_damage) * SURVIVAL_ECHO_DAMAGE_RATIO / float(targets.size()))))
+	for enemy in targets:
+		var event := DamageEvent.from_amount(damage_per_target, self, DamageEvent.DAMAGE_TYPE_PURE, DamageEvent.DELIVERY_REFLECT)
+		CombatEffectRules.add_tag_once(event, CombatEffectRules.SURVIVAL_ECHO_TAG)
+		DamageCalculator.deal_damage(enemy, event)
+		if enemy is Node2D:
+			_spawn_resonance_effect(VFXHelper.EFFECT_SURVIVAL_ECHO, (enemy as Node2D).global_position, 0.0, 0.8)
+
+func _spawn_resonance_effect(effect_id: StringName, pos: Vector2, rotation: float = 0.0, scale_multiplier: float = 1.0) -> void:
+	VFXHelper.spawn_resonance_effect(get_tree().current_scene, effect_id, pos, rotation, scale_multiplier)

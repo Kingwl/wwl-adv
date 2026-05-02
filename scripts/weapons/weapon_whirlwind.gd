@@ -20,7 +20,7 @@ func _activate() -> void:
 			for i in range(_get_hit_count()):
 				_deal_damage_to(enemy, _get_final_damage(), DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_AREA)
 			if _should_slow():
-				enemy.apply_status(&"slow", 1.0, 0.65)
+				_apply_status_to(enemy, &"slow", 1.0, 0.65)
 			if _should_knockback():
 				_knockback(enemy, player.global_position)
 
@@ -94,7 +94,14 @@ func _should_knockback() -> bool:
 	return has_special_tag(&"whirlwind_knockback") or has_special_tag(&"whirlwind_wall")
 
 func _knockback(enemy: Node2D, from_pos: Vector2) -> void:
-	if enemy is CharacterBody2D:
+	var applied := false
+	if enemy.has_method("apply_knockback"):
+		enemy.call("apply_knockback", from_pos, 180.0, 0.12)
+		applied = true
+	elif enemy is CharacterBody2D:
 		var push_dir := (enemy.global_position - from_pos).normalized()
 		enemy.velocity = push_dir * 180.0
 		enemy.move_and_slide()
+		applied = true
+	if applied:
+		_notify_control_effect_applied(enemy, &"knockback")

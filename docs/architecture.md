@@ -92,7 +92,7 @@ GameState.add_exp()
                           └── get_tree().paused = false
 
 Enemy._physics_process()
-  └── 碰撞 Player → Player.take_damage()
+  └── 碰撞 Player → DamageCalculator.deal_damage(Player, DamageEvent)
         └── GameState.apply_damage(DamageEvent)
               └── HP = 0 → GameState.run_ended
                     └── Game._on_run_ended()
@@ -132,6 +132,7 @@ Enemy._physics_process()
 ## 伤害系统
 
 伤害入口已经统一到 `scripts/combat/` 下的轻量 Combat 层：
+结算顺序和 Buff / Debuff / 共鸣效果分层见 [`docs/combat_effects.md`](./combat_effects.md)。
 
 | 类名 | 用途 |
 |------|------|

@@ -9,6 +9,7 @@ var prevented_amount: int = 0
 var is_crit: bool = false
 var was_blocked: bool = false
 var killed: bool = false
+var overkill_amount: int = 0
 var applied_status: StringName = &""
 
 static func blocked(source_event: DamageEvent = null) -> DamageResult:

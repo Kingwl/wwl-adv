@@ -20,9 +20,9 @@ func _activate() -> void:
 			for i in range(_get_pulse_count()):
 				_deal_damage_to(enemy, _get_final_damage(), DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_AREA)
 			if enemy.has_method("apply_status"):
-				enemy.apply_status(&"stun", _get_stun_duration(), 0.0)
+				_apply_status_to(enemy, &"stun", _get_stun_duration(), 0.0)
 				if _should_slow():
-					enemy.apply_status(&"slow", 1.5, 0.55)
+					_apply_status_to(enemy, &"slow", 1.5, 0.55)
 
 func _show_shockwave(pos: Vector2, radius: float) -> void:
 	var current := get_tree().current_scene

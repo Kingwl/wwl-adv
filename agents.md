@@ -9,6 +9,7 @@
 | [`docs/agents.md`](./docs/agents.md) | **每次进入项目时先读** — 快速定位、修改路径、标准流程、测试规范 |
 | [`docs/architecture.md`](./docs/architecture.md) | 需要了解场景树、信号流、碰撞层级、数据类时 |
 | [`docs/game_design.md`](./docs/game_design.md) | 需要了解数值设计、核心循环、未来规划时 |
+| [`docs/combat_effects.md`](./docs/combat_effects.md) | 需要新增或调整伤害、Buff、Debuff、共鸣副作用时 |
 
 > **关键纪律**：修改武器相关代码后，必须运行 `./tests/run_tests.sh` 并确保 0 failed。详见 `docs/agents.md` 测试规范章节。
 > **进度记录**：有重要进展（新增系统、完成阶段性目标、通过关键测试）时，更新 `docs/milestone.md`。

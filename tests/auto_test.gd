@@ -2,6 +2,8 @@ extends Node
 
 ## 集成测试控制器。headless 下自动运行游戏并覆盖所有主要代码路径。
 
+const CombatEffectRules := preload("res://scripts/combat/combat_effect_rules.gd")
+
 var _game: Node
 var _passed := 0
 var _failed := 0
@@ -146,6 +148,14 @@ func _phase_load() -> void:
 	)
 	await _wait(0.05)
 	_assert(not is_instance_valid(missing_vfx), "Missing VFX frames are skipped safely")
+	for effect_id in VFXHelper.RESONANCE_EFFECTS.keys():
+		var effect_config: Dictionary = VFXHelper.RESONANCE_EFFECTS[effect_id]
+		var resonance_vfx := VFXHelper.spawn_resonance_effect(self, effect_id, Vector2.ZERO)
+		_assert(resonance_vfx is AnimatedSprite2D, "Resonance VFX %s can be spawned" % str(effect_id))
+		if resonance_vfx is AnimatedSprite2D:
+			var expected_frames := int(effect_config.get("frame_count", 0))
+			_assert(resonance_vfx.sprite_frames.get_frame_count("default") == expected_frames, "Resonance VFX %s loads all frames" % str(effect_id))
+			resonance_vfx.queue_free()
 
 func _phase_gameplay() -> void:
 	print("[PHASE 1] Gameplay")
@@ -765,6 +775,14 @@ func _node_text_contains(node: Node, text: String) -> bool:
 			return true
 	return false
 
+func _node_has_named_texture_rect(node: Node, node_name: String) -> bool:
+	if node is TextureRect and node.name == node_name and (node as TextureRect).texture != null:
+		return true
+	for child in node.get_children():
+		if _node_has_named_texture_rect(child, node_name):
+			return true
+	return false
+
 func _wait(seconds: float):
 	return get_tree().create_timer(seconds, true).timeout
 
@@ -890,6 +908,7 @@ func _phase_path_system() -> void:
 		upgrade_select.show_options([orbit_unlock], upgrade_system.get_build_resonance_state())
 		await _wait(0.05)
 		_assert(_node_text_contains(upgrade_select, "构筑共鸣"), "UpgradeSelect displays build resonance summary")
+		_assert(_node_has_named_texture_rect(upgrade_select, "ResonanceIcon"), "UpgradeSelect displays resonance tag icons")
 		_assert(_node_text_contains(upgrade_select, "共鸣："), "Upgrade card displays concise build resonance change")
 		_assert(not _node_text_contains(upgrade_select, "选择提示"), "Upgrade card omits extra recommendation hint")
 		upgrade_select.visible = false
@@ -1015,6 +1034,37 @@ func _phase_enemy_damage() -> void:
 	_assert(enemy._hp == event_hp_before - 4, "DamageCalculator reduces enemy HP")
 	_assert(int((GameState.run.get("weapon_damage", {}) as Dictionary).get("test_fire", 0)) >= 4, "DamageCalculator records weapon damage")
 
+	var plain_rule_event := DamageEvent.from_amount(1, player)
+	_assert(not CombatEffectRules.skips_build_resonance(plain_rule_event), "CombatEffectRules allows normal damage through resonance")
+	CombatEffectRules.add_tag_once(plain_rule_event, CombatEffectRules.BURST_OVERFLOW_TAG)
+	CombatEffectRules.add_tag_once(plain_rule_event, CombatEffectRules.BURST_OVERFLOW_TAG)
+	_assert(plain_rule_event.tags.size() == 1 and plain_rule_event.has_tag(CombatEffectRules.BURST_OVERFLOW_TAG), "CombatEffectRules adds derived tags once")
+	_assert(
+		CombatEffectRules.skips_build_resonance(plain_rule_event)
+		and CombatEffectRules.skips_post_hit_effects(plain_rule_event)
+		and CombatEffectRules.skips_post_kill_effects(plain_rule_event)
+		and not CombatEffectRules.skips_combat_stats(plain_rule_event),
+		"CombatEffectRules blocks burst overflow recursion and side effects"
+	)
+	var melee_replay_rule_event := DamageEvent.from_amount(1, player)
+	CombatEffectRules.add_tag_once(melee_replay_rule_event, CombatEffectRules.MELEE_REPLAY_TAG)
+	_assert(
+		CombatEffectRules.skips_build_resonance(melee_replay_rule_event)
+		and CombatEffectRules.skips_melee_replay_record(melee_replay_rule_event)
+		and CombatEffectRules.skips_combat_stats(melee_replay_rule_event)
+		and not CombatEffectRules.skips_post_hit_effects(melee_replay_rule_event),
+		"CombatEffectRules prevents replay self-recording without suppressing every hit effect"
+	)
+	var reflect_rule_event := DamageEvent.from_amount(1, player)
+	CombatEffectRules.add_tag_once(reflect_rule_event, CombatEffectRules.GUARDIAN_REFRACTION_TAG)
+	var echo_rule_event := DamageEvent.from_amount(1, player)
+	CombatEffectRules.add_tag_once(echo_rule_event, CombatEffectRules.SURVIVAL_ECHO_TAG)
+	_assert(
+		CombatEffectRules.skips_combat_stats(reflect_rule_event)
+		and CombatEffectRules.skips_combat_stats(echo_rule_event),
+		"CombatEffectRules excludes system reflect damage from weapon stats"
+	)
+
 	var saved_resonance_rewards: Dictionary = (GameState.run.get("build_resonance_rewards", {}) as Dictionary).duplicate(true)
 	GameState.run["build_resonance_rewards"] = {}
 	var barrage_event := DamageEvent.from_amount(100, player, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_PROJECTILE)
@@ -1041,7 +1091,255 @@ func _phase_enemy_damage() -> void:
 	enemy.velocity = Vector2.ZERO
 	DamageCalculator.deal_damage(enemy, knockback_event)
 	_assert(enemy.velocity.x > 0.0, "Barrage III applies knockback away from the player")
+
+	var saved_incoming_multiplier := float(GameState.run.get("incoming_damage_multiplier", 1.0))
+	var saved_melee_replay_history: Array = (GameState.run.get("melee_replay_history", []) as Array).duplicate(true)
+	var saved_melee_replay_next_time := float(GameState.run.get("melee_replay_next_time", 0.0))
+	var saved_run_time := float(GameState.run.get("run_time", 0.0))
+	var saved_control_energy := float(GameState.run.get("control_resonance_energy", 0.0))
+	var saved_control_charge_next: Dictionary = (GameState.run.get("control_charge_next_by_enemy", {}) as Dictionary).duplicate(true)
+	var saved_hp := int(GameState.run.get("hp", GameState.STARTING_HP))
+	var saved_max_hp := int(GameState.run.get("max_hp", GameState.STARTING_HP))
+	var saved_passive_id: StringName = StringName(GameState.run.get("passive_id", &""))
+	var saved_survival_echo_until := float(GameState.run.get("survival_echo_until", 0.0))
+	var saved_survival_echo_next := float(GameState.run.get("survival_echo_next_trigger_time", 0.0))
+	var saved_survival_echo_absorbed := int(GameState.run.get("survival_echo_absorbed_damage", 0))
+	GameState.run["incoming_damage_multiplier"] = 1.0
+	GameState.run["run_time"] = 10.0
+	GameState.run["melee_replay_history"] = []
+	GameState.run["melee_replay_next_time"] = 0.0
+	enemy.global_position = player.global_position + Vector2.RIGHT * 60.0
+	var close_melee_event := DamageEvent.from_amount(100, player, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_MELEE)
+	close_melee_event.weapon_id = &"melee_basic"
+	close_melee_event.owner = player
+	close_melee_event.target = enemy
+	_assert(DamageCalculator.calculate(close_melee_event).final_amount == 100, "Melee weapon has no resonance bonus before unlock")
+	GameState.record_build_resonance_reward("近身", 1, "test")
+	_assert(DamageCalculator.calculate(close_melee_event).final_amount == 108, "Melee I applies fixed damage bonus")
+	GameState.record_build_resonance_reward("近身", 2, "test")
+	_assert(DamageCalculator.calculate(close_melee_event).final_amount == 127, "Melee II applies close-range damage bonus")
+	enemy.global_position = player.global_position + Vector2.RIGHT * 220.0
+	_assert(DamageCalculator.calculate(close_melee_event).final_amount == 108, "Melee II distance bonus falls off outside close range")
+	GameState.record_build_resonance_reward("近身", 3, "test")
+	_assert(is_equal_approx(float(GameState.run.get("melee_replay_next_time", 0.0)), 15.0), "Melee III schedules first replay after unlock")
+	enemy.global_position = player.global_position + Vector2.RIGHT * 60.0
+	enemy._hp = 1000
+	var small_melee_event := DamageEvent.from_amount(40, player, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_MELEE)
+	small_melee_event.weapon_id = &"melee_basic"
+	small_melee_event.owner = player
+	small_melee_event.target = enemy
+	DamageCalculator.deal_damage(enemy, small_melee_event)
+	GameState.run["run_time"] = 13.0
+	DamageCalculator.deal_damage(enemy, close_melee_event)
+	_assert((GameState.run.get("melee_replay_history", []) as Array).size() >= 2, "Melee III records recent melee damage candidates")
+	enemy.global_position = player.global_position + Vector2.RIGHT * 320.0
+	var melee_replay_target := enemy_scene.instantiate()
+	melee_replay_target.global_position = player.global_position + Vector2.RIGHT * 80.0
+	enemies_parent.add_child(melee_replay_target)
+	await _wait(0.1)
+	melee_replay_target.set_physics_process(false)
+	melee_replay_target._hp = 300
+	if melee_replay_target.has_method("_setup_health_bar"):
+		melee_replay_target._setup_health_bar()
+	GameState.add_run_time(2.0)
+	_assert(melee_replay_target._hp == 173, "Melee III replays the highest recent melee hit to a nearby enemy")
+	_assert(is_equal_approx(float(GameState.run.get("melee_replay_next_time", 0.0)), 20.0), "Melee III advances replay cadence every 5 seconds")
+	if is_instance_valid(melee_replay_target):
+		melee_replay_target.queue_free()
+
+	if enemy.has_method("clear_field_suppression"):
+		enemy.clear_field_suppression()
+	enemy.clear_status(&"slow")
+	GameState.run["run_time"] = 20.0
+	var field_event := DamageEvent.from_amount(100, player, DamageEvent.DAMAGE_TYPE_FIRE, DamageEvent.DELIVERY_AREA)
+	field_event.weapon_id = &"fire_bottle"
+	field_event.owner = player
+	field_event.target = enemy
+	_assert(DamageCalculator.calculate(field_event).final_amount == 100, "Field weapon has no resonance bonus before unlock")
+	GameState.record_build_resonance_reward("场地", 1, "test")
+	_assert(DamageCalculator.calculate(field_event).final_amount == 108, "Field I applies fixed damage bonus")
+	GameState.record_build_resonance_reward("场地", 2, "test")
+	var first_field_result := DamageCalculator.deal_damage(enemy, field_event)
+	_assert(first_field_result.final_amount == 108 and enemy.get_field_suppression_stack_count() == 1, "Field II first hit applies one suppression stack")
+	_assert(DamageCalculator.calculate(field_event).final_amount == 114, "Field II suppression increases later field damage")
+	DamageCalculator.deal_damage(enemy, field_event)
+	_assert(enemy.get_field_suppression_stack_count() == 2 and DamageCalculator.calculate(field_event).final_amount == 121, "Field II suppression stacks up to later damage")
+	GameState.record_build_resonance_reward("场地", 3, "test")
+	DamageCalculator.deal_damage(enemy, field_event)
+	_assert(enemy.get_field_suppression_stack_count() == 3 and enemy._statuses.has("slow"), "Field III triggers lockdown at full suppression")
+	var first_lockdown_next: float = enemy._field_lockdown_next_trigger_time
+	GameState.run["run_time"] = 20.1
+	DamageCalculator.deal_damage(enemy, field_event)
+	_assert(is_equal_approx(enemy._field_lockdown_next_trigger_time, first_lockdown_next), "Field III lockdown has per-enemy cooldown")
+	GameState.run["run_time"] = 22.05
+	DamageCalculator.deal_damage(enemy, field_event)
+	_assert(enemy._field_lockdown_next_trigger_time > first_lockdown_next, "Field III lockdown can retrigger after cooldown")
+	enemy.clear_field_suppression()
+	enemy.clear_status(&"slow")
+
+	GameState.run["run_time"] = 30.0
+	GameState.run["melee_replay_history"] = []
+	GameState.run["control_resonance_energy"] = 0.0
+	GameState.run["control_charge_next_by_enemy"] = {}
+	enemy.clear_status(&"control_threat_reduction")
+	var control_event := DamageEvent.from_amount(100, player, DamageEvent.DAMAGE_TYPE_FROST, DamageEvent.DELIVERY_AREA)
+	control_event.tags.append(&"控制")
+	control_event.owner = player
+	control_event.target = enemy
+	_assert(DamageCalculator.calculate(control_event).final_amount == 100, "Control weapon has no resonance bonus before unlock")
+	GameState.record_build_resonance_reward("控制", 1, "test")
+	_assert(DamageCalculator.calculate(control_event).final_amount == 108, "Control I applies fixed damage bonus")
+	GameState.record_build_resonance_reward("控制", 2, "test")
+	DamageCalculator.notify_control_effect_applied(enemy, control_event, &"slow")
+	_assert(enemy._statuses.has("control_threat_reduction"), "Control II marks controlled enemies as lower threat")
+	var controlled_contact_event := DamageEvent.from_amount(10, enemy, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_CONTACT)
+	_assert(GameState.preview_apply_damage(controlled_contact_event).final_amount == 8, "Control II reduces controlled enemy contact damage")
+	var controlled_projectile_event := DamageEvent.from_amount(10, enemy, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_PROJECTILE)
+	_assert(GameState.preview_apply_damage(controlled_projectile_event).final_amount == 8, "Control II reduces controlled enemy projectile damage")
+	var controlled_direct_event := DamageEvent.from_amount(10, enemy, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_DIRECT)
+	_assert(GameState.preview_apply_damage(controlled_direct_event).final_amount == 10, "Control II does not reduce unrelated direct damage")
+	_assert(is_equal_approx(float(GameState.run.get("control_resonance_energy", 0.0)), 0.0), "Control II does not charge stasis before tier III")
+	GameState.record_build_resonance_reward("控制", 3, "test")
+	DamageCalculator.notify_control_effect_applied(enemy, control_event, &"slow")
+	_assert(is_equal_approx(float(GameState.run.get("control_resonance_energy", 0.0)), 3.0), "Control III gains energy from control effects")
+	DamageCalculator.notify_control_effect_applied(enemy, control_event, &"stun")
+	_assert(is_equal_approx(float(GameState.run.get("control_resonance_energy", 0.0)), 3.0), "Control III charge has a per-enemy cooldown")
+	GameState.run["run_time"] = 30.6
+	DamageCalculator.notify_control_effect_applied(enemy, control_event, &"stun")
+	_assert(is_equal_approx(float(GameState.run.get("control_resonance_energy", 0.0)), 11.0), "Control III can charge again after cooldown")
+	GameState.run["run_time"] = 31.2
+	GameState.run["control_resonance_energy"] = 96.0
+	enemy.clear_status(&"stun")
+	DamageCalculator.notify_control_effect_applied(enemy, control_event, &"stun")
+	_assert(is_equal_approx(float(GameState.run.get("control_resonance_energy", 0.0)), 0.0) and enemy._statuses.has("stun"), "Control III triggers stasis pulse at full energy")
+	enemy.clear_status(&"stun")
+	enemy.clear_status(&"control_threat_reduction")
+
+	var burst_event := DamageEvent.from_amount(100, player, DamageEvent.DAMAGE_TYPE_LIGHTNING, DamageEvent.DELIVERY_AREA)
+	burst_event.weapon_id = &"thunder"
+	burst_event.owner = player
+	burst_event.target = enemy
+	_assert(DamageCalculator.calculate(burst_event).final_amount == 100, "Burst weapon has no resonance bonus before unlock")
+	GameState.record_build_resonance_reward("爆发", 1, "test")
+	_assert(DamageCalculator.calculate(burst_event).final_amount == 108, "Burst I applies fixed damage bonus")
+
+	var burst_primary := enemy_scene.instantiate()
+	var burst_target_a := enemy_scene.instantiate()
+	var burst_target_b := enemy_scene.instantiate()
+	burst_primary.global_position = player.global_position + Vector2.RIGHT * 900.0
+	burst_target_a.global_position = burst_primary.global_position + Vector2.RIGHT * 80.0
+	burst_target_b.global_position = burst_primary.global_position + Vector2.RIGHT * 140.0
+	enemies_parent.add_child(burst_primary)
+	enemies_parent.add_child(burst_target_a)
+	enemies_parent.add_child(burst_target_b)
+	await _wait(0.1)
+	for burst_enemy in [burst_primary, burst_target_a, burst_target_b]:
+		burst_enemy.set_physics_process(false)
+		if burst_enemy.has_method("_setup_health_bar"):
+			burst_enemy._setup_health_bar()
+	burst_primary._hp = 30
+	burst_target_a._hp = 200
+	burst_target_b._hp = 200
+	GameState.record_build_resonance_reward("爆发", 2, "test")
+	var burst_kill_event := DamageEvent.from_amount(100, player, DamageEvent.DAMAGE_TYPE_LIGHTNING, DamageEvent.DELIVERY_AREA)
+	burst_kill_event.weapon_id = &"thunder"
+	burst_kill_event.owner = player
+	DamageCalculator.deal_damage(burst_primary, burst_kill_event)
+	_assert(burst_target_a._hp == 138 and burst_target_b._hp == 200, "Burst II overflows 80% overkill to one nearby target")
+
+	var burst_primary_iii := enemy_scene.instantiate()
+	var burst_targets_iii: Array = []
+	burst_primary_iii.global_position = player.global_position + Vector2.RIGHT * 1200.0
+	enemies_parent.add_child(burst_primary_iii)
+	for i in range(4):
+		var overflow_target := enemy_scene.instantiate()
+		overflow_target.global_position = burst_primary_iii.global_position + Vector2.RIGHT * float(60 + i * 45)
+		enemies_parent.add_child(overflow_target)
+		burst_targets_iii.append(overflow_target)
+	await _wait(0.1)
+	burst_primary_iii.set_physics_process(false)
+	burst_primary_iii._hp = 30
+	for i in range(burst_targets_iii.size()):
+		var overflow_enemy = burst_targets_iii[i]
+		overflow_enemy.set_physics_process(false)
+		overflow_enemy._hp = 20 if i == 0 else 200
+		if overflow_enemy.has_method("_setup_health_bar"):
+			overflow_enemy._setup_health_bar()
+	GameState.record_build_resonance_reward("爆发", 3, "test")
+	var burst_kill_event_iii := DamageEvent.from_amount(100, player, DamageEvent.DAMAGE_TYPE_LIGHTNING, DamageEvent.DELIVERY_AREA)
+	burst_kill_event_iii.weapon_id = &"thunder"
+	burst_kill_event_iii.owner = player
+	DamageCalculator.deal_damage(burst_primary_iii, burst_kill_event_iii)
+	_assert(burst_targets_iii[0]._hp <= 0, "Burst III overflow can kill a secondary target")
+	_assert(burst_targets_iii[1]._hp == 122 and burst_targets_iii[2]._hp == 122, "Burst III overflows full overkill to up to three targets")
+	_assert(burst_targets_iii[3]._hp == 200, "Burst III overflow only triggers once and caps target count")
+	for burst_enemy in [burst_primary, burst_target_a, burst_target_b, burst_primary_iii] + burst_targets_iii:
+		if is_instance_valid(burst_enemy):
+			burst_enemy.queue_free()
+	await _wait(0.1)
+
+	GameState.run["passive_id"] = &"balanced"
+	GameState.run["max_hp"] = 100
+	GameState.run["hp"] = 100
+	GameState.run["run_time"] = 40.0
+	GameState.run["survival_echo_until"] = 0.0
+	GameState.run["survival_echo_next_trigger_time"] = 0.0
+	GameState.run["survival_echo_absorbed_damage"] = 0
+	GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
+	var survival_contact_event := DamageEvent.from_amount(100, enemy, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_CONTACT)
+	_assert(GameState.preview_apply_damage(survival_contact_event).final_amount == 100, "Survival has no mitigation before unlock")
+	GameState.record_build_resonance_reward("生存", 1, "test")
+	_assert(GameState.preview_apply_damage(survival_contact_event).final_amount == 92, "Survival I reduces incoming damage")
+	var survival_pure_event := DamageEvent.from_amount(100, enemy, DamageEvent.DAMAGE_TYPE_PURE, DamageEvent.DELIVERY_DIRECT)
+	_assert(GameState.preview_apply_damage(survival_pure_event).final_amount == 100, "Survival resonance ignores pure damage")
+	GameState.record_build_resonance_reward("生存", 2, "test")
+	GameState.run["hp"] = 25
+	_assert(GameState.preview_apply_damage(survival_contact_event).final_amount == 70, "Survival II reaches max reduction at low HP")
+	GameState.record_build_resonance_reward("生存", 3, "test")
+	enemy.global_position = player.global_position + Vector2.RIGHT * 900.0
+	GameState.run["hp"] = 15
+	var survival_echo_event := DamageEvent.from_amount(10, enemy, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_CONTACT)
+	_assert(GameState.preview_apply_damage(survival_echo_event).final_amount == 0 and not GameState.is_survival_echo_active(), "Survival III preview avoids lethal state without mutating")
+	var echo_result := GameState.apply_damage(survival_echo_event)
+	_assert(echo_result.final_amount == 0 and GameState.run.hp == 25 and GameState.is_survival_echo_active(), "Survival III converts unmitigated critical damage into healing")
+	_assert(int(GameState.run.get("survival_echo_absorbed_damage", 0)) == 10, "Survival III records unmitigated absorbed damage")
+	GameState.apply_damage(survival_echo_event)
+	_assert(GameState.run.hp == 35 and int(GameState.run.get("survival_echo_absorbed_damage", 0)) == 20, "Survival III keeps converting unmitigated damage during echo")
+
+	var survival_echo_target_a := enemy_scene.instantiate()
+	var survival_echo_target_b := enemy_scene.instantiate()
+	survival_echo_target_a.global_position = player.global_position + Vector2.RIGHT * 80.0
+	survival_echo_target_b.global_position = player.global_position + Vector2.RIGHT * 140.0
+	enemies_parent.add_child(survival_echo_target_a)
+	enemies_parent.add_child(survival_echo_target_b)
+	await _wait(0.1)
+	for echo_enemy in [survival_echo_target_a, survival_echo_target_b]:
+		echo_enemy.set_physics_process(false)
+		echo_enemy._hp = 100
+		if echo_enemy.has_method("_setup_health_bar"):
+			echo_enemy._setup_health_bar()
+	GameState.add_run_time(GameState.SURVIVAL_ECHO_DURATION + 0.1)
+	_assert(not GameState.is_survival_echo_active(), "Survival III echo expires after duration")
+	_assert(survival_echo_target_a._hp == 90 and survival_echo_target_b._hp == 90, "Survival III releases unmitigated absorbed damage split across nearby enemies")
+	GameState.run["hp"] = 15
+	_assert(GameState.preview_apply_damage(DamageEvent.from_amount(100, enemy, DamageEvent.DAMAGE_TYPE_PHYSICAL, DamageEvent.DELIVERY_CONTACT)).final_amount == 70, "Survival III has cooldown after echo")
+	for echo_enemy in [survival_echo_target_a, survival_echo_target_b]:
+		if is_instance_valid(echo_enemy):
+			echo_enemy.queue_free()
+	GameState.run["incoming_damage_multiplier"] = saved_incoming_multiplier
+	GameState.run["melee_replay_history"] = saved_melee_replay_history
+	GameState.run["melee_replay_next_time"] = saved_melee_replay_next_time
+	GameState.run["run_time"] = saved_run_time
+	GameState.run["control_resonance_energy"] = saved_control_energy
+	GameState.run["control_charge_next_by_enemy"] = saved_control_charge_next
+	GameState.run["hp"] = saved_hp
+	GameState.run["max_hp"] = saved_max_hp
+	GameState.run["passive_id"] = saved_passive_id
+	GameState.run["survival_echo_until"] = saved_survival_echo_until
+	GameState.run["survival_echo_next_trigger_time"] = saved_survival_echo_next
+	GameState.run["survival_echo_absorbed_damage"] = saved_survival_echo_absorbed
 	GameState.run["build_resonance_rewards"] = saved_resonance_rewards
+	GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
 
 	var stale_owner := Node.new()
 	stale_owner.free()
@@ -2103,6 +2401,7 @@ func _phase_player_combat() -> void:
 
 	# Reset HP for clean test
 	GameState.run.hp = GameState.run.max_hp
+	GameState.run["melee_replay_history"] = []
 	GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
 	player._invincible = false
 	player._invincibility_timer = 0.0
@@ -2602,6 +2901,7 @@ func _phase_enemy_collision() -> void:
 			child.queue_free()
 	await _wait(0.1)
 	GameState.run.hp = GameState.run.max_hp
+	GameState.run["melee_replay_history"] = []
 	GameState.hp_changed.emit(GameState.run.hp, GameState.run.max_hp)
 	player._invincible = false
 	player._invincibility_timer = 0.0
@@ -3624,6 +3924,9 @@ func _phase_character_system() -> void:
 	GameState.start_new_run(777, &"guardian")
 	_assert(StringName(GameState.run.get("passive_id", &"")) == GameState.GUARD_REFRACTION_PASSIVE_ID, "Guardian refraction passive id applied")
 	_assert(GameState.preview_take_damage(20) == 18, "Guardian refraction previews reduced incoming damage")
+	GameState.run.incoming_damage_multiplier = 0.5
+	_assert(GameState.preview_take_damage(20) == 8, "Guardian refraction calculates reduction from unmitigated damage")
+	GameState.run.incoming_damage_multiplier = 1.0
 
 	var enemies_parent := _game.get_node_or_null("Enemies")
 	if player is Node2D and enemies_parent:
@@ -3657,12 +3960,14 @@ func _phase_character_system() -> void:
 		outside_enemy._hp = 50
 
 		var hp_before: int = GameState.run.hp
+		GameState.run.incoming_damage_multiplier = 0.5
 		GameState.take_damage(20)
-		_assert(GameState.run.hp == hp_before - 18, "Guardian refraction reduces incoming damage")
+		_assert(GameState.run.hp == hp_before - 8, "Guardian refraction reduces incoming damage from unmitigated basis")
 		var near_loss: int = 50 - int(near_enemy._hp)
 		var far_loss: int = 50 - int(far_enemy._hp)
-		_assert(near_loss > far_loss and far_loss > 0, "Guardian refraction damage falls off with distance")
+		_assert(near_loss == 3 and far_loss == 1, "Guardian refraction reflects unmitigated reduction with distance falloff")
 		_assert(outside_enemy._hp == 50, "Guardian refraction ignores enemies outside radius")
+		GameState.run.incoming_damage_multiplier = 1.0
 
 		GameState.run.hp = 10
 		if "_invincible_until_msec" in player:

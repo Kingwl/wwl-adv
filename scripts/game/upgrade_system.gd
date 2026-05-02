@@ -539,6 +539,55 @@ func _get_build_resonance_tier_name(tier: int) -> String:
 func _get_build_resonance_reward_name(tag: String, tier: int) -> String:
 	if tier <= 0:
 		return ""
+	match tag:
+		"近身":
+			match tier:
+				1:
+					return "近身I：近身武器伤害+8%"
+				2:
+					return "近身II：贴近命中额外增伤"
+				3:
+					return "近身III：伤害回放"
+		"弹幕":
+			match tier:
+				1:
+					return "弹幕I：弹幕武器伤害+8%"
+				2:
+					return "弹幕II：远距命中额外增伤"
+				3:
+					return "弹幕III：命中击退"
+		"场地":
+			match tier:
+				1:
+					return "场地I：场地武器伤害+8%"
+				2:
+					return "场地II：命中叠加压制"
+				3:
+					return "场地III：地脉封锁"
+		"控制":
+			match tier:
+				1:
+					return "控制I：控制武器伤害+8%"
+				2:
+					return "控制II：受控敌人威胁降低"
+				3:
+					return "控制III：静滞脉冲"
+		"爆发":
+			match tier:
+				1:
+					return "爆发I：爆发武器伤害+8%"
+				2:
+					return "爆发II：击杀时单体外溢"
+				3:
+					return "爆发III：击杀时多重外溢"
+		"生存":
+			match tier:
+				1:
+					return "生存I：所受伤害降低"
+				2:
+					return "生存II：低血时额外减伤"
+				3:
+					return "生存III：濒死伤害转治疗"
 	return "%s共鸣%s（奖励占位）" % [tag, _get_build_resonance_tier_name(tier)]
 
 func _sort_build_resonance_entries(a: Dictionary, b: Dictionary) -> bool:

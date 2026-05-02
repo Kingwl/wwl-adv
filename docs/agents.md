@@ -119,4 +119,5 @@ CI 或自定义安装路径可通过 `GODOT_BIN=/path/to/godot ./tests/run_tests
 
 - [architecture.md](./architecture.md) — 技术架构、场景树、信号流
 - [game_design.md](./game_design.md) — 核心循环、数值设计、未来规划
+- [combat_effects.md](./combat_effects.md) — 伤害、Buff、Debuff、共鸣副作用的结算顺序和分层规范
 - [milestone.md](./milestone.md) — 项目里程碑与待办事项

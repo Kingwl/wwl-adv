@@ -130,6 +130,18 @@ func _deal_damage_to(
 	event.status_value = status_value
 	return DamageCalculator.deal_damage(target, event)
 
+func _apply_status_to(target: Node, status_id: StringName, duration: float, value: float = 0.0) -> StatusEffect:
+	if status_id.is_empty() or not target or not target.has_method("apply_status"):
+		return null
+	var applied = target.call("apply_status", status_id, duration, value)
+	if applied is StatusEffect:
+		DamageCalculator.notify_control_effect_applied(target, _make_damage_event(0, target), status_id)
+		return applied as StatusEffect
+	return null
+
+func _notify_control_effect_applied(target: Node, effect_id: StringName) -> void:
+	DamageCalculator.notify_control_effect_applied(target, _make_damage_event(0, target), effect_id)
+
 func _claim_nearest_enemy_target(from_pos: Vector2) -> Node2D:
 	_purge_expired_target_claims()
 	var candidates := _get_valid_enemy_targets()

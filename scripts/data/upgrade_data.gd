@@ -11,7 +11,7 @@ enum UpgradeType { WEAPON_UNLOCK, WEAPON_LEVEL, WEAPON_PATH, PLAYER_STAT }
 @export var icon: Texture2D
 ## 卡片展示标签。武器解锁卡使用构筑标签，武器流派卡使用路线标签。
 @export var build_tags: Array[String] = []
-## 构筑共鸣变化预览；阶段 1 只展示贡献和进度，不直接改变战斗数值。
+## 构筑共鸣变化预览；部分标签已接入战斗奖励，其余标签只展示贡献和进度。
 @export_multiline var resonance_preview: String = ""
 ## 额外选择提示备用字段。当前卡片默认不展示，避免重复解释。
 @export_multiline var choice_hint: String = ""

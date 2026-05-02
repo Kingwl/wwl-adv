@@ -22,12 +22,12 @@ func _strike_at(pos: Vector2) -> void:
 	var dmg := get_damage()
 	var strike_radius := get_range()
 	for enemy in get_tree().get_nodes_in_group("enemies"):
-		if enemy.global_position.distance_to(pos) <= strike_radius:
-			_deal_damage_to(enemy, dmg, DamageEvent.DAMAGE_TYPE_LIGHTNING, DamageEvent.DELIVERY_AREA)
-			if has_special_tag(&"thunder_slow"):
-				enemy.apply_status(&"slow", 1.0, 0.5)
-			if has_special_tag(&"thunder_paralyze"):
-				enemy.apply_status(&"stun", 0.3, 0.0)
+			if enemy.global_position.distance_to(pos) <= strike_radius:
+				_deal_damage_to(enemy, dmg, DamageEvent.DAMAGE_TYPE_LIGHTNING, DamageEvent.DELIVERY_AREA)
+				if has_special_tag(&"thunder_slow"):
+					_apply_status_to(enemy, &"slow", 1.0, 0.5)
+				if has_special_tag(&"thunder_paralyze"):
+					_apply_status_to(enemy, &"stun", 0.3, 0.0)
 
 func _chain_zap(origin_pos: Vector2, player: Node2D) -> void:
 	var chain_radius := get_range() * 2.0

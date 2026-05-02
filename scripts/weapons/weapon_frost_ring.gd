@@ -18,7 +18,7 @@ func _activate() -> void:
 
 	for enemy in get_tree().get_nodes_in_group("enemies"):
 		if enemy.global_position.distance_to(player.global_position) <= radius:
-			enemy.apply_status(&"slow", _get_slow_duration(), _get_slow_value())
+			_apply_status_to(enemy, &"slow", _get_slow_duration(), _get_slow_value())
 			_deal_damage_to(enemy, get_damage(), DamageEvent.DAMAGE_TYPE_FROST, DamageEvent.DELIVERY_AREA)
 
 func _show_ice_ring(pos: Vector2, radius: float) -> void:
